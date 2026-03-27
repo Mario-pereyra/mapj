@@ -26,7 +26,7 @@ func (c *Client) Export(ctx context.Context, pageID string, opts *ExportOpts) (*
 	var expand string
 	switch opts.Format {
 	case "markdown":
-		expand = "body.export_view,space,version"
+		expand = "body.storage.value,space,version"
 	case "html":
 		expand = "body.storage.value,space,version"
 	case "json":
@@ -49,10 +49,8 @@ func (c *Client) Export(ctx context.Context, pageID string, opts *ExportOpts) (*
 
 	switch opts.Format {
 	case "markdown":
-		if page.Body != nil && page.Body.ExportView != nil && page.Body.ExportView.Value != "" {
-			result.Content = page.Body.ExportView.Value
-		} else if page.Body != nil && page.Body.Storage != nil {
-			result.Content = page.Body.Storage.Value
+		if page.Body != nil && page.Body.Storage != nil {
+			result.Content = ConvertToMarkdown(page.Body.Storage.Value)
 		}
 	case "html":
 		if page.Body != nil && page.Body.Storage != nil {

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
@@ -30,11 +31,13 @@ Examples:
 
 var confluenceFormat string
 var confluenceIncludeComments bool
+var confluenceOutputPath string
 
 func init() {
 	confluenceCmd.AddCommand(confluenceExportCmd)
 	confluenceExportCmd.Flags().StringVar(&confluenceFormat, "format", "markdown", "Output format (markdown, html, json)")
 	confluenceExportCmd.Flags().BoolVar(&confluenceIncludeComments, "include-comments", false, "Include page comments")
+	confluenceExportCmd.Flags().StringVar(&confluenceOutputPath, "output-path", "", "Save output to file")
 }
 
 func confluenceExportRun(cmd *cobra.Command, args []string) error {
@@ -89,6 +92,14 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "EXPORT_ERROR", err.Error(), true)
 		fmt.Println(formatter.Format(env))
 		return nil
+	}
+
+	if confluenceOutputPath != "" {
+		if err := os.WriteFile(confluenceOutputPath, []byte(result.Content), 0644); err != nil {
+			env := output.NewErrorEnvelope(cmd.CommandPath(), "FILE_WRITE_ERROR", err.Error(), true)
+			fmt.Println(formatter.Format(env))
+			return nil
+		}
 	}
 
 	env := output.NewEnvelope(cmd.CommandPath(), result)
