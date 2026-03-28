@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -49,28 +50,27 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	if creds.Confluence == nil || creds.Confluence.Token == "" {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED", "Run 'mapj auth login confluence --url URL --token TOKEN' first", false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return errors.New("NOT_AUTHENTICATED: Run 'mapj auth login confluence --url URL --token TOKEN' first")
 	}
 
 	baseURL, pageID, err := confluence.ParseConfluenceURL(input)
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "INVALID_URL", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	if baseURL == "" {
@@ -91,14 +91,14 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "EXPORT_ERROR", err.Error(), true)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	if confluenceOutputPath != "" {
 		if err := os.WriteFile(confluenceOutputPath, []byte(result.Content), 0644); err != nil {
 			env := output.NewErrorEnvelope(cmd.CommandPath(), "FILE_WRITE_ERROR", err.Error(), true)
 			fmt.Println(formatter.Format(env))
-			return nil
+			return err
 		}
 	}
 

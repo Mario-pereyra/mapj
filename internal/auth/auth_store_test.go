@@ -11,9 +11,12 @@ import (
 
 func TestCredentialStore_EncryptDecrypt(t *testing.T) {
 	tmpDir := t.TempDir()
+	key, err := GetEncryptionKey()
+	require.NoError(t, err)
+
 	store := &CredentialStore{
 		path: filepath.Join(tmpDir, "credentials.enc"),
-		key:  []byte("mapj-cred-key-32bytes-padded!!!!"),
+		key:  key,
 	}
 
 	creds := &ServiceCreds{
@@ -23,7 +26,7 @@ func TestCredentialStore_EncryptDecrypt(t *testing.T) {
 		},
 	}
 
-	err := store.Save(creds)
+	err = store.Save(creds)
 	require.NoError(t, err)
 
 	_, err = os.Stat(store.path)
@@ -38,9 +41,12 @@ func TestCredentialStore_EncryptDecrypt(t *testing.T) {
 
 func TestCredentialStore_HasService(t *testing.T) {
 	tmpDir := t.TempDir()
+	key, err := GetEncryptionKey()
+	require.NoError(t, err)
+
 	store := &CredentialStore{
 		path: filepath.Join(tmpDir, "credentials.enc"),
-		key:  []byte("mapj-cred-key-32bytes-padded!!!!"),
+		key:  key,
 	}
 
 	assert.False(t, store.HasService("tdn"))
@@ -50,7 +56,7 @@ func TestCredentialStore_HasService(t *testing.T) {
 	creds := &ServiceCreds{
 		TDN: &TDNCreds{BaseURL: "https://tdn.totvs.com", Token: "token"},
 	}
-	err := store.Save(creds)
+	err = store.Save(creds)
 	require.NoError(t, err)
 
 	assert.True(t, store.HasService("tdn"))
@@ -59,9 +65,12 @@ func TestCredentialStore_HasService(t *testing.T) {
 
 func TestCredentialStore_LoadNonExistent(t *testing.T) {
 	tmpDir := t.TempDir()
+	key, err := GetEncryptionKey()
+	require.NoError(t, err)
+
 	store := &CredentialStore{
 		path: filepath.Join(tmpDir, "nonexistent.enc"),
-		key:  []byte("mapj-cred-key-32bytes-padded!!!!"),
+		key:  key,
 	}
 
 	creds, err := store.Load()

@@ -4,9 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -41,6 +43,35 @@ type ProtheusCreds struct {
 	Password string `json:"password"`
 }
 
+func GetEncryptionKey() ([]byte, error) {
+	if envKey := os.Getenv("MAPJ_ENCRYPTION_KEY"); envKey != "" {
+		key := []byte(envKey)
+		if len(key) == 32 {
+			return key, nil
+		}
+		return nil, fmt.Errorf("MAPJ_ENCRYPTION_KEY must be exactly 32 bytes, got %d", len(key))
+	}
+
+	return deriveMachineKey()
+}
+
+func deriveMachineKey() ([]byte, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hostname: %w", err)
+	}
+
+	currentUser, err := user.Current()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	combined := hostname + currentUser.Username + currentUser.HomeDir
+	hash := sha256.Sum256([]byte(combined))
+
+	return hash[:], nil
+}
+
 func NewStore() (*CredentialStore, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -49,8 +80,14 @@ func NewStore() (*CredentialStore, error) {
 	configDir := filepath.Join(home, ".config", "mapj")
 	os.MkdirAll(configDir, 0700)
 
+	key, err := GetEncryptionKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get encryption key: %w", err)
+	}
+
 	return &CredentialStore{
 		path: filepath.Join(configDir, "credentials.enc"),
+		key:  key,
 	}, nil
 }
 

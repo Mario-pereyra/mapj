@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -31,10 +32,12 @@ Note: Only SELECT queries are allowed for security reasons.`,
 }
 
 var protheusFormat string
+var protheusMaxRows int
 
 func init() {
 	protheusCmd.AddCommand(protheusQueryCmd)
 	protheusQueryCmd.Flags().StringVar(&protheusFormat, "format", "json", "Output format (json, csv)")
+	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return")
 }
 
 func protheusQueryRun(cmd *cobra.Command, args []string) error {
@@ -46,21 +49,20 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	if creds.Protheus == nil || creds.Protheus.Server == "" {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED", "Run 'mapj auth login protheus --server S --database D --user U --password P' first", false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return errors.New("NOT_AUTHENTICATED: Run 'mapj auth login protheus --server S --database D --user U --password P' first")
 	}
 
 	client := protheus.NewClient(
@@ -76,11 +78,16 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		if strings.Contains(err.Error(), "validation error") {
 			env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", err.Error(), false)
 			fmt.Println(formatter.Format(env))
-			return nil
+			return err
 		}
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "QUERY_ERROR", err.Error(), true)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
+	}
+
+	if protheusMaxRows > 0 && result.Count > protheusMaxRows {
+		result.Rows = result.Rows[:protheusMaxRows]
+		result.Count = protheusMaxRows
 	}
 
 	if protheusFormat == "csv" {

@@ -46,7 +46,6 @@ func tdnLogin(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {
@@ -67,7 +66,6 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {
@@ -92,7 +90,6 @@ func protheusLogin(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {

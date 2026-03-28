@@ -3,6 +3,7 @@ package confluence
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 )
 
 type ExportOpts struct {
@@ -57,7 +58,10 @@ func (c *Client) Export(ctx context.Context, pageID string, opts *ExportOpts) (*
 			result.Content = page.Body.Storage.Value
 		}
 	case "json":
-		data, _ := json.MarshalIndent(page, "", "  ")
+		data, err := json.MarshalIndent(page, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal page to JSON: %w", err)
+		}
 		result.Content = string(data)
 	}
 

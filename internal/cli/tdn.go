@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
@@ -41,25 +42,30 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 	query := args[0]
 	formatter := GetFormatter()
 
+	if tdnLimit <= 0 {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", "--limit must be > 0", false)
+		fmt.Println(formatter.Format(env))
+		return errors.New("USAGE_ERROR: --limit must be > 0")
+	}
+
 	store, err := auth.NewStore()
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
-	store.SetKey("mapj-cred-key-32bytes-padded!!!!")
 
 	creds, err := store.Load()
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	if creds.TDN == nil || creds.TDN.Token == "" {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED", "Run 'mapj auth login tdn --token TOKEN' first", false)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return errors.New("NOT_AUTHENTICATED: Run 'mapj auth login tdn --token TOKEN' first")
 	}
 
 	baseURL := creds.TDN.BaseURL
@@ -81,7 +87,7 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		env := output.NewErrorEnvelope(cmd.CommandPath(), "SEARCH_ERROR", err.Error(), true)
 		fmt.Println(formatter.Format(env))
-		return nil
+		return err
 	}
 
 	env := output.NewEnvelope(cmd.CommandPath(), result)

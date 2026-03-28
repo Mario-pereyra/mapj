@@ -11,7 +11,6 @@ import (
 
 var (
 	outputFormat string
-	noColor      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -36,11 +35,10 @@ func init() {
 
 func Execute() int {
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format (json, table)")
-	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return errors.ExitError
+		return errors.MapErrorToCode(err)
 	}
 	return errors.ExitSuccess
 }
