@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	_ "github.com/denisenkom/go-mssqldb"
 )
@@ -124,4 +125,21 @@ func (c *Client) Query(ctx context.Context, sqlQuery string) (*QueryResult, erro
 		Rows:    results,
 		Count:   len(results),
 	}, nil
+}
+
+// Ping tests the database connection and returns the round-trip latency.
+func (c *Client) Ping(ctx context.Context) (latencyMs int64, err error) {
+	start := time.Now()
+
+	db, err := sql.Open("mssql", c.connectionString())
+	if err != nil {
+		return 0, fmt.Errorf("failed to open connection: %w", err)
+	}
+	defer db.Close()
+
+	if err := db.PingContext(ctx); err != nil {
+		return 0, fmt.Errorf("ping failed: %w", err)
+	}
+
+	return time.Since(start).Milliseconds(), nil
 }

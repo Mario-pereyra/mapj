@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 )
 
 type CredentialStore struct {
@@ -20,7 +21,10 @@ type CredentialStore struct {
 type ServiceCreds struct {
 	TDN        *TDNCreds        `json:"tdn,omitempty"`
 	Confluence *ConfluenceCreds `json:"confluence,omitempty"`
-	Protheus   *ProtheusCreds   `json:"protheus,omitempty"`
+	Protheus   *ProtheusCreds   `json:"protheus,omitempty"` // v1 legacy — kept for migration
+	// v2: named connection profiles
+	ProtheusProfiles map[string]*ProtheusProfile `json:"protheusProfiles,omitempty"`
+	ProtheusActive   string                      `json:"protheusActive,omitempty"`
 }
 
 type TDNCreds struct {
@@ -31,16 +35,79 @@ type TDNCreds struct {
 
 type ConfluenceCreds struct {
 	BaseURL  string `json:"baseURL"`
-	Username string `json:"username"`
+	Username string `json:"username,omitempty"`
 	Token    string `json:"token"`
+	// AuthType controls the HTTP auth scheme: "bearer" (PAT for Server/DC) or "basic" (email+token for Cloud).
+	// Defaults to "bearer" for non-atlassian.net URLs, "basic" for atlassian.net.
+	AuthType string `json:"authType,omitempty"`
 }
 
+// ProtheusCreds is the legacy v1 single-connection model. Kept for migration only.
 type ProtheusCreds struct {
 	Server   string `json:"server"`
 	Port     int    `json:"port"`
 	Database string `json:"database"`
 	User     string `json:"user"`
 	Password string `json:"password"`
+}
+
+// ProtheusProfile is a named, persisted Protheus SQL Server connection profile.
+type ProtheusProfile struct {
+	Name     string `json:"name"`
+	Server   string `json:"server"`
+	Port     int    `json:"port"`
+	Database string `json:"database"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+}
+
+// ActiveProtheusProfile returns the current active profile.
+// Transparently migrates from the v1 legacy single-connection model.
+func (c *ServiceCreds) ActiveProtheusProfile() *ProtheusProfile {
+	if c.ProtheusActive != "" && c.ProtheusProfiles != nil {
+		if p, ok := c.ProtheusProfiles[c.ProtheusActive]; ok {
+			return p
+		}
+	}
+	// Legacy v1 migration: wrap old ProtheusCreds as a default profile
+	if c.Protheus != nil && c.Protheus.Server != "" {
+		return &ProtheusProfile{
+			Name:     "default",
+			Server:   c.Protheus.Server,
+			Port:     c.Protheus.Port,
+			Database: c.Protheus.Database,
+			User:     c.Protheus.User,
+			Password: c.Protheus.Password,
+		}
+	}
+	return nil
+}
+
+// SetProtheusProfile adds or updates a named profile.
+// If setActive is true (or no active is set), makes this the active profile.
+func (c *ServiceCreds) SetProtheusProfile(p *ProtheusProfile, setActive bool) {
+	if c.ProtheusProfiles == nil {
+		c.ProtheusProfiles = make(map[string]*ProtheusProfile)
+	}
+	c.ProtheusProfiles[p.Name] = p
+	if setActive || c.ProtheusActive == "" {
+		c.ProtheusActive = p.Name
+	}
+}
+
+// ProtheusProfileNames returns sorted profile names.
+func (c *ServiceCreds) ProtheusProfileNames() []string {
+	names := make([]string, 0, len(c.ProtheusProfiles))
+	for name := range c.ProtheusProfiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// HasProtheusProfiles returns true if there is at least one profile (new or legacy).
+func (c *ServiceCreds) HasProtheusProfiles() bool {
+	return len(c.ProtheusProfiles) > 0 || (c.Protheus != nil && c.Protheus.Server != "")
 }
 
 func GetEncryptionKey() ([]byte, error) {
@@ -182,7 +249,7 @@ func (s *CredentialStore) HasService(name string) bool {
 	case "confluence":
 		return creds.Confluence != nil && creds.Confluence.Token != ""
 	case "protheus":
-		return creds.Protheus != nil && creds.Protheus.Server != ""
+		return creds.HasProtheusProfiles()
 	}
 	return false
 }

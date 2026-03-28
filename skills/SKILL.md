@@ -1,18 +1,22 @@
 ---
 name: mapj
 description: >
-  CLI tool for AI agents to interact with TOTVS ecosystem (TDN/Confluence documentation and Protheus ERP database).
-  Use when: searching TDN documentation, exporting Confluence pages to markdown/HTML/JSON, querying Protheus database tables,
-  looking up TOTVS Developer Network articles, fetching technical documentation, or executing SELECT queries on Protheus SQL Server.
-  Triggers: "search TDN", "find documentation", "export confluence page", "export to markdown", "query Protheus",
-  "SELECT from Protheus", "look up TOTVS docs", "get API documentation", "SQL query Protheus".
-compatibility: Requires Go 1.21+. Network access to TDN (tdninterno.totvs.com), Confluence instances, and Protheus SQL Server.
+  CLI tool for AI agents to interact with TOTVS ecosystem.
+  Use when: searching TDN documentation, exporting Confluence pages to markdown,
+  exporting with descendants, exporting spaces, downloading attachments, retrying failed exports,
+  querying Protheus ERP database, managing Protheus connection profiles (add/list/switch/ping/remove),
+  or comparing data between Protheus environments.
+  Do NOT use for writing to Confluence, modifying Protheus data, or any DML/DDL operations.
+  Triggers: "search TDN", "export confluence", "export to markdown", "export with descendants",
+  "export space", "export attachments", "retry failed export", "query Protheus",
+  "SELECT from Protheus", "look up TOTVS docs", "Protheus connection", "list connections",
+  "switch database", "ping Protheus", "test connection", "add connection profile".
+compatibility: Requires Go 1.23+ built binary at PATH. Network access to TDN/Confluence and Protheus SQL Server (VPN required for internal servers).
 metadata:
-  version: 1.0.0
+  version: 2.0.0
   language: en
   author: Mario Pereira
   license: MIT
-  repository: https://github.com/Mario-pereyra/mapj
   tags:
     - totvs
     - protheus
@@ -28,6 +32,7 @@ metadata:
     - export
     - query
     - authentication
+    - connection-management
 related:
   - mapj-tdn-search
   - mapj-confluence-export
@@ -35,9 +40,14 @@ related:
 allowed-tools: Bash
 ---
 
-# mapj CLI - Agentic Command-Line Tool for TOTVS Ecosystem
+# mapj CLI — Agentic Tool for TOTVS Ecosystem
 
-**mapj** is an agentic CLI designed for AI agents to interact with TOTVS enterprise systems. It provides machine-readable JSON output, structured error handling, and idempotent operations.
+**mapj** is an agentic CLI designed for AI agents to interact with TOTVS enterprise systems.
+All output is JSON with a consistent envelope. All operations are read-only (no data modification).
+
+> ⚠️ **Documentation mandate:** Any change to commands, flags, behavior, or data models
+> MUST update: the relevant skill file, the relevant `docs/` guide, and `CONTRIBUTING.md`.
+> Never let code diverge from docs.
 
 ## Quick Start
 
@@ -61,11 +71,21 @@ mapj protheus query "SELECT TOP 10 * FROM SA1010"
 
 | Command | Purpose | Output |
 |---------|---------|--------|
-| `mapj tdn search <query>` | Search TDN/Confluence documentation | JSON with results array |
-| `mapj confluence export <url-or-id>` | Export page to markdown/HTML/JSON | JSON with content field |
-| `mapj protheus query <sql>` | Execute SELECT on Protheus DB | JSON with columns/rows |
+| `mapj tdn search <query>` | Search TDN/Confluence documentation | JSON results array |
+| `mapj confluence export <url-or-id>` | Export single page → Markdown | JSON or files on disk |
+| `mapj confluence export <url> --with-descendants` | Export page tree recursively | Files on disk, manifest.jsonl |
+| `mapj confluence export-space <key>` | Export all pages in a space | Files on disk, manifest.jsonl |
+| `mapj confluence retry-failed` | Re-export pages that failed | Files on disk, updated logs |
+| `mapj protheus query <sql>` | Execute SELECT on Protheus DB | JSON columns/rows |
+| `mapj protheus query <sql> --connection NAME` | Query specific profile without switching active | JSON columns/rows |
+| `mapj protheus connection list` | List all saved connection profiles | Text table, active marked |
+| `mapj protheus connection add <name>` | Register a named connection profile | Status message |
+| `mapj protheus connection use <name>` | Switch active profile (no re-login) | Status message |
+| `mapj protheus connection ping [name]` | Test connectivity (VPN hint on failure) | Status with latency |
+| `mapj protheus connection show [name]` | Show profile details (password masked) | Text |
+| `mapj protheus connection remove <name>` | Delete a profile | Status message |
 | `mapj auth login <service>` | Authenticate a service | Status message |
-| `mapj auth status` | Show auth status for all services | JSON summary |
+| `mapj auth status` | Show auth status + active Protheus profile | Text |
 | `mapj auth logout <service>` | Remove credentials | Status message |
 
 ## Output Format
@@ -113,35 +133,51 @@ All commands return **JSON by default** with a consistent envelope structure.
 
 ## Authentication
 
-Credentials are stored encrypted at `~/.config/mapj/credentials.enc` using AES-256-GCM.
+Credentials stored encrypted at `~/.config/mapj/credentials.enc` (AES-256-GCM, machine-bound key).
 
-### TDN / Confluence (Same System)
+### Decision tree: which auth to use?
 
-TDN is a Confluence Cloud instance. It supports **two auth methods**:
+```
+URL contains atlassian.net?
+├── YES → Basic Auth: --username email + --token API_TOKEN
+└── NO  → Bearer PAT: --token TOKEN only (NEVER add --username → causes 401)
+```
+
+### TDN / Confluence Server (tdninterno.totvs.com)
 
 ```bash
-# Method 1: API Token + Email (Basic Auth) - For Python atlassian library
+# ✅ CORRECT — Bearer PAT, no --username
 mapj auth login confluence \
-  --url https://tdninterno.totvs.com \
-  --username your-email@company.com \
-  --token YOUR_API_TOKEN
-
-# Method 2: PAT Token (Bearer Auth) - Direct API access
-mapj auth login tdn \
   --url https://tdninterno.totvs.com \
   --token YOUR_PAT_TOKEN
 ```
 
-### Protheus Database
+### Confluence Cloud (company.atlassian.net)
 
 ```bash
-mapj auth login protheus \
-  --server 192.168.99.102 \
-  --port 1433 \
-  --database P1212410_BIB \
-  --user USERNAME \
-  --password PASSWORD
+# ✅ CORRECT — Basic Auth with email
+mapj auth login confluence \
+  --url https://company.atlassian.net \
+  --username your-email@company.com \
+  --token YOUR_CLOUD_API_TOKEN
 ```
+
+### Protheus — named profiles (v2 model)
+
+```bash
+# Register
+mapj protheus connection add TOTALPEC_BIB \
+  --server 192.168.99.102 --port 1433 \
+  --database P1212410_BIB --user P1212410_BIB --password P1212410_BIB --use
+
+# Switch (no credentials re-entry)
+mapj protheus connection use TOTALPEC_PRD
+
+# Test connectivity
+mapj protheus connection ping [name]
+```
+
+> See [mapj-protheus-query skill](mapj-protheus-query.md) for full connection management reference.
 
 ## Self-Discovery for AI Agents
 

@@ -25,6 +25,7 @@ var protheusQueryCmd = &cobra.Command{
 Examples:
   mapj protheus query "SELECT TOP 10 * FROM SPED050"
   mapj protheus query "SELECT COUNT(*) FROM SA1010" --format csv
+  mapj protheus query "SELECT TOP 5 A1_COD FROM SA1010" --connection TOTALPEC_PRD
 
 Note: Only SELECT queries are allowed for security reasons.`,
 	Args: cobra.ExactArgs(1),
@@ -33,11 +34,13 @@ Note: Only SELECT queries are allowed for security reasons.`,
 
 var protheusFormat string
 var protheusMaxRows int
+var protheusConnection string // --connection: run against specific profile without switching
 
 func init() {
 	protheusCmd.AddCommand(protheusQueryCmd)
 	protheusQueryCmd.Flags().StringVar(&protheusFormat, "format", "json", "Output format (json, csv)")
-	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return")
+	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return (0 = no limit)")
+	protheusQueryCmd.Flags().StringVar(&protheusConnection, "connection", "", "Run against this named profile without switching the active connection")
 }
 
 func protheusQueryRun(cmd *cobra.Command, args []string) error {
@@ -59,19 +62,30 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if creds.Protheus == nil || creds.Protheus.Server == "" {
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED", "Run 'mapj auth login protheus --server S --database D --user U --password P' first", false)
-		fmt.Println(formatter.Format(env))
-		return errors.New("NOT_AUTHENTICATED: Run 'mapj auth login protheus --server S --database D --user U --password P' first")
+	// Resolve which profile to use
+	var profile *auth.ProtheusProfile
+	if protheusConnection != "" {
+		// --connection flag: use specific profile without changing active
+		if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[protheusConnection] == nil {
+			msg := fmt.Sprintf("profile '%s' not found. Use 'mapj protheus connection list' to see available profiles", protheusConnection)
+			env := output.NewErrorEnvelope(cmd.CommandPath(), "PROFILE_NOT_FOUND", msg, false)
+			fmt.Println(formatter.Format(env))
+			return errors.New(msg)
+		}
+		profile = creds.ProtheusProfiles[protheusConnection]
+	} else {
+		// Use active profile (with v1 migration)
+		profile = creds.ActiveProtheusProfile()
 	}
 
-	client := protheus.NewClient(
-		creds.Protheus.Server,
-		creds.Protheus.Port,
-		creds.Protheus.Database,
-		creds.Protheus.User,
-		creds.Protheus.Password,
-	)
+	if profile == nil {
+		msg := "No Protheus connection configured. Run:\n  mapj protheus connection add <name> --server S --database D --user U --password P"
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED", msg, false)
+		fmt.Println(formatter.Format(env))
+		return errors.New("NOT_AUTHENTICATED")
+	}
+
+	client := protheus.NewClient(profile.Server, profile.Port, profile.Database, profile.User, profile.Password)
 
 	result, err := client.Query(ctx, sqlQuery)
 	if err != nil {
@@ -80,7 +94,12 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 			fmt.Println(formatter.Format(env))
 			return err
 		}
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "QUERY_ERROR", err.Error(), true)
+
+		// Connection / network error — add VPN hint
+		msg := err.Error()
+		hint := protheusVPNHint(profile.Server)
+		fullMsg := msg + "\n" + hint
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "QUERY_ERROR", fullMsg, true)
 		fmt.Println(formatter.Format(env))
 		return err
 	}
@@ -119,4 +138,16 @@ func protheusResultToCSV(result *protheus.QueryResult) string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// protheusVPNHint returns a contextual VPN hint based on the server IP range.
+func protheusVPNHint(server string) string {
+	switch {
+	case strings.HasPrefix(server, "192.168.99."):
+		return "💡 VPN: This is a TOTALPEC server. Verify the TOTALPEC VPN is active."
+	case strings.HasPrefix(server, "192.168.7."):
+		return "💡 VPN: This is a UNION server. Verify the UNION VPN is active."
+	default:
+		return fmt.Sprintf("💡 VPN: Verify the VPN for server %s is active.", server)
+	}
 }

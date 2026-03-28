@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -26,12 +27,22 @@ var tdnURL, tdnToken string
 var confluenceLoginCmd = &cobra.Command{
 	Use:   "confluence --url URL --token TOKEN",
 	Short: "Login to Confluence",
-	Long: `Login to Confluence Cloud with either:
-  1. Basic Auth: --username EMAIL --password API_TOKEN
-  2. Bearer Token: --token PAT (Personal Access Token)`,
+	Long: `Login to Confluence.
+
+For Confluence Server / Data Center (e.g. tdninterno.totvs.com):
+  Use Bearer auth (PAT token). Do NOT set --username.
+
+  mapj auth login confluence --url https://tdninterno.totvs.com --token YOUR_PAT
+
+For Confluence Cloud (e.g. company.atlassian.net):
+  Use Basic auth (email + API token).
+
+  mapj auth login confluence --url https://company.atlassian.net --username you@company.com --token YOUR_API_TOKEN
+
+The auth type is auto-detected from the URL. Override with --auth-type bearer|basic.`,
 	RunE: confluenceLogin,
 }
-var confluenceURL, confluenceToken, confluenceUsername string
+var confluenceURL, confluenceToken, confluenceUsername, confluenceAuthType string
 
 var protheusLoginCmd = &cobra.Command{
 	Use:   "protheus --server S --port P --database D --user U --password PASS",
@@ -71,17 +82,41 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	// Auto-detect auth type based on URL if not explicitly set
+	authType := confluenceAuthType
+	if authType == "" {
+		if isCloudURL(confluenceURL) {
+			authType = "basic"
+		} else {
+			authType = "bearer"
+		}
+	}
+
+	// Validate: Cloud Basic Auth needs a username
+	if authType == "basic" && confluenceUsername == "" {
+		return fmt.Errorf("--username is required for basic auth (Confluence Cloud). Use: --username your@email.com")
+	}
+
+	// Warn: Server Bearer Auth with username is a common mistake
+	if authType == "bearer" && confluenceUsername != "" {
+		fmt.Printf("⚠️  Warning: --username is ignored for bearer auth (Confluence Server/DC).\n")
+		fmt.Printf("   If you need Basic Auth, use: --auth-type basic\n")
+		confluenceUsername = ""
+	}
+
 	creds.Confluence = &ConfluenceCreds{
 		BaseURL:  confluenceURL,
 		Username: confluenceUsername,
 		Token:    confluenceToken,
+		AuthType: authType,
 	}
 
 	if err := store.Save(creds); err != nil {
 		return err
 	}
 
-	fmt.Println("Confluence login successful")
+	fmt.Printf("Confluence login successful (auth: %s)\n", authType)
 	return nil
 }
 
@@ -122,7 +157,8 @@ func AddCommands(root *cobra.Command) {
 
 	confluenceLoginCmd.Flags().StringVar(&confluenceURL, "url", "", "Confluence base URL")
 	confluenceLoginCmd.Flags().StringVar(&confluenceToken, "token", "", "Confluence API Token or PAT")
-	confluenceLoginCmd.Flags().StringVar(&confluenceUsername, "username", "", "Confluence username (email for Cloud API token auth)")
+	confluenceLoginCmd.Flags().StringVar(&confluenceUsername, "username", "", "Email for Confluence Cloud Basic Auth (not needed for Server/DC Bearer auth)")
+	confluenceLoginCmd.Flags().StringVar(&confluenceAuthType, "auth-type", "", "Auth scheme: 'bearer' (Server/DC PAT) or 'basic' (Cloud email+token). Auto-detected if omitted")
 	confluenceLoginCmd.MarkFlagRequired("url")
 	confluenceLoginCmd.MarkFlagRequired("token")
 
@@ -135,4 +171,10 @@ func AddCommands(root *cobra.Command) {
 	protheusLoginCmd.MarkFlagRequired("database")
 	protheusLoginCmd.MarkFlagRequired("user")
 	protheusLoginCmd.MarkFlagRequired("password")
+}
+
+// isCloudURL returns true for Confluence Cloud (Atlassian-hosted) URLs.
+// Cloud uses Basic Auth (email + API token). Everything else (Server, DC, intranet) uses Bearer PAT.
+func isCloudURL(rawURL string) bool {
+	return strings.Contains(strings.ToLower(rawURL), "atlassian.net")
 }

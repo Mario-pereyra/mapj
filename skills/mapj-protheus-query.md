@@ -3,15 +3,17 @@ name: mapj-protheus-query
 description: >
   Execute SELECT queries on Protheus ERP SQL Server database for reporting and data retrieval.
   Use when: querying Protheus database tables, generating reports, extracting data from ERP,
-  finding customer records, product information, invoice data, or any SQL SELECT on Protheus.
+  or managing named Protheus connection profiles (add, list, switch, remove, ping).
+  Also use when: configuring a Protheus connection, switching between databases (BIB/PRD/DES),
+  verifying connection status, testing connectivity, or comparing data between environments.
   Triggers: "query Protheus", "SELECT from Protheus", "Protheus database", "ERP query",
-  "extract Protheus data", "SQL query Protheus", "Protheus tables", "report from Protheus".
+  "extract Protheus data", "SQL query Protheus", "Protheus tables", "report from Protheus",
+  "configure Protheus", "switch Protheus database", "connect to Protheus", "ping Protheus",
+  "list Protheus connections", "add Protheus connection".
 metadata:
-  version: 1.0.0
+  version: 3.0.0
   language: en
   author: Mario Pereira
-  license: MIT
-  repository: https://github.com/Mario-pereyra/mapj
   tags:
     - protheus
     - totvs
@@ -21,9 +23,12 @@ metadata:
     - query
     - select
     - reporting
+    - mssql
+    - sqlserver
   capabilities:
     - query
     - select-only
+    - connection-management
   security:
     - select-only-enforced
     - no-insert
@@ -35,237 +40,389 @@ metadata:
 allowed-tools: Bash
 ---
 
-# mapj protheus query
+# mapj protheus — Agent Skill v2.0
 
-Execute SELECT queries on Protheus ERP SQL Server database.
+Execute SELECT queries on the Protheus ERP SQL Server database, and manage the active connection.
 
-## Usage
+> **Important:** The CLI stores **one active Protheus connection** at a time (encrypted).
+> To switch databases, simply re-run `auth login protheus` with the new credentials.
+
+---
+
+## Connection Architecture
+
+Protheus runs on **Microsoft SQL Server**. The CLI connects using the Go `mssql` driver with:
 
 ```
-mapj protheus query <sql> [--format json|csv] [--output json|table]
+server=HOST;port=PORT;database=DATABASE;user id=USER;password=PASS;encrypt=disable
 ```
 
-## Arguments
+The `encrypt=disable` setting matches the `trustServerCertificate: true` / `encrypt: false`
+configuration used in the environment. This is required for internal servers without TLS.
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `<sql>` | Yes | SQL SELECT query |
+---
 
-## Flags
+## Known Connections (TOTALPEC environment)
 
-| Flag | Short | Required | Default | Description |
-|------|-------|----------|---------|-------------|
-| `--format` | `-f` | No | json | Output format: `json` or `csv` |
-| `--output` | `-o` | No | json | CLI output format: `json` or `table` |
+All on the same server: `192.168.99.102:1433`
 
-## Examples
+| Name | Database | User | Purpose |
+|------|----------|------|---------|
+| **TOTALPEC_BIB** | `P1212410_BIB` | `P1212410_BIB` | **Default — BI/Consulting** |
+| TOTALPEC_PRD | `P1212410_PRD` | `P1212410_PRD` | Production |
+| TOTALPEC_DES | `P1212410_DES` | `P1212410_DES` | Development |
+| TOTALPEC_DESII | `P1212410_DESII` | `P1212410_DESII` | Development II |
 
-### Basic SELECT Query
+**UNION environment** (different servers):
+
+| Name | Server | Database | User |
+|------|--------|----------|------|
+| UNION_BIB | 192.168.7.97 | P1212410_BIB | P1212410_BIB |
+| UNION_PRD | 192.168.7.215 | P1212410_PRD | P1212410_PRD |
+| UNION_UPG | 192.168.7.135 | P1212410_UPG | P1212410_UPG |
+
+> ⚠️ Unless told otherwise, **always use TOTALPEC_BIB** (192.168.99.102, P1212410_BIB).
+
+---
+
+## Managing the Connection
+
+### Check current connection
 
 ```bash
-mapj protheus query "SELECT TOP 10 * FROM SA1010"
+mapj auth status
 ```
 
-### Count Query
+Output:
+```
+Authentication Status:
+  TDN:        ✓ authenticated
+  Confluence: ✓ authenticated
+  Protheus:   ✓ authenticated     ← only shows authenticated/not, not which DB
+```
+
+> `auth status` does NOT show which database is active. If you need to know,
+> you must query the DB: `mapj protheus query "SELECT DB_NAME()"`.
+
+### Configure / Switch connection (Add or Modify)
+
+To set or change the active Protheus connection:
 
 ```bash
-mapj protheus query "SELECT COUNT(*) FROM SA1010"
+# Default: TOTALPEC BIB
+mapj auth login protheus \
+  --server 192.168.99.102 \
+  --port 1433 \
+  --database P1212410_BIB \
+  --user P1212410_BIB \
+  --password P1212410_BIB
+
+# Switch to Production
+mapj auth login protheus \
+  --server 192.168.99.102 \
+  --port 1433 \
+  --database P1212410_PRD \
+  --user P1212410_PRD \
+  --password P1212410_PRD
+
+# Switch to Development II
+mapj auth login protheus \
+  --server 192.168.99.102 \
+  --port 1433 \
+  --database P1212410_DESII \
+  --user P1212410_DESII \
+  --password P1212410_DESII
+
+# Switch to UNION BIB (different server)
+mapj auth login protheus \
+  --server 192.168.7.97 \
+  --port 1433 \
+  --database P1212410_BIB \
+  --user P1212410_BIB \
+  --password P1212410_BIB
 ```
 
-### Export as CSV
+The new login **always overwrites** the previous connection. There is no confirmation prompt.
+
+### Verify active database after login
 
 ```bash
-mapj protheus query "SELECT * FROM SA1010 WHERE A1_COD = '000001'" --format csv
+# Always verify which DB is actually active after switching
+mapj protheus query "SELECT DB_NAME() AS active_database, @@SERVERNAME AS server"
 ```
 
-### Complex Query with JOIN
+### Remove connection (Logout)
 
 ```bash
-mapj protheus query "SELECT a.A1_COD, a.A1_NOME, b.B1_DESC FROM SA1010 a INNER JOIN SB1010 b ON a.A1_COD = b.B1_COD"
+# Removes all stored Protheus credentials
+mapj auth logout protheus
 ```
 
-### Filter Results
+After logout, any `protheus query` will return `NOT_AUTHENTICATED` error.
+
+---
+
+## Executing Queries
+
+### Usage
+
+```
+mapj protheus query "<sql>" [flags]
+```
+
+### Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--format` | `json` | Output format: `json` or `csv` |
+| `--max-rows` | `10000` | Truncate result to N rows. `0` = no limit |
+| `--connection` | (active) | Run against a specific named profile **without changing the active** |
+
+### Using --connection (cross-env queries without switching)
 
 ```bash
-mapj protheus query "SELECT * FROM SA1010 WHERE A1_MSBLQL != '1' AND A1_LOJA != ''"
+# Currently active is TOTALPEC_BIB, but query PRD without switching
+mapj protheus query "SELECT COUNT(*) AS total FROM SA1010" --connection TOTALPEC_PRD
+
+# Compare count between BIB and PRD in sequence
+mapj protheus query "SELECT COUNT(*) FROM SA1010" # BIB (active)
+mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD
 ```
 
-### Pagination with TOP
+### Output Formats
+
+#### JSON (default)
 
 ```bash
-# First 100 rows
-mapj protheus query "SELECT TOP 100 * FROM SA1010"
-
-# Next 100 rows (OFFSET)
-mapj protheus query "SELECT * FROM SA1010 ORDER BY A1_COD OFFSET 100 ROWS FETCH NEXT 100 ROWS ONLY"
+mapj protheus query "SELECT TOP 5 A1_COD, A1_NOME FROM SA1010"
 ```
-
-## Prerequisites
-
-1. **Authenticate first**:
-   ```bash
-   mapj auth login protheus \
-     --server 192.168.99.102 \
-     --port 1433 \
-     --database P1212410_BIB \
-     --user USERNAME \
-     --password PASSWORD
-   ```
-
-2. **Verify auth**:
-   ```bash
-   mapj auth status
-   ```
-
-## Output Schema
-
-### JSON Format (Default)
 
 ```json
 {
   "ok": true,
-  "command": "mapj protheus query \"SELECT TOP 10 * FROM SA1010\"",
+  "command": "mapj protheus query",
   "result": {
-    "columns": ["A1_COD", "A1_LOJA", "A1_NOME", "A1_NREDUZ"],
+    "columns": ["A1_COD", "A1_NOME"],
     "rows": [
-      ["000001", "01", "CLIENTE TESTE LTDA", "CLIENTE TESTE"],
-      ["000002", "01", "FORNECEDOR ABC", "FORNECEDOR ABC"]
+      ["010715", "PABLO ALBERTO SAUTO RODRIGUEZ"],
+      ["010102", "GLOVERT ESTEBAN EGUEZ FOIANINI"]
     ],
     "count": 2
   },
   "schemaVersion": "1.0",
-  "timestamp": "2026-03-26T23:00:00Z"
+  "timestamp": "2026-03-28T21:41:47Z"
 }
 ```
 
-### CSV Format
+#### CSV
+
+```bash
+mapj protheus query "SELECT TOP 5 A1_COD, A1_NOME FROM SA1010" --format csv
+```
 
 ```json
 {
   "ok": true,
-  "command": "mapj protheus query \"SELECT * FROM SA1010\" --format csv",
+  "command": "mapj protheus query",
   "result": {
     "format": "csv",
-    "content": "A1_COD,A1_LOJA,A1_NOME,A1_NREDUZ\n000001,01,CLIENTE TESTE LTDA,CLIENTE TESTE\n000002,01,FORNECEDOR ABC,FORNECEDOR ABC"
-  },
-  "schemaVersion": "1.0",
-  "timestamp": "2026-03-26T23:00:00Z"
+    "content": "A1_COD,A1_NOME\n010715,PABLO ALBERTO SAUTO RODRIGUEZ\n010102,GLOVERT ESTEBAN EGUEZ FOIANINI"
+  }
 }
 ```
 
-### Error Response
+> Note: CSV format returns the CSV as a JSON string in `result.content`, not raw text.
+
+---
+
+## Security: SELECT-Only Enforcement
+
+**CRITICAL**: Only SELECT queries are allowed. This is enforced in code BEFORE the query
+reaches the database. No bypass is possible.
+
+### Allowed
+
+```sql
+-- Standard SELECT
+SELECT TOP 10 * FROM SA1010
+
+-- CTEs (WITH clause)
+WITH cte AS (SELECT A1_COD FROM SA1010)
+SELECT * FROM cte
+
+-- Subqueries
+SELECT * FROM SA1010 WHERE A1_COD IN (SELECT A1_COD FROM SA2010)
+
+-- Aggregations, JOINs, ORDER BY — all fine
+SELECT COUNT(*) FROM SA1010
+```
+
+### Blocked — Will return `USAGE_ERROR`
+
+| Category | Keywords Blocked |
+|----------|-----------------|
+| DML | `INSERT`, `UPDATE`, `DELETE`, `MERGE` |
+| DDL | `CREATE`, `ALTER`, `DROP`, `TRUNCATE` |
+| DCL | `GRANT`, `REVOKE`, `DENY` |
+| Execution | `EXEC`, `EXECUTE` |
+| Data movement | `INTO` (blocks SELECT INTO), `REPLACE` |
+| Backup | `BACKUP`, `RESTORE` |
+
+> ⚠️ **The `INTO` keyword is blocked.** This means `SELECT ... INTO #temp` is not allowed.
+> Use subqueries or CTEs instead for temporary aggregation.
+
+### Validation Logic
+
+1. Strip SQL comments (`--` and `/* */`)
+2. Uppercase the query
+3. Check for forbidden keywords using word-boundary regex (`\bKEYWORD\b`)
+4. Verify the query starts with `SELECT` or `WITH`
+5. If any check fails → return `validation error: query contains forbidden keyword: X`
+
+---
+
+## Query Patterns (Generic)
+
+```bash
+# Check active database
+mapj protheus query "SELECT DB_NAME() AS db, @@SERVERNAME AS server, @@VERSION AS version"
+
+# List tables in current database
+mapj protheus query "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME"
+
+# Describe a table structure
+mapj protheus query "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'SA1010' ORDER BY ORDINAL_POSITION"
+
+# Count rows in a table
+mapj protheus query "SELECT COUNT(*) AS total FROM SA1010"
+
+# Paginate large results
+mapj protheus query "SELECT TOP 100 * FROM SA1010 ORDER BY A1_COD"
+mapj protheus query "SELECT * FROM SA1010 ORDER BY A1_COD OFFSET 100 ROWS FETCH NEXT 100 ROWS ONLY"
+
+# Limit via max-rows flag (soft cap on client side, after DB execution)
+mapj protheus query "SELECT * FROM SA1010" --max-rows 500
+
+# Export to CSV string
+mapj protheus query "SELECT A1_COD, A1_NOME FROM SA1010" --format csv
+
+# CTE example
+mapj protheus query "WITH activos AS (SELECT A1_COD, A1_NOME FROM SA1010 WHERE A1_MSBLQL != '1') SELECT COUNT(*) AS activos FROM activos"
+```
+
+---
+
+## Error Handling
+
+### Error Schema
 
 ```json
 {
   "ok": false,
-  "command": "mapj protheus query \"INSERT INTO SA1010...\"",
+  "command": "mapj protheus query",
   "error": {
-    "code": "USAGE_ERROR",
-    "message": "query contains forbidden keyword: INSERT. Only SELECT queries are allowed.",
-    "retryable": false
-  },
-  "schemaVersion": "1.0",
-  "timestamp": "2026-03-26T23:00:00Z"
+    "code": "QUERY_ERROR",
+    "message": "query failed: ...",
+    "retryable": true
+  }
 }
 ```
 
-## Security: SELECT-Only Enforcement
+### Error Codes
 
-**CRITICAL**: Only SELECT queries are allowed. This is a security constraint to prevent data corruption.
+| Code | Condition | Retryable | Resolution |
+|------|-----------|-----------|------------|
+| `NOT_AUTHENTICATED` | No Protheus creds stored | No | Run `mapj auth login protheus ...` |
+| `USAGE_ERROR` | Non-SELECT or forbidden keyword | No | Rewrite query with only SELECT |
+| `QUERY_ERROR` | DB execution error (syntax, table not found) | Yes | Fix SQL syntax or table name |
+| `QUERY_ERROR` | Connection refused / timeout | Yes | Check network, re-login |
 
-### Forbidden Keywords
+### Common Error Messages
 
-The following SQL keywords are blocked:
+| Message contains | Meaning |
+|-----------------|---------|
+| `validation error: query contains forbidden keyword` | Hit the SELECT-only guard |
+| `validation error: query must be a SELECT statement` | Query doesn't start with SELECT/WITH |
+| `failed to connect` | Wrong server/port/credentials |
+| `login error` | Wrong user/password |
+| `Invalid object name` | Table doesn't exist in this database |
 
-| Category | Keywords |
-|----------|----------|
-| DML | INSERT, UPDATE, DELETE, MERGE |
-| DDL | CREATE, ALTER, DROP, TRUNCATE |
-| DCL | GRANT, REVOKE, DENY |
-| Exec | EXEC, EXECUTE, SP_ |
-| Backup | BACKUP, RESTORE |
+---
 
-### Blocked Examples
+## Agentic Decision Tree
 
-```bash
-# These will all fail with USAGE_ERROR (code 2)
-mapj protheus query "INSERT INTO SA1010 VALUES (...)"
-mapj protheus query "UPDATE SA1010 SET A1_NOME = 'new'"
-mapj protheus query "DELETE FROM SA1010 WHERE A1_COD = '000001'"
-mapj protheus query "DROP TABLE SA1010"
-mapj protheus query "EXEC some_procedure"
+```
+Need to interact with Protheus?
+│
+├─ List available profiles
+│   mapj protheus connection list
+│
+├─ Is Protheus configured?
+│   mapj auth status → "Protheus: ✓ authenticated [...]"
+│   If NOT → mapj protheus connection add <name> --server ... (use TOTALPEC_BIB by default)
+│
+├─ Need to check which DB is active?
+│   mapj auth status  ←  now shows active profile name and DB
+│
+├─ Need to switch to a different DB?
+│   mapj protheus connection use <name>   ← no credentials re-entry
+│
+├─ Need to test if server is reachable?
+│   mapj protheus connection ping [name]
+│
+├─ Need to query a specific DB without switching?
+│   mapj protheus query "SELECT ..." --connection OTHER_PROFILE
+│
+├─ The query involves INSERT/UPDATE/DELETE?
+│   → NOT ALLOWED. Read-only only.
+│
+└─ Execute query on active profile
+    mapj protheus query "SELECT ..." [--format csv] [--max-rows N]
 ```
 
-### Validation Pattern
+---
 
-Queries are validated using case-insensitive regex matching for forbidden keywords before execution.
-
-## Common Protheus Tables
-
-| Table | Description | Key Fields |
-|-------|-------------|------------|
-| SA1010 | Clientes (Customers) | A1_COD, A1_LOJA, A1_NOME, A1_NREDUZ |
-| SB1010 | Productos (Products) | B1_COD, B1_DESC, B1_TIPO |
-| SC7010 | Pedidos (Orders) | C7_NUM, C7_CLIENTE, C7_PRODUTO |
-| SF2010 | Notas Fiscais | F2_DOC, F2_SERIE, F2_CLIENTE |
-| SPED050 | SPED Fiscal | Various fiscal fields |
-
-**Note**: Protheus tables typically use 6-character prefix + version suffix (e.g., SA1**010**).
-
-## Error Cases
-
-| Code | Condition | Resolution |
-|------|-----------|------------|
-| USAGE_ERROR (2) | Non-SELECT query or syntax error | Use only SELECT statements |
-| AUTH_ERROR (3) | Not authenticated | Run `mapj auth login protheus ...` |
-| QUERY_ERROR (1) | Database error | Check query syntax, table exists |
-| CONNECTION_ERROR (1) | Cannot connect | Verify server:port/database |
-
-## Limitations
-
-- **SELECT only**: No INSERT, UPDATE, DELETE, DROP, or any data modification
-- **No stored procedures**: EXEC/SP_ calls blocked
-- **Large result sets**: Use `TOP N` to limit rows
-- **Connection timeout**: 30 seconds default
-- **No transactions**: Auto-commit only
-
-## Performance Tips
-
-```bash
-# Always limit results for large tables
-mapj protheus query "SELECT TOP 100 * FROM SA1010 ORDER BY A1_COD"
-
-# Use proper WHERE clauses to filter
-mapj protheus query "SELECT * FROM SA1010 WHERE A1_COD >= '000100' AND A1_COD <= '000200'"
-
-# Avoid SELECT * on large tables - specify columns
-mapj protheus query "SELECT A1_COD, A1_NOME, A1_NREDUZ FROM SA1010"
-```
-
-## Workflow Example
+## Workflow: Switch DB, Query, Restore
 
 ```bash
 #!/bin/bash
-# Generate a customer report
+# Switch to PRD, run a query, switch back to BIB
 
-# Query active customers
-mapj protheus query "SELECT A1_COD, A1_LOJA, A1_NOME, A1_NREDUZ, A1_EST FROM SA1010 WHERE A1_MSBLQL != '1'" --format csv > customers.csv
+# 1. Save current (BIB is default)
+# 2. Switch to PRD
+mapj auth login protheus \
+  --server 192.168.99.102 --port 1433 \
+  --database P1212410_PRD --user P1212410_PRD --password P1212410_PRD
 
-# Check row count
-echo "Report generated: $(wc -l < customers.csv) rows"
+# 3. Verify
+mapj protheus query "SELECT DB_NAME()"
+
+# 4. Query PRD
+mapj protheus query "SELECT TOP 10 A1_COD FROM SA1010"
+
+# 5. Switch back to BIB
+mapj auth login protheus \
+  --server 192.168.99.102 --port 1433 \
+  --database P1212410_BIB --user P1212410_BIB --password P1212410_BIB
 ```
 
-## Exit Codes
+---
 
-| Code | Meaning |
-|------|---------|
-| 0 | Query successful |
-| 1 | Query failed (error) |
-| 2 | Usage error (non-SELECT or syntax) |
-| 3 | Auth error (not authenticated) |
+## Limitations
+
+- **Single active connection**: Only one Protheus connection at a time (no connection pooling at CLI level)
+- **SELECT only**: No INSERT, UPDATE, DELETE, DROP, EXEC, or any data modification
+- **No stored procedures**: EXEC/EXECUTE blocked
+- **`INTO` blocked**: Cannot use `SELECT INTO #temp` — use CTEs or subqueries
+- **`--max-rows` is client-side**: The DB still processes the full query; `--max-rows` just truncates the returned rows. Use `TOP N` in SQL for true DB-side limiting
+- **No transactions**: Each query is a single auto-commit operation
+- **Connection timeout**: 30 seconds (hardcoded in the driver)
+- **CSV escaping**: Current CSV output does NOT escape commas within field values. Use JSON format if field values may contain commas
+
+---
 
 ## See Also
 
-- [SKILL.md](../SKILL.md) - Main manifest
-- [mapj-tdn-search](mapj-tdn-search.md) - Search TDN documentation
-- [mapj-confluence-export](mapj-confluence-export.md) - Export Confluence pages
+- [SKILL.md](SKILL.md) — Main manifest
+- [mapj-tdn-search](mapj-tdn-search.md) — Search TDN documentation
+- [mapj-confluence-export](mapj-confluence-export.md) — Export Confluence pages

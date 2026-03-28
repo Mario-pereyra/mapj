@@ -1,20 +1,35 @@
-# Binary
+# ── Binaries ────────────────────────────────────────────────────────────────
 /mapj
-*.exe
+/mapj.exe
+dist/
+build/
 
-# IDE
+# ── Credentials (MUST NEVER BE COMMITTED) ───────────────────────────────────
+*.enc
+credentials.*
+credenciales.*
+.env
+.env.*
+
+# ── Test & Debug output ──────────────────────────────────────────────────────
+.debug/
+export-errors.jsonl
+manifest.jsonl
+testdata/output/
+/tmp/
+
+# ── IDE / Editor ─────────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
+*.swo
+*~
 
-# OS
+# ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Credentials (should never be committed)
-*.enc
-credentials.*
-
-# Build output
-dist/
-build/
+# ── Go ───────────────────────────────────────────────────────────────────────
+# (go.sum IS committed — needed for reproducible builds)
+/vendor/

@@ -16,7 +16,10 @@ type Client struct {
 	Username   string // For Basic auth (email)
 	Password   string // For Basic auth (API token)
 	UseBasic   bool   // Use Basic auth instead of Bearer
-	HTTPClient *http.Client
+
+	httpClient *http.Client
+	basicUser  string
+	basicPass  string
 }
 
 type APIResponse struct {
@@ -37,7 +40,7 @@ func NewClient(baseURL, token string) *Client {
 	return &Client{
 		BaseURL: baseURL,
 		Token:   token,
-		HTTPClient: &http.Client{
+		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}
@@ -47,6 +50,8 @@ func (c *Client) SetBasicAuth(username, apiToken string) {
 	c.Username = username
 	c.Password = apiToken
 	c.UseBasic = true
+	c.basicUser = username
+	c.basicPass = apiToken
 }
 
 func (c *Client) _getHeaders() map[string]string {
@@ -87,7 +92,7 @@ func (c *Client) do(ctx context.Context, method, path string, params map[string]
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
