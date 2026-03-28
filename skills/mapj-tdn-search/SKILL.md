@@ -1,16 +1,18 @@
 ---
 name: mapj-tdn-search
 description: >
-  Search TOTVS Developer Network (TDN) documentation, a Confluence-based system at tdninterno.totvs.com.
-  Use when: finding technical documentation, looking up Protheus API references, searching ADVPL guides,
-  finding ERP customization docs, or any TOTVS technical search.
-  Do NOT use when: exporting pages (use mapj-confluence-export), querying Protheus database
-  (use mapj-protheus-query), or searching non-TDN content.
-  Triggers: "search TDN", "find documentation", "look up TOTVS", "TDN search",
-  "search Protheus docs", "find API docs", "ADVPL documentation", "search framework".
-compatibility: Requires mapj CLI at PATH and network access to tdninterno.totvs.com with valid PAT.
+  Search TOTVS Developer Network (TDN) documentation using CQL. Export found pages directly.
+  Use when: searching TDN documentation, finding Protheus API references, searching ADVPL guides,
+  finding ERP customization docs, exporting a set of pages by topic (search→export pipeline),
+  browsing all pages under a section (--ancestor), filtering by label/tag, listing available spaces.
+  Do NOT use when: exporting a specific known page (use mapj-confluence-export), querying Protheus
+  database (use mapj-protheus-query), or creating/modifying Confluence pages.
+  Triggers: "search TDN", "find documentation", "look up TOTVS", "TDN search", "search AdvPL",
+  "find API docs", "ADVPL documentation", "search framework", "list TDN spaces",
+  "export by topic", "find pages for", "search and export", "what pages exist for".
+compatibility: No auth required for tdn.totvs.com public content. Optional PAT for private content.
 metadata:
-  version: 1.1.0
+  version: 2.0.0
   language: en
   author: Mario Pereira
   tags:
@@ -19,78 +21,81 @@ metadata:
     - confluence
     - documentation
     - search
+    - cql
   capabilities:
     - search
     - filter-by-space
-    - filter-by-limit
+    - filter-by-label
+    - filter-by-date
+    - filter-by-ancestor
+    - search-to-export-pipeline
+    - list-spaces
   related:
     - mapj-confluence-export
     - mapj-protheus-query
 allowed-tools: Bash
 ---
 
-# mapj tdn search — Agent Skill v1.1
+# mapj tdn — Agent Skill v2.0
 
-Search documentation in TOTVS Developer Network (TDN), a Confluence-based system.
+Search documentation in TOTVS Developer Network (TDN). **No authentication required** for
+public content on `tdn.totvs.com`. Uses `siteSearch` CQL — searches title, body, and labels.
 
 ---
 
-## Prerequisites
+## Quick Routing
+
+```
+Need to...
+├─ Find docs by keyword → tdn search "keyword"
+├─ Find docs in a space → tdn search "keyword" --space PROT
+├─ Get all pages under a section → tdn search --ancestor 187531295
+├─ Filter by label/tag → tdn search --label versao_12 --space PROT
+├─ Find what changed recently → tdn search "keyword" --since 1m
+├─ Search AND export at once → tdn search "keyword" --space PROT --export-to ./docs
+└─ See all available spaces → tdn spaces list
+```
+
+---
+
+## Core Commands
 
 ```bash
-# TDN uses Bearer PAT — no --username
-mapj auth login tdn --url https://tdninterno.totvs.com --token YOUR_PAT
+# Basic search (no auth needed)
+mapj tdn search "AdvPL"
 
-# Verify
-mapj auth status   # → "TDN: ✓ authenticated"
+# Filter by space
+mapj tdn search "ponto de entrada" --space PROT
+
+# Filter by content type
+mapj tdn search "apostila treinamento" --space PROT --type attachment
+
+# Filter by label (AND logic for multiple)
+mapj tdn search --space PROT --label versao_12 --label ponto_de_entrada
+
+# Filter by date (last N weeks/months/days/years)
+mapj tdn search "api rest" --space PROT --since 1m
+mapj tdn search "advpl" --space PROT --since 2024-01-01
+
+# Get all pages under an ancestor ID
+mapj tdn search --ancestor 811253174 --type page
+
+# Multi-space search
+mapj tdn search "API REST" --spaces PROT,LDT,TASS
+
+# Search AND export all found pages
+mapj tdn search "ponto de entrada" --space PROT --export-to ./docs/pontos
+
+# List all available spaces
+mapj tdn spaces list
+
+# Pagination
+mapj tdn search "advpl" --space PROT --limit 25 --start 25  # page 2
 ```
 
 ---
 
-## Usage
-
-```
-mapj tdn search "<query>" [--space KEY] [--limit N] [--output json|table]
-```
-
-| Flag | Default | Description |
-|---|---|---|
-| `--space` | (all) | Filter by space key (e.g., `PROT`, `LDT`, `FLUIG`) |
-| `--limit` | 10 | Max results (1–100) |
-| `--output` | json | `json` or `table` (human-readable) |
-
----
-
-## Common Searches
-
-```bash
-# Basic search
-mapj tdn search "REST API authentication"
-
-# Filter to Protheus space, limit results
-mapj tdn search "invoice processing" --space PROT --limit 5
-
-# Human-readable output
-mapj tdn search "WebService" --output table
-
-# ADVPL-specific search
-mapj tdn search "MT0795" --space LDT --limit 20
-```
-
----
-
-## Known Spaces
-
-| Key | Name |
-|---|---|
-| `PROT` | Protheus ERP |
-| `LDT` | Linha Datasul |
-| `FLUIG` | Fluig Platform |
-| `EngMP` | Engineering Protheus |
-
----
-
-## Output Schema (JSON)
+## Output Schema
 
 ```json
 {
@@ -98,18 +103,77 @@ mapj tdn search "MT0795" --space LDT --limit 20
   "result": {
     "results": [
       {
-        "id": "123456789",
-        "title": "REST API Authentication Guide",
-        "url": "https://tdninterno.totvs.com/...",
-        "space": { "key": "PROT", "name": "Protheus" },
-        "excerpt": "...matched text..."
+        "id": "663845988",
+        "type": "page",
+        "title": "PE MT261FIL - Filtro com regra AdvPL",
+        "url": "https://tdn.totvs.com/pages/viewpage.action?pageId=663845988",
+        "space": { "key": "PROT", "name": "Linha Microsiga Protheus" },
+        "labels": ["versao_12", "ponto_de_entrada", "mata261"],
+        "ancestors": [
+          { "id": "187531295", "title": "TOTVS Linha Protheus" },
+          { "id": "811253174", "title": "Pontos de Entrada - Protheus 12" }
+        ],
+        "version": 9,
+        "lastUpdated": "2025-12-16T17:44:59-03:00",
+        "lastUpdatedBy": "Vitor Badam Rafael"
       }
     ],
-    "count": 3,
-    "total": 42
+    "count": 10,
+    "start": 0,
+    "hasNext": true,
+    "nextStart": 10,
+    "cql": "siteSearch ~ \"advpl\" AND space = \"PROT\" AND type = page"
   }
 }
 ```
+
+---
+
+## Search → Export Pipeline
+
+Use when you need to find AND export a group of pages:
+
+```bash
+# 1. Preview what will be exported (no --export-to)
+mapj tdn search "ponto de entrada" --space PROT --limit 25
+
+# 2. Export all found pages
+mapj tdn search "ponto de entrada" --space PROT --limit 25 --export-to ./docs
+
+# Pipeline output
+{
+  "searched": 25,
+  "exported": 24,
+  "failed": 1,
+  "outputDir": "C:/abs/path/to/docs",
+  "pages": ["PE MT261FIL (663845988)", ...],
+  "errors": ["page 'X' (ID): reason"]
+}
+```
+
+---
+
+## Key Spaces
+
+| Key | Name |
+|---|---|
+| `PROT` | Linha Microsiga Protheus ⭐ |
+| `LDT` / `DL` | Linha Datasul |
+| `TASS` | TOTVS API Services |
+| `INT` | Integrações |
+| `FDI` | Aceleradores + IA |
+
+For complete list → `mapj tdn spaces list`
+
+## Useful Labels in PROT Space
+
+| Label | Content |
+|---|---|
+| `versao_12` | Protheus 12 documentation |
+| `ponto_de_entrada` | Pontos de entrada (user exits) |
+| `documento_de_referencia` | Reference documentation |
+| `base_de_conhecimento` | Knowledge base articles |
+| `api` | API documentation |
 
 ---
 
@@ -117,22 +181,25 @@ mapj tdn search "MT0795" --space LDT --limit 20
 
 | Code | Condition | Fix |
 |---|---|---|
-| `AUTH_ERROR` | Not authenticated | `mapj auth login tdn ...` |
-| `USAGE_ERROR` | `--limit` out of range (1-100) | Adjust limit |
-| `SEARCH_ERROR` | Server error | Retry with backoff |
-| `RATE_LIMITED` (retryable) | Too many requests | Wait 1s and retry |
+| `USAGE_ERROR` | No query, --ancestor, or --label provided | Provide at least one filter |
+| `USAGE_ERROR` | `--limit` out of range | Use 1–100 |
+| `SEARCH_ERROR` (retryable) | Server error | Wait 1s, retry |
+| `AUTH_ERROR` | Could not load stored credentials | Run `mapj auth login tdn --url URL --token TOKEN` or skip (public content works without auth) |
 
 ---
 
-## After Searching → Export a Found Page
+## What This Skill Will NOT Do
 
-When search returns a page you want to export:
-```bash
-# Use the ID from search results
-mapj confluence export <id-from-search-result> --output-path ./docs
+- ❌ **Export a specific known page by URL/ID** → use `mapj-confluence-export/SKILL.md`
+- ❌ **Query Protheus database** → use `mapj-protheus-query/SKILL.md`
+- ❌ **Create or edit pages** — read-only
+- ❌ **Search non-TDN Confluence** — configure base URL via `mapj auth login tdn --url`
 
-# Or use the URL directly
-mapj confluence export "<url-from-search-result>" --output-path ./docs
-```
+---
 
-> See `mapj-confluence-export/SKILL.md` for full export workflow.
+## Extended Reference
+
+| Need | File |
+|---|---|
+| CQL syntax reference (operators, fields, functions) | `references/cql-reference.md` |
+| All known spaces with descriptions | `references/spaces.md` |

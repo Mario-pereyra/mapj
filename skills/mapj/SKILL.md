@@ -70,13 +70,19 @@ Load the specific sub-skill for your task. Don't try to do everything from this 
 ```
 What do you need to do?
 │
-├─ Search TOTVS documentation / TDN
+├─ Search TDN by keyword, label, date, or topic
 │   → Load: mapj-tdn-search/SKILL.md
 │
-├─ Export Confluence page(s) to Markdown
+├─ Search TDN AND export all found pages
+│   → Load: mapj-tdn-search/SKILL.md  (use --export-to flag)
+│
+├─ List all available TDN spaces
+│   → mapj tdn spaces list  (no sub-skill needed)
+│
+├─ Export a specific Confluence page to Markdown
 │   → Load: mapj-confluence-export/SKILL.md
 │
-├─ Query Protheus ERP database (SELECT)
+├─ Query Protheus ERP database (SELECT only)
 │   → Load: mapj-protheus-query/SKILL.md
 │
 ├─ Manage Protheus connection profiles (add/list/switch/ping/remove)
@@ -194,7 +200,8 @@ fi
 
 | Skill | Location | What it covers |
 |---|---|---|
-| TDN Search | `mapj-tdn-search/SKILL.md` | CQL search, spaces, output schema |
+| TDN Search | `mapj-tdn-search/SKILL.md` | CQL search, --since, --ancestor, --label, --export-to pipeline |
+| ↳ CQL reference | `mapj-tdn-search/references/cql-reference.md` | All operators, fields, date functions |
 | Confluence Export | `mapj-confluence-export/SKILL.md` | Auth types, URL formats, export modes |
 | ↳ Auth detail | `mapj-confluence-export/references/auth.md` | 401 fix, Cloud vs Server/DC |
 | Protheus Query | `mapj-protheus-query/SKILL.md` | Query workflow, connection management |
