@@ -35,12 +35,14 @@ Note: Only SELECT queries are allowed for security reasons.`,
 var protheusFormat string
 var protheusMaxRows int
 var protheusConnection string // --connection: run against specific profile without switching
+var protheusOutputFile string  // --output-file: write result to file instead of stdout
 
 func init() {
 	protheusCmd.AddCommand(protheusQueryCmd)
-	protheusQueryCmd.Flags().StringVar(&protheusFormat, "format", "json", "Output format (json, csv)")
+	protheusQueryCmd.Flags().StringVar(&protheusFormat, "format", "json", "Result format inside output: json, csv")
 	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return (0 = no limit)")
 	protheusQueryCmd.Flags().StringVar(&protheusConnection, "connection", "", "Run against this named profile without switching the active connection")
+	protheusQueryCmd.Flags().StringVar(&protheusOutputFile, "output-file", "", "Write query result to this file path instead of stdout (useful for large result sets)")
 }
 
 func protheusQueryRun(cmd *cobra.Command, args []string) error {
@@ -109,35 +111,65 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		result.Count = protheusMaxRows
 	}
 
+	// ── Build output payload ──────────────────────────────────────────────────
+	var resultPayload any
+	var fileFormatter output.Formatter
+
 	if protheusFormat == "csv" {
-		csvOutput := protheusResultToCSV(result)
-		env := output.NewEnvelope(cmd.CommandPath(), map[string]interface{}{
-			"format":  "csv",
-			"content": csvOutput,
+		csvPayload := buildCSVPayload(result)
+		resultPayload = csvPayload
+		fileFormatter = output.CSVFormatter{}
+	} else {
+		resultPayload = result
+		fileFormatter = formatter
+	}
+
+	// ── --output-file: write to file, print summary to stdout ─────────────────
+	if protheusOutputFile != "" {
+		env := output.NewEnvelope(cmd.CommandPath(), resultPayload)
+		content := fileFormatter.Format(env)
+
+		if err := output.WriteToFile(protheusOutputFile, content); err != nil {
+			errEnv := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(), "FILE_WRITE_ERROR", err.Error(),
+				fmt.Sprintf("Check that the directory exists and you have write access: %s", protheusOutputFile),
+				false,
+			)
+			fmt.Println(formatter.Format(errEnv))
+			return err
+		}
+
+		// Print a minimal summary to stdout (not the data)
+		summary := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+			"rows":        result.Count,
+			"columns":     len(result.Columns),
+			"format":      protheusFormat,
+			"output_file": protheusOutputFile,
 		})
-		fmt.Println(formatter.Format(env))
+		fmt.Println(formatter.Format(summary))
 		return nil
 	}
 
-	env := output.NewEnvelope(cmd.CommandPath(), result)
+	// ── Default: print to stdout ──────────────────────────────────────────────
+	env := output.NewEnvelope(cmd.CommandPath(), resultPayload)
 	fmt.Println(formatter.Format(env))
 	return nil
 }
 
-func protheusResultToCSV(result *protheus.QueryResult) string {
-	var lines []string
-
-	lines = append(lines, strings.Join(result.Columns, ","))
-
-	for _, row := range result.Rows {
-		var fields []string
-		for _, f := range row {
-			fields = append(fields, fmt.Sprintf("%v", f))
-		}
-		lines = append(lines, strings.Join(fields, ","))
+// buildCSVPayload converts a QueryResult into a CSVPayload for RFC 4180-compliant serialization.
+func buildCSVPayload(result *protheus.QueryResult) *output.CSVPayload {
+	payload := &output.CSVPayload{
+		Headers: result.Columns,
+		Rows:    make([][]string, 0, len(result.Rows)),
 	}
-
-	return strings.Join(lines, "\n")
+	for _, row := range result.Rows {
+		fields := make([]string, len(row))
+		for i, f := range row {
+			fields[i] = fmt.Sprintf("%v", f)
+		}
+		payload.Rows = append(payload.Rows, fields)
+	}
+	return payload
 }
 
 // protheusVPNHint returns a contextual VPN hint based on the server IP range.

@@ -12,7 +12,7 @@ description: >
   "Protheus tables", "report from Protheus", "compare environments".
 compatibility: Requires mapj CLI at PATH. VPN required: TOTALPEC (192.168.99.x), UNION (192.168.7.x).
 metadata:
-  version: 3.0.0
+  version: 3.1.0
   language: en
   author: Mario Pereira
   tags:
@@ -108,13 +108,27 @@ Need to query?
 ├─ Query specific connection WITHOUT switching active
 │   mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD
 │
-├─ Result too large → add TOP N to SQL (DB-side) or --max-rows (client-side)
+├─ Result too large for context? → write to file
+│   mapj protheus query "SELECT * FROM SA1010" --output-file ./result.json
+│   mapj protheus query "SELECT * FROM SA1010" --format csv --output-file ./result.csv
+│   # stdout only gets: {"rows": N, "columns": M, "format": "json", "output_file": "./result.json"}
+│
+├─ Limit rows (add TOP in SQL, or client-side with --max-rows)
 │   mapj protheus query "SELECT TOP 100 * FROM SA1010"
 │   mapj protheus query "SELECT * FROM SA1010" --max-rows 500
 │
 └─ Need CSV output
     mapj protheus query "SELECT A1_COD, A1_NOME FROM SA1010" --format csv
+    mapj protheus query "SELECT A1_COD, A1_NOME FROM SA1010" --format csv --output-file ./sa1010.csv
 ```
+
+### Why `--output-file` matters for agents
+
+Large query results (1000+ rows) saturate the LLM context window. With `--output-file`:
+- Only a **summary** is returned to stdout (rows, columns, file path)
+- The agent can reference the file path for downstream processing
+- Supports both JSON and CSV format
+
 
 ### Essential queries
 
@@ -157,9 +171,10 @@ mapj protheus query "WITH active AS (SELECT A1_COD, A1_NOME FROM SA1010 WHERE A1
 | `NOT_AUTHENTICATED` | No profile configured | `mapj protheus connection add ...` |
 | `PROFILE_NOT_FOUND` | `--connection NAME` not in list | `mapj protheus connection list` |
 | `USAGE_ERROR` | Forbidden SQL keyword | Rewrite as SELECT only |
-| `QUERY_ERROR` + i/o timeout | Server unreachable | Check VPN hint in output |
+| `QUERY_ERROR` + i/o timeout | Server unreachable | Check VPN hint in `error.hint` |
 | `QUERY_ERROR` + login error | Wrong credentials | `mapj protheus connection show` to verify |
 | `Invalid object name` | Table not in this DB | `mapj protheus connection use CORRECT_PROFILE` |
+| `FILE_WRITE_ERROR` | `--output-file` path inaccessible | Check directory exists and has write access |
 
 ---
 

@@ -12,7 +12,7 @@ description: >
   "list connections", "TOTVS documentation", "look up ADVPL", "export attachments".
 compatibility: Requires mapj binary at PATH (Go 1.23+). VPN for internal servers. See sub-skills for specific requirements.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   language: en
   author: Mario Pereira
   license: MIT
@@ -39,8 +39,8 @@ allowed-tools: Bash
 
 # mapj — Agentic CLI for TOTVS Ecosystem
 
-`mapj` connects AI agents to TOTVS enterprise systems. All output is **JSON** with a
-consistent envelope. All operations are **read-only** — no data is modified.
+`mapj` connects AI agents to TOTVS enterprise systems. All output is **structured JSON**
+optimized for token efficiency. All operations are **read-only** — no data is modified.
 
 > ⚠️ **Documentation mandate:** Any change to commands, flags, or behavior MUST update
 > the corresponding sub-skill file, the relevant `docs/` guide, and `CONTRIBUTING.md`.
@@ -130,33 +130,44 @@ mapj protheus connection add TOTALPEC_BIB \
 
 ---
 
-## Output Schema (All Commands)
+## Output Modes
 
-### Success
+| Flag | Format | Use when |
+|---|---|---|
+| *(default)* `--output llm` | Compact JSON, no metadata | **Agent/LLM consumption** (~40% fewer tokens) |
+| `-o json` | Pretty JSON + `schemaVersion` + `timestamp` | Human debugging / logging |
+| `-o csv` | RFC 4180 CSV (Protheus only) | Spreadsheet import |
+
+### LLM mode (default) — optimized for token efficiency
+```json
+{"ok":true,"command":"mapj tdn search","result":{"results":[...],"count":5,"hasNext":true,"cql":"..."}}
+```
+
+### Human mode (`-o json`) — for debugging
 ```json
 {
   "ok": true,
-  "command": "mapj tdn search \"REST API\"",
-  "result": { "...": "..." },
+  "command": "mapj tdn search",
+  "result": { "..." },
   "schemaVersion": "1.0",
-  "timestamp": "2026-03-28T22:00:00Z"
+  "timestamp": "2026-03-29T00:07:08Z"
 }
 ```
 
-### Error
+### Error envelope (both modes)
 ```json
 {
   "ok": false,
-  "command": "mapj protheus query \"INSERT INTO...\"",
+  "command": "mapj protheus query",
   "error": {
     "code": "USAGE_ERROR",
     "message": "query contains forbidden keyword: INSERT",
+    "hint": "Only SELECT queries are allowed. Rewrite without INSERT/UPDATE/DELETE/EXEC.",
     "retryable": false
-  },
-  "schemaVersion": "1.0",
-  "timestamp": "2026-03-28T22:00:00Z"
+  }
 }
 ```
+`hint` is an actionable recovery step for the agent (not always present).
 
 ---
 

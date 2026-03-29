@@ -34,7 +34,7 @@ func init() {
 }
 
 func Execute() int {
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "json", "Output format (json, table)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "llm", "Output format: llm (compact JSON, default), json (pretty JSON), csv")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
