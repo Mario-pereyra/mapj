@@ -1,7 +1,7 @@
 # 📘 Guía de Usuario — `mapj protheus`
 
 > **Para:** Mario (usuario del CLI `mapj`)  
-> **Versión:** 3.0 — Multi-perfil  
+> **Versión:** 3.1 — Multi-perfil + output-file  
 > **Fecha:** Marzo 2026
 
 ---
@@ -65,12 +65,11 @@ El `*` marca la conexión activa.
 mapj auth status
 ```
 
+```json
+{"ok":true,"result":{"tdn":{"authenticated":false},"confluence":{"authenticated":true,"url":"https://tdninterno.totvs.com"},"protheus":{"authenticated":true,"activeProfile":"TOTALPEC_BIB","server":"192.168.99.102","database":"P1212410_BIB","totalProfiles":7}}}
 ```
-Authentication Status:
-  TDN:        ✗ not configured
-  Confluence: ✓ authenticated
-  Protheus:   ✓ authenticated  [active: TOTALPEC_BIB → 192.168.99.102/P1212410_BIB | 7 profile(s) registered]
-```
+
+> Tip: usar `-o json` para verlo indentado: `mapj auth status -o json`
 
 ### Agregar un nuevo perfil
 
@@ -174,9 +173,10 @@ mapj protheus query "<SQL>" [--format json|csv] [--max-rows N] [--connection NOM
 
 | Flag | Default | Descripción |
 |------|---------|-------------|
-| `--format` | `json` | `json` (estructurado) o `csv` |
+| `--format` | `json` | `json` (estructurado) o `csv` (RFC 4180, con escape correcto) |
 | `--max-rows` | `10000` | Límite de filas (client-side). `0` = sin límite |
 | `--connection` | (activo) | Ejecutar contra un perfil específico SIN cambiar el activo |
+| `--output-file` | stdout | Escribir resultado a un archivo en lugar de stdout (stdout solo recibe resumen) |
 
 ### Queries básicas
 
@@ -240,7 +240,20 @@ mapj protheus query "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS
 mapj protheus query "SELECT TOP 100 A1_COD, A1_NOME FROM SA1010" --format csv
 ```
 
-> ⚠️ El CSV actual no escapa comas dentro de valores. Usá `--format json` si los campos pueden contener comas.
+El CSV es RFC 4180: los campos con comas, comillas o saltos de línea se escapan correctamente.
+
+### Guardar resultado en archivo (para queries grandes)
+
+Cuando una query retorna muchas filas, el LLM puede quedar sin contexto. Usá `--output-file`:
+
+```bash
+# Solo el resumen va a stdout, el resultado completo al archivo
+mapj protheus query "SELECT * FROM SA1010" --output-file ./sa1010.json
+# stdout: {"rows": 1500, "columns": 45, "format": "json", "output_file": "./sa1010.json"}
+
+# CSV masivo
+mapj protheus query "SELECT * FROM SA1010" --format csv --output-file ./sa1010.csv
+```
 
 ---
 
@@ -293,6 +306,7 @@ La query debe empezar con `SELECT` o `WITH`.
 |---------|-------------|
 | `mapj protheus query "SELECT ..."` | Ejecutar query en el perfil activo |
 | `mapj protheus query "..." --connection NOMBRE` | Ejecutar en un perfil específico sin cambiar activo |
-| `mapj protheus query "..." --format csv` | Resultado como CSV |
+| `mapj protheus query "..." --format csv` | Resultado como CSV (RFC 4180) |
 | `mapj protheus query "..." --max-rows 500` | Limitar filas (client-side) |
+| `mapj protheus query "..." --output-file ./result.json` | Escribir a archivo (stdout solo resumen) |
 | `mapj auth status` | Ver perfil activo y total de perfiles |
