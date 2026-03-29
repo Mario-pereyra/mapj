@@ -31,24 +31,32 @@ All commands output **compact JSON by default** (LLM-optimized). Use `-o json` f
 - Go 1.23+ (`go version`)
 - VPN access to TOTVS network (for internal Protheus/Confluence instances)
 
-### Build from source
+### Option A — Pre-built Windows executable
+
+Download `mapj.exe` from the [Releases](../../releases) page and add it to your PATH:
+```powershell
+# Move to a directory in your PATH
+Move-Item .\mapj.exe "$env:LOCALAPPDATA\Programs\mapj\mapj.exe"
+```
+
+### Option B — Build from source
 
 ```bash
 git clone <repo-url>
 cd mapj_cli
 
-# Build binary
-go build -o mapj ./cmd/mapj
+# Development build
+go build -o mapj.exe ./cmd/mapj
 
-# Windows: add to PATH
-Move-Item .\mapj.exe "$env:LOCALAPPDATA\Programs\mapj\mapj.exe"
+# Production build (smaller, stripped debug symbols)
+go build -ldflags="-s -w" -o mapj.exe ./cmd/mapj
 ```
 
 ### Verify
 
 ```bash
-mapj --help
-mapj auth status
+mapj --help         # full onboarding guide + command inventory
+mapj auth status    # check what's already authenticated
 ```
 
 ---
@@ -298,16 +306,21 @@ mapj/
 
 ## Agent Skills (LLM)
 
-The `skills/` directory contains structured documentation for LLM agents using mapj as a tool:
+> **Auto-discovery first:** Run `mapj --help` and `mapj <command> --help`.
+> Every command is self-describing: output schema, GOTCHAs, and next steps are inline.
+> Skills provide deeper context for complex multi-step workflows.
+
+The `skills/` directory contains structured documentation for LLM agents:
 
 ```bash
-# Load the main skill first — it routes to sub-skills
+# Main orchestrator skill — routes to sub-skills
 skills/mapj/SKILL.md
 
-# Sub-skills (load when relevant)
-skills/mapj-tdn-search/SKILL.md          # TDN search + --check-children + pipeline
-skills/mapj-confluence-export/SKILL.md   # Export auth, URL formats
-skills/mapj-protheus-query/SKILL.md      # Query workflow, --output-file, connections
+# Sub-skills (load when use case matches)
+skills/mapj-tdn-search/SKILL.md           # TDN search + --check-children + pipeline
+skills/mapj-confluence-export/SKILL.md    # Export auth, URL formats, retry-failed
+skills/mapj-protheus-query/SKILL.md       # Query workflow, --output-file, connections
+skills/mapj-protheus-query/references/    # flags.md, connections.md, security.md
 ```
 
 ---

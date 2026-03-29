@@ -5,6 +5,42 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versio
 
 ---
 
+## [2.0.1] — 2026-03-29
+
+### Fixed
+
+#### JSON Envelope — Complete Coverage
+- **`protheus connection` commands** (`add`, `list`, `use`, `remove`, `show`, `ping`) were emitting
+  plain text / table output. All now emit structured JSON envelopes via `GetFormatter()`.
+  - `connection list` → `{profiles:[{name,server,port,database,user,active}], count, active}`
+  - `connection ping` → `{profile, server, latencyMs, ok}` or `PING_FAILED` with VPN hint
+  - `connection use` → `{previous, active, server, port, database}`
+  - `connection show` → `{name, server, port, database, user, password(masked), active}`
+  - `connection add` → `{name, server, port, database, setActive}`
+- **`--format csv`** on `protheus query` was producing JSON to stdout (formatter mismatch).
+  Fixed: stdout uses `CSVFormatter` when `--format csv` is active.
+- **`auth status/login/logout`** were ignoring the global `-o/--output` flag.
+  Fixed: all three now read `-o` from `os.Args` and route through `output.NewFormatter`.
+
+### Added
+
+#### Self-Describing Help Text
+Every command now answers 4 LLM-agent questions inline via `--help`:
+- What it does and its prerequisite context
+- Full JSON output schema (field names, types, and semantics)
+- GOTCHAs and known edge cases
+- Recommended next steps
+
+Affected files: `root.go`, `tdn.go`, `confluence.go`, `protheus.go`,
+`protheus_connection.go`, `auth/login.go`, `auth/status.go`, `auth/logout.go`.
+
+#### Skills Documentation
+- `skills/mapj-protheus-query/references/flags.md` — created (was referenced but missing).
+  Documents all query flags (`--connection`, `--output-file`, `--format`, `--max-rows`)
+  and all `connection` subcommand flags.
+
+---
+
 ## [2.0.0] — 2026-03-29
 
 ### Breaking Changes
