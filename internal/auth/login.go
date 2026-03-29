@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -68,7 +69,7 @@ func tdnLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("TDN login successful")
+	fmt.Println(authJSON(cmd.CommandPath(), "tdn", ""))
 	return nil
 }
 
@@ -100,8 +101,8 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 
 	// Warn: Server Bearer Auth with username is a common mistake
 	if authType == "bearer" && confluenceUsername != "" {
-		fmt.Printf("⚠️  Warning: --username is ignored for bearer auth (Confluence Server/DC).\n")
-		fmt.Printf("   If you need Basic Auth, use: --auth-type basic\n")
+		// Still log the warning to stderr so it doesn't pollute the JSON output
+		fmt.Fprintf(cmd.OutOrStderr(), `{"level":"warn","message":"--username is ignored for bearer auth (Server/DC). If you need Basic Auth use --auth-type basic"}%s`, "\n")
 		confluenceUsername = ""
 	}
 
@@ -116,7 +117,7 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Confluence login successful (auth: %s)\n", authType)
+	fmt.Println(authJSON(cmd.CommandPath(), "confluence", authType))
 	return nil
 }
 
@@ -142,7 +143,7 @@ func protheusLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("Protheus login successful")
+	fmt.Println(authJSON(cmd.CommandPath(), "protheus", ""))
 	return nil
 }
 
@@ -177,4 +178,21 @@ func AddCommands(root *cobra.Command) {
 // Cloud uses Basic Auth (email + API token). Everything else (Server, DC, intranet) uses Bearer PAT.
 func isCloudURL(rawURL string) bool {
 	return strings.Contains(strings.ToLower(rawURL), "atlassian.net")
+}
+
+// authJSON produces a compact JSON response for auth operations.
+func authJSON(cmdPath, service, authType string) string {
+	payload := map[string]any{
+		"ok":            true,
+		"command":       cmdPath,
+		"result": map[string]any{
+			"service":       service,
+			"authenticated": true,
+		},
+	}
+	if authType != "" {
+		payload["result"].(map[string]any)["authType"] = authType
+	}
+	b, _ := json.Marshal(payload)
+	return string(b)
 }

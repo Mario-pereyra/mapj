@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -34,6 +35,16 @@ func logoutRun(cmd *cobra.Command, args []string) error {
 	case "protheus":
 		creds.Protheus = nil
 	default:
+		b, _ := json.Marshal(map[string]any{
+			"ok":      false,
+			"command": cmd.CommandPath(),
+			"error": map[string]any{
+				"code":    "INVALID_SERVICE",
+				"message": "unknown service: " + service,
+				"hint":    "Valid services: tdn, confluence, protheus",
+			},
+		})
+		fmt.Println(string(b))
 		return fmt.Errorf("unknown service: %s", service)
 	}
 
@@ -41,6 +52,14 @@ func logoutRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Logged out from %s\n", service)
+	b, _ := json.Marshal(map[string]any{
+		"ok":      true,
+		"command": cmd.CommandPath(),
+		"result": map[string]any{
+			"service":       service,
+			"authenticated": false,
+		},
+	})
+	fmt.Println(string(b))
 	return nil
 }

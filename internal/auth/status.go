@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -10,6 +11,26 @@ var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show authentication status for all services",
 	RunE:  statusRun,
+}
+
+// authStatusResult is the structured output for LLM consumption.
+type authStatusResult struct {
+	TDN        serviceStatus    `json:"tdn"`
+	Confluence serviceStatus    `json:"confluence"`
+	Protheus   protheusStatus   `json:"protheus"`
+}
+
+type serviceStatus struct {
+	Authenticated bool   `json:"authenticated"`
+	URL           string `json:"url,omitempty"`
+}
+
+type protheusStatus struct {
+	Authenticated bool   `json:"authenticated"`
+	ActiveProfile string `json:"activeProfile,omitempty"`
+	Server        string `json:"server,omitempty"`
+	Database      string `json:"database,omitempty"`
+	TotalProfiles int    `json:"totalProfiles,omitempty"`
 }
 
 func statusRun(cmd *cobra.Command, args []string) error {
@@ -23,34 +44,45 @@ func statusRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println("Authentication Status:")
-	fmt.Printf("  TDN:        %s\n", boolStr(creds.TDN != nil && creds.TDN.Token != ""))
-	fmt.Printf("  Confluence: %s\n", boolStr(creds.Confluence != nil && creds.Confluence.Token != ""))
+	result := authStatusResult{}
 
-	// Protheus: show active profile name and total count
+	// TDN
+	if creds.TDN != nil && creds.TDN.Token != "" {
+		result.TDN = serviceStatus{Authenticated: true, URL: creds.TDN.BaseURL}
+	}
+
+	// Confluence
+	if creds.Confluence != nil && creds.Confluence.Token != "" {
+		result.Confluence = serviceStatus{Authenticated: true, URL: creds.Confluence.BaseURL}
+	}
+
+	// Protheus
 	if creds.HasProtheusProfiles() {
 		active := creds.ActiveProtheusProfile()
 		total := len(creds.ProtheusProfiles)
+		ps := protheusStatus{Authenticated: true, TotalProfiles: total}
+
 		if creds.Protheus != nil && total == 0 {
-			// Legacy v1 — show as "default (legacy)"
-			fmt.Printf("  Protheus:   ✓ authenticated  [active: default (legacy) → %s/%s]\n",
-				creds.Protheus.Server, creds.Protheus.Database)
+			// Legacy v1
+			ps.ActiveProfile = "default (legacy)"
+			ps.Server = creds.Protheus.Server
+			ps.Database = creds.Protheus.Database
 		} else if active != nil {
-			fmt.Printf("  Protheus:   ✓ authenticated  [active: %s → %s/%s | %d profile(s) registered]\n",
-				active.Name, active.Server, active.Database, total)
-		} else {
-			fmt.Printf("  Protheus:   ✓ authenticated  [%d profile(s) registered, no active set]\n", total)
+			ps.ActiveProfile = active.Name
+			ps.Server = active.Server
+			ps.Database = active.Database
 		}
-	} else {
-		fmt.Println("  Protheus:   ✗ not configured")
+		result.Protheus = ps
 	}
 
+	// Output: use structured JSON (respects --output flag via shared approach)
+	// auth package doesn't get the global formatter from cli package (circular import),
+	// so we write compact JSON directly — consistent with LLM mode.
+	b, _ := json.Marshal(map[string]any{
+		"ok":      true,
+		"command": cmd.CommandPath(),
+		"result":  result,
+	})
+	fmt.Println(string(b))
 	return nil
-}
-
-func boolStr(b bool) string {
-	if b {
-		return "✓ authenticated"
-	}
-	return "✗ not configured"
 }
