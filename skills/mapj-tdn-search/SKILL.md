@@ -12,7 +12,7 @@ description: >
   "export by topic", "find pages for", "search and export", "what pages exist for".
 compatibility: No auth required for tdn.totvs.com public content. Optional PAT for private content.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   language: en
   author: Mario Pereira
   tags:
@@ -52,6 +52,8 @@ Need to...
 ├─ Get all pages under a section → tdn search --ancestor 187531295
 ├─ Filter by label/tag → tdn search --label versao_12 --space PROT
 ├─ Find what changed recently → tdn search "keyword" --since 1m
+├─ Know if a page has children (before deciding --with-descendants)
+│   → tdn search "keyword" --space PROT --check-children
 ├─ Search AND export at once → tdn search "keyword" --space PROT --export-to ./docs
 └─ See all available spaces → tdn spaces list
 ```
@@ -76,6 +78,9 @@ mapj tdn search --space PROT --label versao_12 --label ponto_de_entrada
 # Filter by date (last N weeks/months/days/years)
 mapj tdn search "api rest" --space PROT --since 1m
 mapj tdn search "advpl" --space PROT --since 2024-01-01
+
+# Check if results have children (before deciding --with-descendants)
+mapj tdn search "AdvPL" --space PROT --limit 10 --check-children
 
 # Get all pages under an ancestor ID
 mapj tdn search --ancestor 811253174 --type page
@@ -115,7 +120,8 @@ mapj tdn search "advpl" --space PROT --limit 25 --start 25  # page 2
         ],
         "version": 9,
         "lastUpdated": "2025-12-16T17:44:59-03:00",
-        "lastUpdatedBy": "Vitor Badam Rafael"
+        "lastUpdatedBy": "Vitor Badam Rafael",
+        "childCount": 1        // present only with --check-children. 0=leaf, N=has children
       }
     ],
     "count": 10,
@@ -129,15 +135,54 @@ mapj tdn search "advpl" --space PROT --limit 25 --start 25  # page 2
 
 ---
 
-## Search → Export Pipeline
+## Deciding: Single Page vs Full Tree (`--with-descendants`)
 
-Use when you need to find AND export a group of pages:
+Use `--check-children` to see if a page has children before exporting:
 
 ```bash
-# 1. Preview what will be exported (no --export-to)
-mapj tdn search "ponto de entrada" --space PROT --limit 25
+mapj tdn search "AdvPL" --space PROT --limit 5 --check-children
+```
 
-# 2. Export all found pages
+Cada resultado incluye `childCount`:
+
+| `childCount` | Significado | ¿Usar `--with-descendants`? |
+|---|---|---|
+| `0` | Página hoja — sin hijos | No, ambas opciones exportan igual |
+| `1..N` | N hijos **directos** | Probablemente sí |
+| `-1` | Error al consultar | Verificar manualmente |
+
+> ⚠️ **TRAMPA CRÍTICA — `childCount` ≠ total de páginas del árbol**
+> `childCount` cuenta solo los hijos **directos** (un nivel).
+> Una página con `childCount: 1` puede tener **171 páginas** en total
+> si ese hijo tiene sus propios descendientes.
+> El único número real es el que ves al ejecutar `--with-descendants`.
+
+**Workflow correcto:**
+```bash
+# 1. Verificar si tiene hijos
+mapj tdn search "AdvPL" --space PROT --check-children
+# → childCount: 1  ← tiene al menos un hijo directo
+
+# 2. Exportar sin descendencia (preview rápido)
+mapj confluence export 235312129 --output-path ./preview
+# → 1 página exportada
+
+# 3. Exportar árbol completo
+mapj confluence export 235312129 --output-path ./docs --with-descendants
+# → 171 páginas exportadas  (sorpresa: 1 hijo directo → 171 total)
+```
+
+---
+
+## Search → Export Pipeline
+
+Use when you need to find AND export a group of pages (sin --with-descendants por página):
+
+```bash
+# 1. Preview con check-children para entender el scope
+mapj tdn search "ponto de entrada" --space PROT --limit 25 --check-children
+
+# 2. Export all found pages (solo la página raíz de cada resultado)
 mapj tdn search "ponto de entrada" --space PROT --limit 25 --export-to ./docs
 
 # Pipeline output
