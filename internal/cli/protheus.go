@@ -152,7 +152,8 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 
 	// ── Default: print to stdout ──────────────────────────────────────────────
 	env := output.NewEnvelope(cmd.CommandPath(), resultPayload)
-	fmt.Println(formatter.Format(env))
+	// For CSV: fileFormatter is CSVFormatter — use it for stdout too
+	fmt.Println(fileFormatter.Format(env))
 	return nil
 }
 

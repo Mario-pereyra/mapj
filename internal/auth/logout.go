@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
 
+	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +16,7 @@ var logoutCmd = &cobra.Command{
 
 func logoutRun(cmd *cobra.Command, args []string) error {
 	service := args[0]
+	formatter := output.NewFormatter(outputFlagFromArgs())
 
 	store, err := NewStore()
 	if err != nil {
@@ -35,16 +36,13 @@ func logoutRun(cmd *cobra.Command, args []string) error {
 	case "protheus":
 		creds.Protheus = nil
 	default:
-		b, _ := json.Marshal(map[string]any{
-			"ok":      false,
-			"command": cmd.CommandPath(),
-			"error": map[string]any{
-				"code":    "INVALID_SERVICE",
-				"message": "unknown service: " + service,
-				"hint":    "Valid services: tdn, confluence, protheus",
-			},
-		})
-		fmt.Println(string(b))
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(), "INVALID_SERVICE",
+			"unknown service: "+service,
+			"Valid services: tdn, confluence, protheus",
+			false,
+		)
+		fmt.Println(formatter.Format(env))
 		return fmt.Errorf("unknown service: %s", service)
 	}
 
@@ -52,14 +50,10 @@ func logoutRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	b, _ := json.Marshal(map[string]any{
-		"ok":      true,
-		"command": cmd.CommandPath(),
-		"result": map[string]any{
-			"service":       service,
-			"authenticated": false,
-		},
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"service":       service,
+		"authenticated": false,
 	})
-	fmt.Println(string(b))
+	fmt.Println(formatter.Format(env))
 	return nil
 }

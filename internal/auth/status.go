@@ -1,9 +1,11 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
 
+	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -15,9 +17,9 @@ var statusCmd = &cobra.Command{
 
 // authStatusResult is the structured output for LLM consumption.
 type authStatusResult struct {
-	TDN        serviceStatus    `json:"tdn"`
-	Confluence serviceStatus    `json:"confluence"`
-	Protheus   protheusStatus   `json:"protheus"`
+	TDN        serviceStatus  `json:"tdn"`
+	Confluence serviceStatus  `json:"confluence"`
+	Protheus   protheusStatus `json:"protheus"`
 }
 
 type serviceStatus struct {
@@ -75,14 +77,28 @@ func statusRun(cmd *cobra.Command, args []string) error {
 		result.Protheus = ps
 	}
 
-	// Output: use structured JSON (respects --output flag via shared approach)
-	// auth package doesn't get the global formatter from cli package (circular import),
-	// so we write compact JSON directly — consistent with LLM mode.
-	b, _ := json.Marshal(map[string]any{
-		"ok":      true,
-		"command": cmd.CommandPath(),
-		"result":  result,
-	})
-	fmt.Println(string(b))
+	// Use the correct formatter based on global --output flag
+	// Read from os.Args since we can't import cli (circular). Auth flag is always -o / --output.
+	formatter := output.NewFormatter(outputFlagFromArgs())
+	env := output.NewEnvelope(cmd.CommandPath(), result)
+	fmt.Println(formatter.Format(env))
 	return nil
+}
+
+// outputFlagFromArgs reads the -o / --output flag value from os.Args.
+// This avoids a circular import between auth and cli packages.
+func outputFlagFromArgs() string {
+	args := os.Args
+	for i, a := range args {
+		if (a == "-o" || a == "--output") && i+1 < len(args) {
+			return args[i+1]
+		}
+		if strings.HasPrefix(a, "--output=") {
+			return strings.TrimPrefix(a, "--output=")
+		}
+		if strings.HasPrefix(a, "-o=") {
+			return strings.TrimPrefix(a, "-o=")
+		}
+	}
+	return "llm" // default
 }

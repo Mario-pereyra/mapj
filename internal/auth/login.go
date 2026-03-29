@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +69,7 @@ func tdnLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(authJSON(cmd.CommandPath(), "tdn", ""))
+	fmt.Println(loginJSON(cmd.CommandPath(), "tdn", ""))
 	return nil
 }
 
@@ -117,7 +117,7 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(authJSON(cmd.CommandPath(), "confluence", authType))
+	fmt.Println(loginJSON(cmd.CommandPath(), "confluence", authType))
 	return nil
 }
 
@@ -143,7 +143,7 @@ func protheusLogin(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Println(authJSON(cmd.CommandPath(), "protheus", ""))
+	fmt.Println(loginJSON(cmd.CommandPath(), "protheus", ""))
 	return nil
 }
 
@@ -175,24 +175,20 @@ func AddCommands(root *cobra.Command) {
 }
 
 // isCloudURL returns true for Confluence Cloud (Atlassian-hosted) URLs.
-// Cloud uses Basic Auth (email + API token). Everything else (Server, DC, intranet) uses Bearer PAT.
 func isCloudURL(rawURL string) bool {
 	return strings.Contains(strings.ToLower(rawURL), "atlassian.net")
 }
 
-// authJSON produces a compact JSON response for auth operations.
-func authJSON(cmdPath, service, authType string) string {
-	payload := map[string]any{
-		"ok":            true,
-		"command":       cmdPath,
-		"result": map[string]any{
-			"service":       service,
-			"authenticated": true,
-		},
+// loginJSON produces a formatted auth operation response using the global --output flag.
+func loginJSON(cmdPath, service, authType string) string {
+	result := map[string]any{
+		"service":       service,
+		"authenticated": true,
 	}
 	if authType != "" {
-		payload["result"].(map[string]any)["authType"] = authType
+		result["authType"] = authType
 	}
-	b, _ := json.Marshal(payload)
-	return string(b)
+	formatter := output.NewFormatter(outputFlagFromArgs())
+	env := output.NewEnvelope(cmdPath, result)
+	return formatter.Format(env)
 }

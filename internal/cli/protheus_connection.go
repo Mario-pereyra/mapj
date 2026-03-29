@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
+	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/Mario-pereyra/mapj/pkg/protheus"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,11 @@ var (
 
 func connAddRun(cmd *cobra.Command, args []string) error {
 	name := args[0]
+	formatter := GetFormatter()
+
 	if name == "" {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", "profile name cannot be empty", false)
+		fmt.Println(formatter.Format(env))
 		return fmt.Errorf("profile name cannot be empty")
 	}
 
@@ -67,17 +72,21 @@ func connAddRun(cmd *cobra.Command, args []string) error {
 	}
 
 	isFirst := !creds.HasProtheusProfiles()
-	creds.SetProtheusProfile(profile, connAddUse || isFirst)
+	setActive := connAddUse || isFirst
+	creds.SetProtheusProfile(profile, setActive)
 
 	if err := store.Save(creds); err != nil {
 		return err
 	}
 
-	active := ""
-	if connAddUse || isFirst {
-		active = " (set as active)"
-	}
-	fmt.Printf("✓ Profile '%s' registered%s → %s:%d/%s\n", name, active, connAddServer, connAddPort, connAddDatabase)
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"name":      name,
+		"server":    connAddServer,
+		"port":      connAddPort,
+		"database":  connAddDatabase,
+		"setActive": setActive,
+	})
+	fmt.Println(formatter.Format(env))
 	return nil
 }
 
@@ -90,6 +99,8 @@ var connListCmd = &cobra.Command{
 }
 
 func connListRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+
 	store, err := auth.NewStore()
 	if err != nil {
 		return err
@@ -99,36 +110,53 @@ func connListRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Handle legacy v1 migration
 	if !creds.HasProtheusProfiles() {
-		fmt.Println("No Protheus profiles registered.")
-		fmt.Println("Use: mapj protheus connection add <name> --server ... --database ... --user ... --password ...")
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(), "NO_PROFILES",
+			"no Protheus profiles registered",
+			"Run: mapj protheus connection add <name> --server ... --database ... --user ... --password ...",
+			false,
+		)
+		fmt.Println(formatter.Format(env))
 		return nil
 	}
 
-	// Show legacy profile if only v1 exists
+	// Build structured list
+	type profileEntry struct {
+		Name     string `json:"name"`
+		Server   string `json:"server"`
+		Port     int    `json:"port"`
+		Database string `json:"database"`
+		User     string `json:"user"`
+		Active   bool   `json:"active"`
+	}
+
+	profiles := []profileEntry{}
+
+	// Handle legacy v1
 	if len(creds.ProtheusProfiles) == 0 && creds.Protheus != nil {
-		fmt.Println("Registered profiles:")
-		fmt.Printf("  * default (legacy)  →  %s:%d / %s / user: %s\n",
-			creds.Protheus.Server, creds.Protheus.Port,
-			creds.Protheus.Database, creds.Protheus.User)
-		fmt.Println("\n💡 Migrate to named profiles: mapj protheus connection add <name> --server ...")
-		return nil
+		profiles = append(profiles, profileEntry{
+			Name: "default (legacy)", Server: creds.Protheus.Server,
+			Port: creds.Protheus.Port, Database: creds.Protheus.Database,
+			User: creds.Protheus.User, Active: true,
+		})
+	} else {
+		for _, name := range creds.ProtheusProfileNames() {
+			p := creds.ProtheusProfiles[name]
+			profiles = append(profiles, profileEntry{
+				Name: name, Server: p.Server, Port: p.Port,
+				Database: p.Database, User: p.User,
+				Active: name == creds.ProtheusActive,
+			})
+		}
 	}
 
-	fmt.Println("Registered profiles:")
-	for _, name := range creds.ProtheusProfileNames() {
-		p := creds.ProtheusProfiles[name]
-		marker := "  "
-		activeTag := ""
-		if name == creds.ProtheusActive {
-			marker = "* "
-			activeTag = "  ← ACTIVE"
-		}
-		fmt.Printf("  %s%-20s  %s:%d / %s / user: %s%s\n",
-			marker, name, p.Server, p.Port, p.Database, p.User, activeTag)
-	}
-	fmt.Printf("\nTotal: %d profile(s). Active: %s\n", len(creds.ProtheusProfiles), creds.ProtheusActive)
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"profiles": profiles,
+		"count":    len(profiles),
+		"active":   creds.ProtheusActive,
+	})
+	fmt.Println(formatter.Format(env))
 	return nil
 }
 
@@ -143,6 +171,7 @@ var connUseCmd = &cobra.Command{
 
 func connUseRun(cmd *cobra.Command, args []string) error {
 	name := args[0]
+	formatter := GetFormatter()
 
 	store, err := auth.NewStore()
 	if err != nil {
@@ -154,11 +183,13 @@ func connUseRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[name] == nil {
-		fmt.Printf("✗ Profile '%s' not found.\n", name)
-		fmt.Println("  Available profiles:")
-		for _, n := range creds.ProtheusProfileNames() {
-			fmt.Printf("    - %s\n", n)
-		}
+		hint := "Available profiles: " + strings.Join(creds.ProtheusProfileNames(), ", ")
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(), "PROFILE_NOT_FOUND",
+			fmt.Sprintf("profile '%s' not found", name),
+			hint, false,
+		)
+		fmt.Println(formatter.Format(env))
 		return fmt.Errorf("profile not found: %s", name)
 	}
 
@@ -170,8 +201,14 @@ func connUseRun(cmd *cobra.Command, args []string) error {
 	}
 
 	p := creds.ProtheusProfiles[name]
-	fmt.Printf("✓ Switched active profile: %s → %s\n", prev, name)
-	fmt.Printf("  Server: %s:%d / Database: %s\n", p.Server, p.Port, p.Database)
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"previous": prev,
+		"active":   name,
+		"server":   p.Server,
+		"port":     p.Port,
+		"database": p.Database,
+	})
+	fmt.Println(formatter.Format(env))
 	return nil
 }
 
@@ -186,6 +223,7 @@ var connRemoveCmd = &cobra.Command{
 
 func connRemoveRun(cmd *cobra.Command, args []string) error {
 	name := args[0]
+	formatter := GetFormatter()
 
 	store, err := auth.NewStore()
 	if err != nil {
@@ -197,27 +235,36 @@ func connRemoveRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[name] == nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "PROFILE_NOT_FOUND",
+			fmt.Sprintf("profile '%s' not found", name), false)
+		fmt.Println(formatter.Format(env))
 		return fmt.Errorf("profile '%s' not found", name)
 	}
 
+	wasActive := creds.ProtheusActive == name
 	delete(creds.ProtheusProfiles, name)
 
-	wasActive := creds.ProtheusActive == name
+	newActive := ""
 	if wasActive {
 		creds.ProtheusActive = ""
-		// Auto-select next profile if any remain
 		remaining := creds.ProtheusProfileNames()
 		if len(remaining) > 0 {
-			creds.ProtheusActive = remaining[0]
-			fmt.Printf("✓ Profile '%s' removed. Auto-switched active to: %s\n", name, remaining[0])
-		} else {
-			fmt.Printf("✓ Profile '%s' removed. No profiles remaining — configure one with 'connection add'.\n", name)
+			newActive = remaining[0]
+			creds.ProtheusActive = newActive
 		}
-	} else {
-		fmt.Printf("✓ Profile '%s' removed.\n", name)
 	}
 
-	return store.Save(creds)
+	if err := store.Save(creds); err != nil {
+		return err
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"removed":   name,
+		"wasActive": wasActive,
+		"newActive": newActive,
+	})
+	fmt.Println(formatter.Format(env))
+	return nil
 }
 
 // ---- SHOW ----
@@ -230,6 +277,8 @@ var connShowCmd = &cobra.Command{
 }
 
 func connShowRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+
 	store, err := auth.NewStore()
 	if err != nil {
 		return err
@@ -243,31 +292,39 @@ func connShowRun(cmd *cobra.Command, args []string) error {
 	var name string
 
 	if len(args) == 0 {
-		// Show active
 		p = creds.ActiveProtheusProfile()
 		if p == nil {
-			return fmt.Errorf("no active Protheus profile. Use 'connection use <name>' or 'connection add'")
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(), "NO_ACTIVE_PROFILE",
+				"no active Protheus profile",
+				"Run: mapj protheus connection list && mapj protheus connection use <name>",
+				false,
+			)
+			fmt.Println(formatter.Format(env))
+			return fmt.Errorf("no active Protheus profile")
 		}
 		name = creds.ProtheusActive
 	} else {
 		name = args[0]
 		if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[name] == nil {
+			env := output.NewErrorEnvelope(cmd.CommandPath(), "PROFILE_NOT_FOUND",
+				fmt.Sprintf("profile '%s' not found", name), false)
+			fmt.Println(formatter.Format(env))
 			return fmt.Errorf("profile '%s' not found", name)
 		}
 		p = creds.ProtheusProfiles[name]
 	}
 
-	activeTag := ""
-	if name == creds.ProtheusActive || (creds.ProtheusActive == "" && name == "default") {
-		activeTag = "  ← ACTIVE"
-	}
-
-	fmt.Printf("Profile: %s%s\n", p.Name, activeTag)
-	fmt.Printf("  Server:   %s\n", p.Server)
-	fmt.Printf("  Port:     %d\n", p.Port)
-	fmt.Printf("  Database: %s\n", p.Database)
-	fmt.Printf("  User:     %s\n", p.User)
-	fmt.Printf("  Password: %s\n", maskPassword(p.Password))
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"name":     p.Name,
+		"server":   p.Server,
+		"port":     p.Port,
+		"database": p.Database,
+		"user":     p.User,
+		"password": maskPassword(p.Password),
+		"active":   name == creds.ProtheusActive,
+	})
+	fmt.Println(formatter.Format(env))
 	return nil
 }
 
@@ -287,6 +344,8 @@ Examples:
 }
 
 func connPingRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+
 	store, err := auth.NewStore()
 	if err != nil {
 		return err
@@ -300,17 +359,21 @@ func connPingRun(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		p = creds.ActiveProtheusProfile()
 		if p == nil {
+			env := output.NewErrorEnvelope(cmd.CommandPath(), "NOT_AUTHENTICATED",
+				"no active Protheus profile configured", false)
+			fmt.Println(formatter.Format(env))
 			return fmt.Errorf("no active Protheus profile configured")
 		}
 	} else {
 		name := args[0]
 		if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[name] == nil {
+			env := output.NewErrorEnvelope(cmd.CommandPath(), "PROFILE_NOT_FOUND",
+				fmt.Sprintf("profile '%s' not found", name), false)
+			fmt.Println(formatter.Format(env))
 			return fmt.Errorf("profile '%s' not found", name)
 		}
 		p = creds.ProtheusProfiles[name]
 	}
-
-	fmt.Printf("Pinging %s → %s:%d/%s ...\n", p.Name, p.Server, p.Port, p.Database)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -318,23 +381,25 @@ func connPingRun(cmd *cobra.Command, args []string) error {
 	client := protheus.NewClient(p.Server, p.Port, p.Database, p.User, p.Password)
 	latency, err := client.Ping(ctx)
 	if err != nil {
-		fmt.Printf("✗ FAILED (%s)\n", err.Error())
-		fmt.Println()
-		fmt.Println("💡 Suggestions:")
-		fmt.Println("   1. Verify you are connected to the VPN for this server:")
-		if strings.HasPrefix(p.Server, "192.168.99.") {
-			fmt.Printf("      TOTALPEC servers (%s) — connect to the TOTALPEC VPN\n", p.Server)
-		} else if strings.HasPrefix(p.Server, "192.168.7.") {
-			fmt.Printf("      UNION servers (%s) — connect to the UNION VPN\n", p.Server)
-		} else {
-			fmt.Printf("      Server %s — verify the appropriate VPN is active\n", p.Server)
-		}
-		fmt.Printf("   2. Verify credentials: user='%s', database='%s'\n", p.User, p.Database)
-		fmt.Printf("   3. Verify the server is reachable: ping %s\n", p.Server)
+		hint := vpnHintForServer(p.Server, p.User, p.Database)
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(), "PING_FAILED",
+			fmt.Sprintf("connection to %s:%d failed: %s", p.Server, p.Port, err.Error()),
+			hint, true,
+		)
+		fmt.Println(formatter.Format(env))
 		return err
 	}
 
-	fmt.Printf("✓ OK — %dms  [%s:%d / %s]\n", latency, p.Server, p.Port, p.Database)
+	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{
+		"profile":  p.Name,
+		"server":   p.Server,
+		"port":     p.Port,
+		"database": p.Database,
+		"latencyMs": latency,
+		"ok":       true,
+	})
+	fmt.Println(formatter.Format(env))
 	return nil
 }
 
@@ -351,7 +416,6 @@ func init() {
 		connPingCmd,
 	)
 
-	// add flags
 	connAddCmd.Flags().StringVar(&connAddServer, "server", "", "SQL Server host/IP")
 	connAddCmd.Flags().IntVar(&connAddPort, "port", 1433, "SQL Server port")
 	connAddCmd.Flags().StringVar(&connAddDatabase, "database", "", "Database name")
@@ -371,4 +435,17 @@ func maskPassword(pwd string) string {
 		return strings.Repeat("*", len(pwd))
 	}
 	return pwd[:2] + strings.Repeat("*", len(pwd)-4) + pwd[len(pwd)-2:]
+}
+
+func vpnHintForServer(server, user, database string) string {
+	var vpnName string
+	switch {
+	case strings.HasPrefix(server, "192.168.99."):
+		vpnName = "TOTALPEC"
+	case strings.HasPrefix(server, "192.168.7."):
+		vpnName = "UNION"
+	default:
+		return fmt.Sprintf("Verify VPN for server %s is active. Credentials: user=%s, database=%s", server, user, database)
+	}
+	return fmt.Sprintf("Connect to %s VPN for server %s. Credentials: user=%s, database=%s", vpnName, server, user, database)
 }
