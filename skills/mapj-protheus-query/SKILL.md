@@ -51,7 +51,8 @@ All queries are **read-only** — DML/DDL is blocked before reaching the databas
 ```bash
 # Check if connection is configured
 mapj auth status
-# → "Protheus: ✓ authenticated [active: TOTALPEC_BIB → ...]"
+# → {"ok":true,"result":{"protheus":{"authenticated":true,"activeProfile":"TOTALPEC_BIB",
+#      "server":"192.168.99.102","database":"P1212410_BIB","totalProfiles":7},...}}
 
 # If not configured → add first profile
 mapj protheus connection add TOTALPEC_BIB \

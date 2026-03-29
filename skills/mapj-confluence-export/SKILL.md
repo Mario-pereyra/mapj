@@ -58,7 +58,7 @@ URL contains atlassian.net?
 ```bash
 # Verify auth is configured
 mapj auth status
-# → "Confluence: ✓ authenticated"
+# → {"ok":true,"result":{"confluence":{"authenticated":true,"url":"https://tdninterno.totvs.com"},...}}
 ```
 
 ---

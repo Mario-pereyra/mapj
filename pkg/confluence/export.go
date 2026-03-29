@@ -89,6 +89,13 @@ func (c *Client) Export(ctx context.Context, pageID string, opts *ExportOpts) (*
 			Labels:     page.GetLabels(),
 			ExportPath: exportPath,
 			ExportedAt: time.Now().UTC().Format(time.RFC3339),
+			Depth:      len(page.Ancestors),
+			Ancestors:  page.Ancestors,
+			Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
+		}
+		if len(page.Ancestors) > 0 {
+			entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
+			entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
 		}
 		_ = WriteManifest(opts.OutputPath, entry)
 	}
@@ -150,6 +157,13 @@ func (c *Client) ExportPages(ctx context.Context, pageIDs []string, opts *Export
 				Labels:     page.GetLabels(),
 				ExportPath: result.ExportPath,
 				ExportedAt: time.Now().UTC().Format(time.RFC3339),
+				Depth:      len(page.Ancestors),
+				Ancestors:  page.Ancestors,
+				Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
+			}
+			if len(page.Ancestors) > 0 {
+				entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
+				entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
 			}
 			entries[page.SpaceKey()] = append(entries[page.SpaceKey()], entry)
 		}
@@ -240,8 +254,16 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 			Labels:     page.GetLabels(),
 			ExportPath: exportPath,
 			ExportedAt: time.Now().UTC().Format(time.RFC3339),
+			Depth:      len(page.Ancestors),
+			Ancestors:  page.Ancestors,
+			Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
+		}
+		if len(page.Ancestors) > 0 {
+			entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
+			entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
 		}
 		_ = WriteManifest(opts.OutputPath, entry)
+
 
 		// Download attachments (only if explicitly requested)
 		if opts.WithAttachments {

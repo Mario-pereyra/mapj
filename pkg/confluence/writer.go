@@ -88,6 +88,31 @@ func GenerateFrontMatter(page *Page, baseURL, exportPath string) string {
 	writeField("space_key", page.SpaceKey())
 	writeField("space_name", page.Space.Name)
 
+	// ── Hierarchy ──────────────────────────────────────────────────────────
+	// Ancestors are ordered from root to immediate parent.
+	// We skip the first ancestor (space root) as it's redundant with space_key.
+	if len(page.Ancestors) > 0 {
+		// immediate parent = last ancestor
+		immediate := page.Ancestors[len(page.Ancestors)-1]
+		writeField("parent_id", immediate.ID)
+		writeField("parent_title", immediate.Title)
+		b.WriteString(fmt.Sprintf("depth: %d\n", len(page.Ancestors)))
+
+		// Full ancestor chain as YAML list
+		b.WriteString("ancestors:\n")
+		for _, a := range page.Ancestors {
+			b.WriteString(fmt.Sprintf("  - id: %q\n    title: %q\n", a.ID, a.Title))
+		}
+
+		// Human-readable breadcrumb line
+		titles := page.AncestorTitles()
+		titles = append(titles, page.Title)
+		writeField("breadcrumb", strings.Join(titles, " > "))
+	} else {
+		b.WriteString("depth: 0\n")
+	}
+	// ───────────────────────────────────────────────────────────────────────
+
 	if labels := page.GetLabels(); len(labels) > 0 {
 		b.WriteString("labels:\n")
 		for _, l := range labels {
@@ -138,40 +163,115 @@ func WriteManifest(outputPath string, entry *ManifestEntry) error {
 
 // ManifestEntry is a single entry in manifest.jsonl.
 type ManifestEntry struct {
-	PageID     string   `json:"page_id"`
-	Title      string   `json:"title"`
-	Slug       string   `json:"slug"`
-	SourceURL  string   `json:"source_url"`
-	SpaceKey   string   `json:"space_key"`
-	SpaceName  string   `json:"space_name"`
-	Labels     []string `json:"labels,omitempty"`
-	ExportPath string   `json:"export_path"`
-	ExportedAt string   `json:"exported_at"`
+	PageID     string        `json:"page_id"`
+	Title      string        `json:"title"`
+	Slug       string        `json:"slug"`
+	SourceURL  string        `json:"source_url"`
+	SpaceKey   string        `json:"space_key"`
+	SpaceName  string        `json:"space_name"`
+	Labels     []string      `json:"labels,omitempty"`
+	ExportPath string        `json:"export_path"`
+	ExportedAt string        `json:"exported_at"`
+	// Hierarchy fields
+	ParentID   string        `json:"parent_id,omitempty"`
+	ParentTitle string       `json:"parent_title,omitempty"`
+	Depth      int           `json:"depth"`
+	Ancestors  []AncestorRef `json:"ancestors,omitempty"`
+	Breadcrumb string        `json:"breadcrumb,omitempty"`
 }
 
-// WriteSpaceIndex generates a README.md index for a space.
+// WriteSpaceIndex generates a README.md index and a hierarchy tree for a space.
 func WriteSpaceIndex(outputPath, spaceKey, spaceName string, entries []*ManifestEntry) error {
 	spaceDir := filepath.Join(outputPath, "spaces", sanitizeFilename(spaceKey))
-	indexPath := filepath.Join(spaceDir, "README.md")
+	if err := os.MkdirAll(spaceDir, 0755); err != nil {
+		return err
+	}
 
+	// ── README.md: flat index ordered by breadcrumb ────────────────────────
+	indexPath := filepath.Join(spaceDir, "README.md")
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("# Space: %s (%s)\n\n", spaceName, spaceKey))
+	b.WriteString(fmt.Sprintf("Exported: %d pages — see `tree.md` for the full hierarchy.\n\n", len(entries)))
 	b.WriteString(fmt.Sprintf("## Pages (%d documents)\n\n", len(entries)))
 
 	for _, e := range entries {
 		relPath, _ := filepath.Rel(spaceDir, filepath.Join(outputPath, e.ExportPath))
 		relPath = filepath.ToSlash(relPath)
+		indent := strings.Repeat("  ", e.Depth)
+		crumb := e.Breadcrumb
+		if crumb == "" {
+			crumb = e.Title
+		}
 		labelStr := ""
 		if len(e.Labels) > 0 {
 			labelStr = " — Labels: " + strings.Join(e.Labels, ", ")
 		}
-		b.WriteString(fmt.Sprintf("- [%s](%s)%s\n", e.Title, relPath, labelStr))
+		b.WriteString(fmt.Sprintf("%s- [%s](%s)%s\n", indent, e.Title, relPath, labelStr))
+		_ = crumb
 	}
-
-	if err := os.MkdirAll(spaceDir, 0755); err != nil {
+	if err := os.WriteFile(indexPath, []byte(b.String()), 0644); err != nil {
 		return err
 	}
-	return os.WriteFile(indexPath, []byte(b.String()), 0644)
+
+	// ── tree.md: ASCII hierarchy tree ─────────────────────────────────────
+	if err := WriteHierarchyTree(spaceDir, spaceName, spaceKey, entries); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WriteHierarchyTree generates tree.md (ASCII art) inside the space directory.
+func WriteHierarchyTree(spaceDir, spaceName, spaceKey string, entries []*ManifestEntry) error {
+	// Build parent→children map
+	type node struct {
+		Entry    *ManifestEntry
+		Children []*ManifestEntry
+	}
+	byID := make(map[string]*ManifestEntry, len(entries))
+	children := make(map[string][]*ManifestEntry)
+	var roots []*ManifestEntry
+
+	for _, e := range entries {
+		byID[e.PageID] = e
+	}
+	for _, e := range entries {
+		if e.ParentID == "" {
+			roots = append(roots, e)
+		} else if _, parentInSet := byID[e.ParentID]; parentInSet {
+			children[e.ParentID] = append(children[e.ParentID], e)
+		} else {
+			// Parent not exported — treat as root
+			roots = append(roots, e)
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("# %s (%s) — Page Hierarchy\n\n", spaceName, spaceKey))
+	b.WriteString(fmt.Sprintf("Total: %d pages\n\n", len(entries)))
+	b.WriteString("```\n")
+
+	var writeNode func(e *ManifestEntry, prefix string, isLast bool)
+	writeNode = func(e *ManifestEntry, prefix string, isLast bool) {
+		connector := "├── "
+		childPrefix := prefix + "│   "
+		if isLast {
+			connector = "└── "
+			childPrefix = prefix + "    "
+		}
+		b.WriteString(fmt.Sprintf("%s%s%s [%s]\n", prefix, connector, e.Title, e.PageID))
+		kids := children[e.PageID]
+		for i, kid := range kids {
+			writeNode(kid, childPrefix, i == len(kids)-1)
+		}
+	}
+
+	for i, r := range roots {
+		writeNode(r, "", i == len(roots)-1)
+	}
+	b.WriteString("```\n")
+
+	return os.WriteFile(filepath.Join(spaceDir, "tree.md"), []byte(b.String()), 0644)
 }
 
 // ==================== PATH HELPERS ====================
