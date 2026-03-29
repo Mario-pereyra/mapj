@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
@@ -47,13 +48,14 @@ var (
 	tdnSpace    string
 	tdnSpaces   []string
 	tdnLimit    int
-	tdnStart    int
-	tdnType     string
-	tdnSince    string
-	tdnAncestor string
-	tdnLabel    string
-	tdnLabels   []string
-	tdnExportTo string
+	tdnStart         int
+	tdnType          string
+	tdnSince         string
+	tdnAncestor      string
+	tdnLabel         string
+	tdnLabels        []string
+	tdnExportTo      string
+	tdnCheckChildren bool
 )
 
 func init() {
@@ -73,6 +75,7 @@ func init() {
 	f.StringVar(&tdnLabel, "label", "", "Filter by a single label/tag")
 	f.StringSliceVar(&tdnLabels, "labels", nil, "Filter by multiple labels (AND logic)")
 	f.StringVar(&tdnExportTo, "export-to", "", "Export each found page to Markdown in this directory (search→export pipeline)")
+	f.BoolVar(&tdnCheckChildren, "check-children", false, "Add childCount to each result (extra API call per page, helps decide --with-descendants)")
 }
 
 func tdnSearchRun(cmd *cobra.Command, args []string) error {
@@ -125,6 +128,11 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// ── Check children (optional enrichment) ──────────────────────────────────
+	if tdnCheckChildren {
+		enrichWithChildCount(ctx, client, result)
+	}
+
 	// ── Search → Export pipeline ─────────────────────────────────────────────
 	if tdnExportTo != "" {
 		return runSearchExportPipeline(ctx, cmd, formatter, client, result, opts)
@@ -133,6 +141,36 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 	env := output.NewEnvelope(cmd.CommandPath(), result)
 	fmt.Println(formatter.Format(env))
 	return nil
+}
+
+// enrichWithChildCount fetches child counts for all results concurrently.
+// Uses a semaphore to limit concurrent API calls to 5 at a time.
+func enrichWithChildCount(ctx context.Context, client *confluence.Client, result *confluence.SearchResult) {
+	const maxConcurrent = 5
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+
+	for i := range result.Results {
+		if result.Results[i].Type != "page" || result.Results[i].ID == "" {
+			count := 0
+			result.Results[i].ChildCount = &count
+			continue
+		}
+
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			count, err := client.GetChildCount(ctx, result.Results[idx].ID)
+			if err != nil {
+				count = -1 // -1 = fetch error
+			}
+			result.Results[idx].ChildCount = &count
+		}(i)
+	}
+	wg.Wait()
 }
 
 // runSearchExportPipeline exports every page found in the search results.

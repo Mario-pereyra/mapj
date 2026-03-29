@@ -35,17 +35,18 @@ type SearchResult struct {
 
 // PageRef is a single search result item.
 type PageRef struct {
-	ID          string    `json:"id"`
-	Type        string    `json:"type"`
-	Title       string    `json:"title"`
-	URL         string    `json:"url,omitempty"`
-	Space       SpaceRef  `json:"space"`
-	Labels      []string  `json:"labels,omitempty"`
-	Excerpt     string    `json:"excerpt,omitempty"`
-	Ancestors   []AncestorRef `json:"ancestors,omitempty"`
-	Version     int       `json:"version,omitempty"`
-	LastUpdated *time.Time `json:"lastUpdated,omitempty"`
-	LastUpdatedBy string  `json:"lastUpdatedBy,omitempty"`
+	ID            string        `json:"id"`
+	Type          string        `json:"type"`
+	Title         string        `json:"title"`
+	URL           string        `json:"url,omitempty"`
+	Space         SpaceRef      `json:"space"`
+	Labels        []string      `json:"labels,omitempty"`
+	Excerpt       string        `json:"excerpt,omitempty"`
+	Ancestors     []AncestorRef `json:"ancestors,omitempty"`
+	Version       int           `json:"version,omitempty"`
+	LastUpdated   *time.Time    `json:"lastUpdated,omitempty"`
+	LastUpdatedBy string        `json:"lastUpdatedBy,omitempty"`
+	ChildCount    *int          `json:"childCount,omitempty"` // nil = not fetched, 0 = leaf, N = has children
 }
 
 // SpaceRef is the space-key+name pair included in each result.
@@ -55,6 +56,30 @@ type SpaceRef struct {
 }
 
 // AncestorRef is defined in pages.go — breadcrumb item (parent page chain).
+
+// GetChildCount returns the number of direct child pages for a given page ID.
+// Use this to decide whether --with-descendants is worth running.
+// Returns 0 for leaf pages, N for pages with children.
+func (c *Client) GetChildCount(ctx context.Context, pageID string) (int, error) {
+	params := map[string]string{
+		"limit":  "1", // We only need size, not actual children
+		"expand": "",
+	}
+
+	body, err := c.do(ctx, "GET", fmt.Sprintf("/rest/api/content/%s/child/page", pageID), params)
+	if err != nil {
+		return 0, err
+	}
+
+	var resp struct {
+		Size int `json:"size"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return 0, fmt.Errorf("failed to parse child count: %w", err)
+	}
+	return resp.Size, nil
+}
+
 
 // Search executes a CQL search against /rest/api/content/search.
 //
