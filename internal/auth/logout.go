@@ -9,7 +9,19 @@ import (
 
 var logoutCmd = &cobra.Command{
 	Use:   "logout <service>",
-	Short: "Logout from a service",
+	Short: "Remove stored credentials for a service",
+	Long: `Remove stored credentials for a service. Does not affect the server.
+Valid services: tdn, confluence, protheus
+
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj auth logout","result":{"service":"confluence","authenticated":false}}
+
+EXAMPLE:
+  mapj auth logout confluence
+  mapj auth logout protheus
+
+Note: For Protheus, this only removes the legacy v1 credential.
+To remove named profiles use: mapj protheus connection remove <name>`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  logoutRun,
 }

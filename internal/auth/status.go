@@ -12,6 +12,26 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show authentication status for all services",
+	Long: `Show the current authentication state for TDN, Confluence, and Protheus.
+Run this first to check what needs to be configured.
+
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj auth status","result":{
+    "tdn":        {"authenticated":false},
+    "confluence": {"authenticated":true, "url":"https://tdninterno.totvs.com"},
+    "protheus":   {"authenticated":true,
+                   "activeProfile":"TOTALPEC_BIB",
+                   "server":"192.168.99.102",
+                   "database":"P1212410_BIB",
+                   "totalProfiles":7}
+  }}
+
+  authenticated:true  = credentials stored and present (not validated against server)
+  authenticated:false = not configured, run 'mapj auth login <service>'
+  totalProfiles       = number of registered Protheus connection profiles
+
+See also:
+  mapj protheus connection list   # detailed view of all Protheus profiles`,
 	RunE:  statusRun,
 }
 

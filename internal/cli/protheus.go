@@ -14,20 +14,73 @@ import (
 
 var protheusCmd = &cobra.Command{
 	Use:   "protheus",
-	Short: "Protheus database commands",
+	Short: "Execute SELECT queries and manage connections to Protheus ERP SQL Server",
+	Long: `Query Protheus ERP SQL Server databases and manage named connection profiles.
+
+TWO-STEP MODEL:
+  1. Register a connection profile (one-time setup):
+     mapj protheus connection add MYDB --server HOST --database DB --user U --password P --use
+
+  2. Query the active connection:
+     mapj protheus query "SELECT TOP 10 * FROM SA1010"
+
+SUBCOMMANDS:
+  mapj protheus query <sql>                 Execute a SELECT query
+  mapj protheus connection list             List all registered profiles
+  mapj protheus connection add <name>       Register a new profile
+  mapj protheus connection use <name>       Switch the active profile
+  mapj protheus connection ping [name]      Test connectivity
+  mapj protheus connection show [name]      Show profile details
+  mapj protheus connection remove <name>    Delete a profile
+
+Run 'mapj protheus <command> --help' for full output schema.`,
 }
 
 var protheusQueryCmd = &cobra.Command{
 	Use:   "query <sql>",
-	Short: "Execute SELECT query on Protheus database",
-	Long: `Execute a SELECT query on the Protheus SQL Server database.
+	Short: "Execute SELECT query on Protheus SQL Server (read-only enforced)",
+	Long: `Execute a SELECT query on the active Protheus SQL Server connection.
 
-Examples:
-  mapj protheus query "SELECT TOP 10 * FROM SPED050"
-  mapj protheus query "SELECT COUNT(*) FROM SA1010" --format csv
-  mapj protheus query "SELECT TOP 5 A1_COD FROM SA1010" --connection TOTALPEC_PRD
+SOURCE OF TRUTH: run 'mapj protheus connection list' first to know the active profile.
+Run 'mapj auth status' to confirm protheus is authenticated.
 
-Note: Only SELECT queries are allowed for security reasons.`,
+OUTPUT SCHEMA (--format json, default):
+  {"ok":true,"command":"mapj protheus query","result":{
+    "columns": ["A1_COD","A1_NOME"],
+    "rows":    [["000001","CLIENTE TESTE"],...],
+    "count":   10
+  }}
+
+OUTPUT SCHEMA (--format csv):
+  A1_COD,A1_NOME
+  000001,CLIENTE TESTE
+  (raw RFC 4180 CSV, no envelope wrapper)
+
+OUTPUT SCHEMA (--output-file, any format):
+  stdout → {"ok":true,"result":{"rows":1500,"columns":45,"format":"json","output_file":"./r.json"}}
+  file   → full result (json or csv)
+  Use when result > ~200 rows to avoid saturating LLM context.
+
+SECURITY — SELECT-only enforcement:
+  Blocked keywords: INSERT UPDATE DELETE MERGE CREATE ALTER DROP TRUNCATE
+                    EXEC EXECUTE INTO REPLACE GRANT REVOKE BACKUP RESTORE
+  Only SELECT and WITH (CTEs) are allowed. Error code: USAGE_ERROR, exit 2.
+  Tip: avoid SELECT INTO #temp — use CTEs: WITH t AS (SELECT ...) SELECT * FROM t
+
+FLAGS:
+  --connection NAME    Run against specific profile WITHOUT switching active
+                       Use to compare data across environments:
+                       mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD
+  --format json|csv    Output format (default: json)
+  --max-rows N         Client-side row cap, default 10000. Prefer TOP N in SQL.
+  --output-file PATH   Write result to file, stdout gets summary only.
+
+EXAMPLES:
+  mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"
+  mapj protheus query "SELECT DB_NAME() AS db, @@SERVERNAME AS srv"
+  mapj protheus query "SELECT COUNT(*) AS total FROM SA1010" --connection TOTALPEC_PRD
+  mapj protheus query "SELECT * FROM SA1010" --output-file ./sa1010.json
+  mapj protheus query "SELECT * FROM SA1010" --format csv --output-file ./sa1010.csv`,
 	Args: cobra.ExactArgs(1),
 	RunE: protheusQueryRun,
 }

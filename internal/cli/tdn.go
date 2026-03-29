@@ -18,28 +18,61 @@ import (
 
 var tdnCmd = &cobra.Command{
 	Use:   "tdn",
-	Short: "TOTVS Developer Network (TDN) commands",
-	Long:  `Commands for searching and exploring the TOTVS Developer Network documentation (TDN).`,
+	Short: "Search and explore TOTVS Developer Network (TDN) documentation",
+	Long: `TDN (tdn.totvs.com) is the public TOTVS developer documentation portal.
+
+No authentication required for public content.
+Authentication only needed for private/internal TDN instances.
+
+Subcommands:
+  mapj tdn search <query>   Search documentation using CQL
+  mapj tdn spaces list      List all available spaces (use keys in --space filter)
+
+Run 'mapj tdn <command> --help' for the full output schema of each command.`,
 }
 
 // ─── tdn search ──────────────────────────────────────────────────────────────
 
 var tdnSearchCmd = &cobra.Command{
 	Use:   "search [query]",
-	Short: "Search TDN documentation using CQL",
-	Long: `Search the TOTVS Developer Network (TDN) for documentation.
+	Short: "Search TDN documentation using CQL (no auth required)",
+	Long: `Search TDN (tdn.totvs.com) documentation. No authentication required for public content.
 
-Uses the siteSearch CQL field which searches across title, body, and labels simultaneously.
-No authentication required for public TDN content (tdn.totvs.com).
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj tdn search","result":{
+    "results": [{
+      "id":          "235312129",      // Confluence page ID — use for export
+      "type":        "page",
+      "title":       "AdvPL",
+      "url":         "https://tdn.totvs.com/...",
+      "space":       {"key":"PROT","name":"Linha Microsiga Protheus"},
+      "ancestors":   [{"id":"...","title":"..."}],   // breadcrumb
+      "labels":      ["versao_12","ponto_de_entrada"],
+      "version":     {"number":5},
+      "lastUpdated": "2024-03-10T14:22:00Z",
+      "childCount":  3               // only present with --check-children
+    }],
+    "count":   25,                   // results in this page
+    "total":   1842,                 // total matching results
+    "hasNext": true,                 // use --start N to paginate
+    "cql":     "siteSearch ~ \"AdvPL\" AND ..."
+  }}
 
-Examples:
-  mapj tdn search "AdvPL"
-  mapj tdn search "ponto de entrada" --space PROT
-  mapj tdn search "api rest" --space PROT --type page --since 1m
-  mapj tdn search "apostila" --space PROT --type attachment
-  mapj tdn search --ancestor 187531295 --space PROT
+GOTCHAS:
+  - childCount counts DIRECT children only. childCount:1 can have 171+ total descendants.
+    Always check before using --with-descendants on confluence export.
+  - --since uses TDN's lastmodified field. Relative: 1w, 4d, 2m, 1y. Absolute: 2024-01-01.
+  - Use result[*].id to feed into: mapj confluence export <id>
+  - --export-to pipelines search results directly into confluence export (no extra step)
+
+EXAMPLES:
+  mapj tdn search "AdvPL" --space PROT --limit 10
+  mapj tdn search "ponto de entrada" --space PROT --since 1m
   mapj tdn search "advpl" --space PROT --label versao_12
-  mapj tdn search "advpl" --space PROT --export-to ./docs`,
+  mapj tdn search "advpl" --space PROT --check-children
+  mapj tdn search --ancestor 187531295 --space PROT
+  mapj tdn search "advpl" --space PROT --export-to ./docs
+  mapj tdn search "apostila" --spaces PROT,LDT --type attachment`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: tdnSearchRun,
 }
@@ -229,16 +262,27 @@ func runSearchExportPipeline(
 var tdnSpacesCmd = &cobra.Command{
 	Use:   "spaces",
 	Short: "List available TDN spaces",
+	Long: `List subcommands for TDN space discovery.
+
+Subcommands:
+  mapj tdn spaces list   Get all available space keys and names`,
 }
 
 var tdnSpacesListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all available public spaces in TDN",
-	Long: `List all global, current spaces available in TDN.
+	Short: "List all available public TDN spaces (use keys in --space filter)",
+	Long: `List all global spaces available in TDN (tdn.totvs.com).
+Use the returned space keys in 'mapj tdn search --space KEY'.
 
-Examples:
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj tdn spaces list","result":{
+    "spaces": [{"key":"PROT","name":"Linha Microsiga Protheus","type":"global"}],
+    "count":  192
+  }}
+
+EXAMPLE:
   mapj tdn spaces list
-  mapj tdn spaces list --output table`,
+  # then: mapj tdn search "AdvPL" --space PROT`,
 	RunE: tdnSpacesListRun,
 }
 

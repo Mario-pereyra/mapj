@@ -10,45 +10,89 @@ import (
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
-	Short: "Login to a service",
+	Short: "Authenticate to a service and store credentials",
+	Long: `Authenticate to a service. Credentials stored encrypted at ~/.config/mapj/credentials.enc.
+
+SERVICES:
+  tdn         Public TDN (optional — public content works without auth)
+  confluence  Confluence Server/DC or Cloud (required for export)
+  protheus    Protheus SQL Server (legacy — prefer: mapj protheus connection add)
+
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj auth login <service>","result":{
+    "service":"confluence","authenticated":true,"authType":"bearer"
+  }}
+
+Run 'mapj auth login <service> --help' for service-specific flags.`,
 }
 
 var authCmd = &cobra.Command{
 	Use:   "auth",
-	Short: "Authentication commands",
+	Short: "Manage authentication for TDN, Confluence, and Protheus",
+	Long: `Manage credentials for all services used by mapj.
+
+Subcommands:
+  mapj auth status              Show auth state for all services (run this first)
+  mapj auth login <service>     Authenticate a service
+  mapj auth logout <service>    Remove stored credentials
+
+SERVICES:
+  tdn         tdn.totvs.com   — public docs, auth optional
+  confluence  Confluence Server/DC or Cloud  — required for export
+  protheus    SQL Server  — use 'mapj protheus connection' for multi-profile management
+
+Run 'mapj auth status' first to see what is already authenticated.`,
 }
 
 var tdnLoginCmd = &cobra.Command{
 	Use:   "tdn --url URL --token TOKEN",
-	Short: "Login to TDN (TOTVS Developer Network)",
-	RunE:  tdnLogin,
+	Short: "Login to TDN (optional — public content works without auth)",
+	Long: `Authenticate to TDN (tdn.totvs.com). This is OPTIONAL.
+Public TDN content is accessible without authentication.
+Only needed for private/internal TDN instances.
+
+  mapj auth login tdn --url https://tdn.totvs.com --token YOUR_PAT
+
+OUTPUT SCHEMA:
+  {"ok":true,"result":{"service":"tdn","authenticated":true}}`,
+	RunE: tdnLogin,
 }
 var tdnURL, tdnToken string
 
 var confluenceLoginCmd = &cobra.Command{
 	Use:   "confluence --url URL --token TOKEN",
-	Short: "Login to Confluence",
-	Long: `Login to Confluence.
+	Short: "Authenticate Confluence (required before export)",
+	Long: `Authenticate to Confluence. Required before running 'mapj confluence export'.
+
+AUTH TYPE AUTO-DETECTION from URL:
+  *.atlassian.net  → Basic Auth (email + API token)
+  anything else    → Bearer PAT (Server/DC)
 
 For Confluence Server / Data Center (e.g. tdninterno.totvs.com):
-  Use Bearer auth (PAT token). Do NOT set --username.
-
   mapj auth login confluence --url https://tdninterno.totvs.com --token YOUR_PAT
+  ⚠️  Do NOT use --username for Server/DC — causes 401.
 
 For Confluence Cloud (e.g. company.atlassian.net):
-  Use Basic auth (email + API token).
+  mapj auth login confluence --url https://company.atlassian.net --username you@example.com --token YOUR_API_TOKEN
 
-  mapj auth login confluence --url https://company.atlassian.net --username you@company.com --token YOUR_API_TOKEN
-
-The auth type is auto-detected from the URL. Override with --auth-type bearer|basic.`,
+OUTPUT SCHEMA:
+  {"ok":true,"result":{"service":"confluence","authenticated":true,"authType":"bearer"}}`,
 	RunE: confluenceLogin,
 }
 var confluenceURL, confluenceToken, confluenceUsername, confluenceAuthType string
 
 var protheusLoginCmd = &cobra.Command{
 	Use:   "protheus --server S --port P --database D --user U --password PASS",
-	Short: "Login to Protheus database",
-	RunE:  protheusLogin,
+	Short: "Login to Protheus (legacy — prefer: mapj protheus connection add)",
+	Long: `DEPRECATED in favor of multi-profile connection management.
+This command registers a single legacy connection (no profile name).
+
+Preferred: Use 'mapj protheus connection add' for named, switchable profiles.
+  mapj protheus connection add MYDB --server HOST --database DB --user U --password P --use
+
+OUTPUT SCHEMA:
+  {"ok":true,"result":{"service":"protheus","authenticated":true}}`,
+	RunE: protheusLogin,
 }
 var protheusServer, protheusDatabase, protheusUser, protheusPassword string
 var protheusPort int

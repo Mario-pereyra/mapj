@@ -14,7 +14,22 @@ import (
 
 var confluenceCmd = &cobra.Command{
 	Use:   "confluence",
-	Short: "Confluence export and search commands",
+	Short: "Export Confluence pages to Markdown files",
+	Long: `Export Confluence pages (or entire spaces) to Markdown files with YAML front matter.
+
+AUTH REQUIRED:
+  Run first: mapj auth login confluence --url BASEURL --token TOKEN
+  Check status: mapj auth status
+
+  Server/DC (e.g. tdninterno.totvs.com) → Bearer PAT, no --username
+  Cloud (company.atlassian.net) → Basic Auth, requires --username you@company.com
+
+SUBCOMMANDS:
+  mapj confluence export <url-or-id>     Export one page (or tree with --with-descendants)
+  mapj confluence export-space <key>     Export every page in a space
+  mapj confluence retry-failed           Retry pages from export-errors.jsonl
+
+Run 'mapj confluence <command> --help' for full schema.`,
 }
 
 // ==================== FLAGS ====================
@@ -33,39 +48,70 @@ var (
 
 var confluenceExportCmd = &cobra.Command{
 	Use:   "export <url-or-page-id>",
-	Short: "Export Confluence page to markdown",
-	Long: `Export a Confluence page to markdown and save to disk.
+	Short: "Export Confluence page(s) to Markdown with YAML front matter",
+	Long: `Export a Confluence page to Markdown. Auth required (run mapj auth status first).
 
-Supports:
-  - Page IDs: mapj confluence export 12345
-  - Cloud URLs: mapj confluence export https://company.atlassian.net/wiki/spaces/TEAM/pages/12345
-  - Server URLs: mapj confluence export https://tdn.totvs.com/display/tec/Page+Title
-  - ViewPage URLs: mapj confluence export https://tdn.totvs.com/pages/viewpage.action?pageId=12345
+INPUT FORMATS (all equivalent):
+  mapj confluence export 235312129                                         # Page ID
+  mapj confluence export https://tdn.totvs.com/display/PROT/AdvPL         # Server URL
+  mapj confluence export https://tdn.totvs.com/pages/viewpage.action?pageId=235312129
+  mapj confluence export https://company.atlassian.net/wiki/spaces/X/pages/235312129
 
-Options:
-  --with-descendants    Export page and all its child pages
-  --with-attachments    Also download page attachments (images, files, etc.)
-  --output-path PATH    Directory to save exported files (required for multi-page)
-  --verbose             Show detailed progress and warnings
-  --debug               Save raw HTML and metadata to .debug/ for troubleshooting
-  --dump-debug          Full diagnostic dump (raw HTML, storage, converted MD, metadata)
+OUTPUT STRUCTURE (files created under --output-path):
+  output-path/
+  ├── spaces/SPACE_KEY/
+  │   ├── README.md                 ← index of all exported pages
+  │   └── pages/
+  │       └── PAGE_ID-slug.md       ← one file per page, YAML front matter
+  ├── manifest.jsonl                ← one JSON line per exported page (inventory)
+  └── export-errors.jsonl           ← one JSON line per failure (use retry-failed)
 
-Examples:
-  mapj confluence export 12345 --output-path ./docs
-  mapj confluence export 12345 --output-path ./docs --with-attachments
-  mapj confluence export https://tdn.totvs.com/display/tec/Home --with-descendants --output-path ./docs
-  mapj confluence export 12345 --output-path ./docs --dump-debug`,
+STDOUT SCHEMA (final summary):
+  {"ok":true,"command":"mapj confluence export","result":{
+    "exported":   1,
+    "outputPath": "./docs"
+  }}
+
+GOTCHAS:
+  - --with-descendants exports the full subtree recursively.
+    Use 'mapj tdn search --check-children' BEFORE to know how large the tree is.
+    childCount:1 can mean 171+ total pages. Preview first.
+  - Pages with errors are logged to export-errors.jsonl, not stdout.
+    Run 'mapj confluence retry-failed --output-path ./docs' to retry them.
+  - Without --output-path, single-page export prints Markdown to stdout.
+
+EXAMPLES:
+  mapj confluence export 235312129 --output-path ./docs
+  mapj confluence export 235312129 --output-path ./docs --with-descendants
+  mapj confluence export https://tdn.totvs.com/display/PROT/AdvPL --output-path ./docs
+  mapj confluence export 235312129 --output-path ./docs --with-attachments
+  mapj confluence export 235312129 --output-path ./docs --dump-debug`,
 	Args: cobra.ExactArgs(1),
 	RunE: confluenceExportRun,
 }
 
 var confluenceExportSpaceCmd = &cobra.Command{
 	Use:   "export-space <space-key>",
-	Short: "Export all pages in a Confluence space",
-	Long: `Export every page in a Confluence space to markdown.
+	Short: "Export all pages in a Confluence space to Markdown",
+	Long: `Export every page in a Confluence space. Auth required.
 
-Examples:
-  mapj confluence export-space tec --output-path ./docs
+Get space keys from: mapj tdn spaces list
+
+OUTPUT STRUCTURE (same as 'confluence export'):
+  output-path/spaces/SPACE_KEY/
+    README.md          ← full index
+    pages/*.md         ← one file per page
+  manifest.jsonl       ← inventory of all exported pages
+  export-errors.jsonl  ← failures (retry with 'confluence retry-failed')
+
+STDOUT SCHEMA:
+  {"ok":true,"command":"mapj confluence export-space","result":{
+    "exported":   342,
+    "outputPath": "./docs"
+  }}
+
+EXAMPLES:
+  mapj confluence export-space PROT --output-path ./docs
   mapj confluence export-space PROT --output-path ./docs --verbose`,
 	Args: cobra.ExactArgs(1),
 	RunE: confluenceExportSpaceRun,

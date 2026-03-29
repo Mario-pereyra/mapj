@@ -16,7 +16,21 @@ import (
 
 var protheusConnectionCmd = &cobra.Command{
 	Use:   "connection",
-	Short: "Manage Protheus connection profiles (add, list, use, remove, ping)",
+	Short: "Manage named Protheus SQL Server connection profiles",
+	Long: `Manage named, encrypted connection profiles for Protheus SQL Server.
+
+PROFILE STORAGE: encrypted at ~/.config/mapj/credentials.enc
+ACTIVE PROFILE: queries use the active profile by default.
+
+SUBCOMMANDS:
+  connection add <name>    Register new profile (--server --database --user --password --use)
+  connection list          List all profiles (JSON with active field)
+  connection use <name>    Switch active profile
+  connection ping [name]   Test connectivity (returns latencyMs)
+  connection show [name]   Show profile details (password masked)
+  connection remove <name> Delete profile
+
+Run 'mapj protheus connection <cmd> --help' for output schema.`,
 }
 
 // ---- ADD ----
@@ -94,8 +108,20 @@ func connAddRun(cmd *cobra.Command, args []string) error {
 
 var connListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List all registered Protheus connection profiles",
-	RunE:  connListRun,
+	Short: "List all registered Protheus profiles (shows which is active)",
+	Long: `List all registered Protheus connection profiles.
+
+OUTPUT SCHEMA:
+  {"ok":true,"command":"mapj protheus connection list","result":{
+    "profiles": [
+      {"name":"TOTALPEC_BIB","server":"192.168.99.102","port":1433,
+       "database":"P1212410_BIB","user":"P1212410_BIB","active":true},
+      {"name":"TOTALPEC_PRD",...,"active":false}
+    ],
+    "count":  7,
+    "active": "TOTALPEC_BIB"
+  }}`,
+	RunE: connListRun,
 }
 
 func connListRun(cmd *cobra.Command, args []string) error {
@@ -164,9 +190,15 @@ func connListRun(cmd *cobra.Command, args []string) error {
 
 var connUseCmd = &cobra.Command{
 	Use:   "use <name>",
-	Short: "Switch the active Protheus connection profile",
-	Args:  cobra.ExactArgs(1),
-	RunE:  connUseRun,
+	Short: "Switch the active Protheus connection (affects all future queries)",
+	Long: `Switch the active connection profile. Future queries will use this profile.
+Does NOT affect queries using --connection flag.
+
+OUTPUT SCHEMA:
+  {"ok":true,"result":{"previous":"TOTALPEC_BIB","active":"TOTALPEC_PRD",
+                        "server":"192.168.99.102","port":1433,"database":"P1212410_PRD"}}`,
+	Args: cobra.ExactArgs(1),
+	RunE: connUseRun,
 }
 
 func connUseRun(cmd *cobra.Command, args []string) error {
@@ -332,13 +364,25 @@ func connShowRun(cmd *cobra.Command, args []string) error {
 
 var connPingCmd = &cobra.Command{
 	Use:   "ping [name]",
-	Short: "Test connectivity to a Protheus connection profile",
-	Long: `Test the connection to a Protheus SQL Server profile.
-If no name is given, tests the active connection.
+	Short: "Test connectivity to a Protheus profile (returns latencyMs)",
+	Long: `Test TCP+SQL connection to a Protheus profile.
+Defaults to active profile if no name given.
 
-Examples:
+OUTPUT SCHEMA (success):
+  {"ok":true,"result":{"profile":"TOTALPEC_BIB","server":"192.168.99.102",
+                        "port":1433,"database":"P1212410_BIB","latencyMs":147,"ok":true}}
+
+OUTPUT SCHEMA (failure — with VPN hint):
+  {"ok":false,"error":{"code":"PING_FAILED","retryable":true,
+                        "hint":"Connect to TOTALPEC VPN for server 192.168.99.102. ..."}}
+
+VPN auto-detection:
+  192.168.99.x → TOTALPEC VPN
+  192.168.7.x  → UNION VPN
+
+EXAMPLES:
   mapj protheus connection ping              # test active
-  mapj protheus connection ping TOTALPEC_BIB # test specific profile`,
+  mapj protheus connection ping TOTALPEC_BIB # test specific`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: connPingRun,
 }
