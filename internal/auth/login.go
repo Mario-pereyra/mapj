@@ -166,29 +166,7 @@ func confluenceLogin(cmd *cobra.Command, args []string) error {
 }
 
 func protheusLogin(cmd *cobra.Command, args []string) error {
-	store, err := NewStore()
-	if err != nil {
-		return err
-	}
-
-	creds, err := store.Load()
-	if err != nil {
-		return err
-	}
-	creds.Protheus = &ProtheusCreds{
-		Server:   protheusServer,
-		Port:     protheusPort,
-		Database: protheusDatabase,
-		User:     protheusUser,
-		Password: protheusPassword,
-	}
-
-	if err := store.Save(creds); err != nil {
-		return err
-	}
-
-	fmt.Println(loginJSON(cmd.CommandPath(), "protheus", ""))
-	return nil
+	return fmt.Errorf("DEPRECATED: Use 'mapj protheus connection add' instead")
 }
 
 func AddCommands(root *cobra.Command) {

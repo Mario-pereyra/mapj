@@ -174,15 +174,8 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 	var resultPayload any
 	var fileFormatter output.Formatter
 
-	// Check if global formatter is CSVFormatter (via type assertion)
-	if _, isCSV := formatter.(output.CSVFormatter); isCSV {
-		csvPayload := buildCSVPayload(result)
-		resultPayload = csvPayload
-		fileFormatter = formatter
-	} else {
-		resultPayload = result
-		fileFormatter = formatter
-	}
+	resultPayload = result
+	fileFormatter = formatter
 
 	// ── --output-file: write to file, print summary to stdout ─────────────────
 	if protheusOutputFile != "" {
@@ -200,12 +193,8 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		}
 
 		// Print a minimal summary to stdout (not the data)
-		format := "json"
-		if _, isCSV := formatter.(output.CSVFormatter); isCSV {
-			format = "csv"
-		} else if _, isTOON := formatter.(output.TOONFormatter); isTOON {
-			format = "toon"
-		} else if _, isLLM := formatter.(output.LLMFormatter); isLLM {
+		format := "auto"
+		if _, isLLM := formatter.(output.LLMFormatter); isLLM {
 			format = "llm"
 		}
 		summary := output.NewEnvelope(cmd.CommandPath(), map[string]any{
@@ -220,25 +209,8 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 
 	// ── Default: print to stdout ──────────────────────────────────────────────
 	env := output.NewEnvelope(cmd.CommandPath(), resultPayload)
-	// For CSV: fileFormatter is CSVFormatter — use it for stdout too
 	fmt.Println(fileFormatter.Format(env))
 	return nil
-}
-
-// buildCSVPayload converts a QueryResult into a CSVPayload for RFC 4180-compliant serialization.
-func buildCSVPayload(result *protheus.QueryResult) *output.CSVPayload {
-	payload := &output.CSVPayload{
-		Headers: result.Columns,
-		Rows:    make([][]string, 0, len(result.Rows)),
-	}
-	for _, row := range result.Rows {
-		fields := make([]string, len(row))
-		for i, f := range row {
-			fields[i] = fmt.Sprintf("%v", f)
-		}
-		payload.Rows = append(payload.Rows, fields)
-	}
-	return payload
 }
 
 // protheusVPNHint returns a contextual VPN hint based on the server IP range.

@@ -1,6 +1,7 @@
 package errors
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -22,6 +23,31 @@ func TestExitCodes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.code != tt.expected {
 				t.Errorf("got %d, want %d", tt.code, tt.expected)
+			}
+		})
+	}
+}
+
+func TestMapErrorToCode(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected int
+	}{
+		{"nil error", nil, ExitSuccess},
+		{"AuthError", &AuthError{Msg: "auth"}, ExitAuth},
+		{"UsageError", &UsageError{Msg: "usage"}, ExitUsage},
+		{"RetryableError", &RetryableError{Msg: "retry"}, ExitRetry},
+		{"ConflictError", &ConflictError{Msg: "conflict"}, ExitConflict},
+		{"GeneralError", &GeneralError{Msg: "general"}, ExitError},
+		{"untyped error", errors.New("something else"), ExitError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code := MapErrorToCode(tt.err)
+			if code != tt.expected {
+				t.Errorf("MapErrorToCode(%v) = %d, want %d", tt.err, code, tt.expected)
 			}
 		})
 	}

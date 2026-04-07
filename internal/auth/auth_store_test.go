@@ -98,8 +98,9 @@ func TestConfluenceCreds(t *testing.T) {
 	assert.Equal(t, "api-token", creds.Token)
 }
 
-func TestProtheusCreds(t *testing.T) {
-	creds := &ProtheusCreds{
+func TestProtheusProfile(t *testing.T) {
+	creds := &ProtheusProfile{
+		Name:     "default",
 		Server:   "192.168.1.100",
 		Port:     1433,
 		Database: "PROTHEUS",
@@ -107,6 +108,7 @@ func TestProtheusCreds(t *testing.T) {
 		Password: "secret",
 	}
 
+	assert.Equal(t, "default", creds.Name)
 	assert.Equal(t, "192.168.1.100", creds.Server)
 	assert.Equal(t, 1433, creds.Port)
 	assert.Equal(t, "PROTHEUS", creds.Database)

@@ -1,0 +1,45 @@
+# git ls-files --others --exclude-from=.git/info/exclude
+# Lines that start with '#' are comments.
+# For a project mostly in C, the following would be a good set of
+# exclude patterns (uncomment them if you want to use them):
+# *.[oa]
+# *~
+
+# >>> opencode:workspace-gitignore >>>
+# ── Binaries ────────────────────────────────────────────────────────────────
+/mapj
+/mapj.exe
+dist/
+build/
+
+# ── Credentials (MUST NEVER BE COMMITTED) ───────────────────────────────────
+*.enc
+credentials.*
+credenciales.*
+.env
+.env.*
+
+# ── Test & Debug output ──────────────────────────────────────────────────────
+.debug/
+export-errors.jsonl
+manifest.jsonl
+testdata/output/
+/tmp/
+
+# ── IDE / Editor ─────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Go ───────────────────────────────────────────────────────────────────────
+# (go.sum IS committed — needed for reproducible builds)
+/vendor/
+.opencode
+# <<< opencode:workspace-gitignore <<<

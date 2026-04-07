@@ -159,22 +159,13 @@ func connListRun(cmd *cobra.Command, args []string) error {
 
 	profiles := []profileEntry{}
 
-	// Handle legacy v1
-	if len(creds.ProtheusProfiles) == 0 && creds.Protheus != nil {
+	for _, name := range creds.ProtheusProfileNames() {
+		p := creds.ProtheusProfiles[name]
 		profiles = append(profiles, profileEntry{
-			Name: "default (legacy)", Server: creds.Protheus.Server,
-			Port: creds.Protheus.Port, Database: creds.Protheus.Database,
-			User: creds.Protheus.User, Active: true,
+			Name: name, Server: p.Server, Port: p.Port,
+			Database: p.Database, User: p.User,
+			Active: name == creds.ProtheusActive,
 		})
-	} else {
-		for _, name := range creds.ProtheusProfileNames() {
-			p := creds.ProtheusProfiles[name]
-			profiles = append(profiles, profileEntry{
-				Name: name, Server: p.Server, Port: p.Port,
-				Database: p.Database, User: p.User,
-				Active: name == creds.ProtheusActive,
-			})
-		}
 	}
 
 	env := output.NewEnvelope(cmd.CommandPath(), map[string]any{

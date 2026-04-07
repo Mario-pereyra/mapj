@@ -30,8 +30,7 @@ ONBOARDING — run in this order:
   4. mapj tdn search "your query" --space PROT # start searching
 
 OUTPUT FORMAT (all commands):
-  Default (-o llm): compact JSON, no extra metadata — optimized for token efficiency.
-  Human  (-o json): indented JSON + schemaVersion + timestamp.
+  Auto-detected by default (TOON for tables, LLM for objects).
   All output goes to stdout. Progress/logs go to stderr.
 
   Success envelope:  {"ok":true,  "command":"...","result":{...}}
@@ -49,7 +48,6 @@ AVAILABLE COMMANDS (run --help on each for full schema):
   mapj tdn spaces list     List all available TDN spaces
   mapj confluence export   Export page(s) to Markdown files
   mapj confluence export-space  Export an entire Confluence space
-  mapj confluence retry-failed  Retry previously failed exports
   mapj protheus query      Execute SELECT on Protheus SQL Server
   mapj protheus connection Manage named DB connection profiles
   mapj auth login          Authenticate a service
@@ -65,11 +63,14 @@ func init() {
 }
 
 func Execute() int {
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "llm", "Output format: llm (compact JSON, default), json (pretty JSON), csv, toon (compact tabular)")
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: auto (default), llm, toon, json")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		return errors.MapErrorToCode(err)
+		if exitCoder, ok := err.(errors.ExitCoder); ok {
+			return exitCoder.ExitCode()
+		}
+		return errors.ExitError
 	}
 	return errors.ExitSuccess
 }

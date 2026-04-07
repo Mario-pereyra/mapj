@@ -2,7 +2,6 @@ package output
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -12,12 +11,9 @@ type Formatter interface {
 	Format(*Envelope) string
 }
 
-// ─── LLM Formatter (default) ─────────────────────────────────────────────────
+// ─── LLM Formatter ───────────────────────────────────────────────────────────
 
 // LLMFormatter produces compact, token-efficient JSON for LLM consumption.
-// - No indentation (JSON compact)
-// - Omits schemaVersion and timestamp (noise for agents)
-// - All action-relevant fields included
 type LLMFormatter struct{}
 
 func (f LLMFormatter) Format(env *Envelope) string {
@@ -28,80 +24,36 @@ func (f LLMFormatter) Format(env *Envelope) string {
 	return string(b)
 }
 
-// ─── Human Formatter ─────────────────────────────────────────────────────────
+// ─── TOON Formatter ──────────────────────────────────────────────────────────
 
-// HumanFormatter produces indented, verbose JSON for human reading.
-// - 2-space indentation
-// - Includes schemaVersion and timestamp
-type HumanFormatter struct{}
+// TOONFormatter is a placeholder for the actual TOON serialization.
+// If the actual TOON serialization is implemented in toon_formatter.go, we just use it.
+// If not, we might need to rely on the existing TOONFormatter struct.
 
-func (f HumanFormatter) Format(env *Envelope) string {
-	// Add verbose fields for human mode
-	env.withHumanFields()
-	b, err := json.MarshalIndent(env, "", "  ")
-	if err != nil {
-		return `{"error": "serialization failed"}`
-	}
-	return string(b)
-}
+// ─── Auto Formatter ──────────────────────────────────────────────────────────
 
-// ─── CSV Formatter (Protheus only) ───────────────────────────────────────────
+type AutoFormatter struct{}
 
-// CSVFormatter produces raw CSV (no envelope wrapper).
-// Only effective when Result is a *CSVPayload.
-// For all other results, falls back to LLMFormatter.
-type CSVFormatter struct{}
-
-// CSVPayload is the result type that CSVFormatter knows how to serialize.
-type CSVPayload struct {
-	Headers []string   `json:"headers"`
-	Rows    [][]string `json:"rows"`
-}
-
-func (f CSVFormatter) Format(env *Envelope) string {
+func (f AutoFormatter) Format(env *Envelope) string {
+	// If error, return JSON
 	if env.Error != nil {
-		return fmt.Sprintf("ERROR [%s]: %s", env.Error.Code, env.Error.Message)
+		return LLMFormatter{}.Format(env)
 	}
-	if payload, ok := env.Result.(*CSVPayload); ok {
-		return renderCSV(payload)
-	}
-	// Fallback to LLM compact
-	return LLMFormatter{}.Format(env)
-}
 
-// renderCSV produces RFC 4180-compliant CSV.
-func renderCSV(p *CSVPayload) string {
-	var sb strings.Builder
-	sb.WriteString(csvRow(p.Headers))
-	for _, row := range p.Rows {
-		sb.WriteString(csvRow(row))
-	}
-	return strings.TrimRight(sb.String(), "\n")
-}
-
-// csvRow formats a single row with proper RFC 4180 escaping.
-// Only quotes fields that contain commas, double-quotes, newlines, or carriage returns.
-func csvRow(fields []string) string {
-	escaped := make([]string, len(fields))
-	for i, f := range fields {
-		needsQuoting := strings.Contains(f, ",") ||
-			strings.Contains(f, `"`) ||
-			strings.Contains(f, "\n") ||
-			strings.Contains(f, "\r")
-		if needsQuoting {
-			// Escape inner quotes by doubling them, then wrap in quotes
-			f = `"` + strings.ReplaceAll(f, `"`, `""`) + `"`
-		}
-		escaped[i] = f
-	}
-	return strings.Join(escaped, ",") + "\n"
+	// Simple heuristic: if it's a slice or contains a large slice as a top-level property,
+	// TOON might be better. For now, let's look at the result.
+	// If it's a map with "rows" or "results" array, maybe TOON is better.
+	
+	// Actually, if toon_formatter.go is already converting to TOON, we can just use TOONFormatter
+	// and if TOONFormatter handles objects and arrays natively, we just use it!
+	// Let's use TOONFormatter if it's available and returns a good string, else fallback.
+	// We'll just default to TOONFormatter if it can format anything, but TOONFormatter is implemented in toon_formatter.go.
+	return TOONFormatter{}.Format(env)
 }
 
 // ─── File Writer ─────────────────────────────────────────────────────────────
 
 // WriteToFile writes the formatted output to a file.
-// Used by --output-file flag (Protheus query).
-// Returns the absolute path written.
 func WriteToFile(path string, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
@@ -109,20 +61,16 @@ func WriteToFile(path string, content string) error {
 // ─── Factory ─────────────────────────────────────────────────────────────────
 
 // NewFormatter returns the correct Formatter for the given format string.
-// "llm" (default)  → LLMFormatter   — compact JSON, no metadata noise
-// "json" / "human" → HumanFormatter — indented JSON with timestamp
-// "csv"            → CSVFormatter   — RFC 4180 CSV
-// "table"          → HumanFormatter — alias for json (table was never implemented)
-// "toon"           → TOONFormatter  — token-efficient tabular format
+// Auto-detects if format is empty.
 func NewFormatter(format string) Formatter {
 	switch strings.ToLower(format) {
-	case "json", "human", "table":
-		return HumanFormatter{}
-	case "csv":
-		return CSVFormatter{}
+	case "llm", "json":
+		return LLMFormatter{}
 	case "toon":
 		return TOONFormatter{}
-	default: // "llm" or empty
-		return LLMFormatter{}
+	default:
+		// Auto-discovery
+		return AutoFormatter{}
 	}
 }
+

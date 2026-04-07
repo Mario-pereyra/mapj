@@ -84,12 +84,7 @@ func statusRun(cmd *cobra.Command, args []string) error {
 		total := len(creds.ProtheusProfiles)
 		ps := protheusStatus{Authenticated: true, TotalProfiles: total}
 
-		if creds.Protheus != nil && total == 0 {
-			// Legacy v1
-			ps.ActiveProfile = "default (legacy)"
-			ps.Server = creds.Protheus.Server
-			ps.Database = creds.Protheus.Database
-		} else if active != nil {
+		if active != nil {
 			ps.ActiveProfile = active.Name
 			ps.Server = active.Server
 			ps.Database = active.Database

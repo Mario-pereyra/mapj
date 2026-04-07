@@ -46,7 +46,8 @@ func logoutRun(cmd *cobra.Command, args []string) error {
 	case "confluence":
 		creds.Confluence = nil
 	case "protheus":
-		creds.Protheus = nil
+		creds.ProtheusProfiles = nil
+		creds.ProtheusActive = ""
 	default:
 		env := output.NewErrorEnvelopeWithHint(
 			cmd.CommandPath(), "INVALID_SERVICE",

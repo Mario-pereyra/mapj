@@ -21,8 +21,6 @@ type CredentialStore struct {
 type ServiceCreds struct {
 	TDN        *TDNCreds        `json:"tdn,omitempty"`
 	Confluence *ConfluenceCreds `json:"confluence,omitempty"`
-	Protheus   *ProtheusCreds   `json:"protheus,omitempty"` // v1 legacy — kept for migration
-	// v2: named connection profiles
 	ProtheusProfiles map[string]*ProtheusProfile `json:"protheusProfiles,omitempty"`
 	ProtheusActive   string                      `json:"protheusActive,omitempty"`
 }
@@ -42,15 +40,6 @@ type ConfluenceCreds struct {
 	AuthType string `json:"authType,omitempty"`
 }
 
-// ProtheusCreds is the legacy v1 single-connection model. Kept for migration only.
-type ProtheusCreds struct {
-	Server   string `json:"server"`
-	Port     int    `json:"port"`
-	Database string `json:"database"`
-	User     string `json:"user"`
-	Password string `json:"password"`
-}
-
 // ProtheusProfile is a named, persisted Protheus SQL Server connection profile.
 type ProtheusProfile struct {
 	Name     string `json:"name"`
@@ -62,22 +51,10 @@ type ProtheusProfile struct {
 }
 
 // ActiveProtheusProfile returns the current active profile.
-// Transparently migrates from the v1 legacy single-connection model.
 func (c *ServiceCreds) ActiveProtheusProfile() *ProtheusProfile {
 	if c.ProtheusActive != "" && c.ProtheusProfiles != nil {
 		if p, ok := c.ProtheusProfiles[c.ProtheusActive]; ok {
 			return p
-		}
-	}
-	// Legacy v1 migration: wrap old ProtheusCreds as a default profile
-	if c.Protheus != nil && c.Protheus.Server != "" {
-		return &ProtheusProfile{
-			Name:     "default",
-			Server:   c.Protheus.Server,
-			Port:     c.Protheus.Port,
-			Database: c.Protheus.Database,
-			User:     c.Protheus.User,
-			Password: c.Protheus.Password,
 		}
 	}
 	return nil
@@ -105,9 +82,9 @@ func (c *ServiceCreds) ProtheusProfileNames() []string {
 	return names
 }
 
-// HasProtheusProfiles returns true if there is at least one profile (new or legacy).
+// HasProtheusProfiles returns true if there is at least one profile.
 func (c *ServiceCreds) HasProtheusProfiles() bool {
-	return len(c.ProtheusProfiles) > 0 || (c.Protheus != nil && c.Protheus.Server != "")
+	return len(c.ProtheusProfiles) > 0
 }
 
 func GetEncryptionKey() ([]byte, error) {
@@ -133,7 +110,7 @@ func deriveMachineKey() ([]byte, error) {
 		return nil, fmt.Errorf("failed to get current user: %w", err)
 	}
 
-	combined := hostname + currentUser.Username + currentUser.HomeDir
+	combined := hostname + currentUser.Username
 	hash := sha256.Sum256([]byte(combined))
 
 	return hash[:], nil

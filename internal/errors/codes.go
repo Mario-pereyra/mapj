@@ -1,7 +1,5 @@
 package errors
 
-import "strings"
-
 const (
 	ExitSuccess  = 0
 	ExitError    = 1
@@ -11,34 +9,51 @@ const (
 	ExitConflict = 5
 )
 
-const (
-	ErrCodeAuth     = "AUTH_ERROR"
-	ErrCodeNotAuth  = "NOT_AUTHENTICATED"
-	ErrCodeUsage    = "USAGE_ERROR"
-	ErrCodeInvalid  = "INVALID"
-	ErrCodeRetry    = "RETRY"
-	ErrCodeConflict = "CONFLICT"
-)
+type ExitCoder interface {
+	ExitCode() int
+}
+
+type AuthError struct {
+	Msg string
+}
+
+func (e *AuthError) Error() string { return e.Msg }
+func (e *AuthError) ExitCode() int { return ExitAuth }
+
+type UsageError struct {
+	Msg string
+}
+
+func (e *UsageError) Error() string { return e.Msg }
+func (e *UsageError) ExitCode() int { return ExitUsage }
+
+type RetryableError struct {
+	Msg string
+}
+
+func (e *RetryableError) Error() string { return e.Msg }
+func (e *RetryableError) ExitCode() int { return ExitRetry }
+
+type ConflictError struct {
+	Msg string
+}
+
+func (e *ConflictError) Error() string { return e.Msg }
+func (e *ConflictError) ExitCode() int { return ExitConflict }
+
+type GeneralError struct {
+	Msg string
+}
+
+func (e *GeneralError) Error() string { return e.Msg }
+func (e *GeneralError) ExitCode() int { return ExitError }
 
 func MapErrorToCode(err error) int {
 	if err == nil {
 		return ExitSuccess
 	}
-
-	errStr := err.Error()
-
-	if strings.Contains(errStr, ErrCodeAuth) || strings.Contains(errStr, ErrCodeNotAuth) {
-		return ExitAuth
+	if exitCoder, ok := err.(ExitCoder); ok {
+		return exitCoder.ExitCode()
 	}
-	if strings.Contains(errStr, ErrCodeUsage) || strings.Contains(errStr, ErrCodeInvalid) {
-		return ExitUsage
-	}
-	if strings.Contains(errStr, ErrCodeRetry) {
-		return ExitRetry
-	}
-	if strings.Contains(errStr, ErrCodeConflict) {
-		return ExitConflict
-	}
-
 	return ExitError
 }
