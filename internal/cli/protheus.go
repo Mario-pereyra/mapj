@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
@@ -102,6 +104,53 @@ func init() {
 	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return (0 = no limit)")
 	protheusQueryCmd.Flags().StringVar(&protheusConnection, "connection", "", "Run against this named profile without switching the active connection")
 	protheusQueryCmd.Flags().StringVar(&protheusOutputFile, "output-file", "", "Write query result to this file path instead of stdout (useful for large result sets)")
+
+	protheusCmd.AddCommand(protheusSchemaCmd)
+	protheusSchemaCmd.Flags().StringVar(&protheusConnection, "connection", "", "Run against this named profile without switching the active connection")
+}
+
+var protheusSchemaCmd = &cobra.Command{
+	Use:   "schema <table_name>",
+	Short: "Get the schema (columns and types) for a specific table",
+	Long: `Quickly discover the structure of a Protheus SQL Server table.
+This helps AI agents formulate correct SQL queries without hallucinations.
+
+OUTPUT SCHEMA:
+  Returns a TOON or JSON response containing column names, data types, and max lengths.
+
+EXAMPLE:
+  mapj protheus schema SA1010
+  mapj protheus schema SA1010 --connection TOTALPEC_PRD`,
+	Args: cobra.ExactArgs(1),
+	RunE: protheusSchemaRun,
+}
+
+func protheusSchemaRun(cmd *cobra.Command, args []string) error {
+	tableName := args[0]
+
+	// Validate basic table name to prevent SQL injection in the schema query itself
+	if strings.ContainsAny(tableName, " ;'\"-") {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", "invalid table name format", false)
+		fmt.Println(GetFormatter().Format(env))
+		return errors.New("USAGE_ERROR")
+	}
+
+	sqlQuery := fmt.Sprintf(`
+		SELECT 
+			COLUMN_NAME, 
+			DATA_TYPE, 
+			CHARACTER_MAXIMUM_LENGTH
+		FROM INFORMATION_SCHEMA.COLUMNS
+		WHERE TABLE_NAME = '%s'
+		ORDER BY ORDINAL_POSITION
+	`, tableName)
+
+	// Reuse the query logic but override the SQL
+	protheusMaxRows = 1000 // Schema queries are small, but add a safety net
+	protheusOutputFile = "" // Never write schema to file, always stdout
+	
+	// Temporarily override the args to use our generated SQL
+	return protheusQueryRun(cmd, []string{sqlQuery})
 }
 
 func protheusQueryRun(cmd *cobra.Command, args []string) error {
@@ -148,7 +197,7 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 
 	client := protheus.NewClient(profile.Server, profile.Port, profile.Database, profile.User, profile.Password)
 
-	result, err := client.Query(ctx, sqlQuery)
+	result, err := client.Query(ctx, sqlQuery, protheusMaxRows)
 	if err != nil {
 		if strings.Contains(err.Error(), "validation error") {
 			env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", err.Error(), false)
@@ -165,9 +214,18 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if protheusMaxRows > 0 && result.Count > protheusMaxRows {
-		result.Rows = result.Rows[:protheusMaxRows]
-		result.Count = protheusMaxRows
+	// ── Safety Tripwire (Protect LLM Context) ──────────────────────────────────
+	// If the result is very large and no output file was specified, auto-fallback to file
+	tripwireThreshold := 500
+	if protheusOutputFile == "" && result.Count > tripwireThreshold {
+		tempFile := fmt.Sprintf("mapj_overflow_%d.toon", time.Now().UnixNano())
+		protheusOutputFile = tempFile
+		
+		// Let the user/agent know we diverted the output
+		fmt.Fprintf(os.Stderr, "⚠️  Safety Tripwire: Result exceeded %d rows. Auto-saving to %s to protect context window.\n", tripwireThreshold, tempFile)
+		
+		// Force TOON format for the file since it's the most efficient
+		formatter = output.NewFormatter("toon")
 	}
 
 	// ── Build output payload ──────────────────────────────────────────────────

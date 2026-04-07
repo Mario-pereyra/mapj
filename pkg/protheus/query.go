@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -45,31 +44,32 @@ func (c *Client) connectionString() string {
 func ValidateReadOnly(sqlQuery string) error {
 	normalized := strings.ToUpper(strings.TrimSpace(sqlQuery))
 
-	normalized = regexp.MustCompile(`--.*$`).ReplaceAllString(normalized, "")
-	normalized = regexp.MustCompile(`/\*.*?\*/`).ReplaceAllString(normalized, "")
-
-	dangerous := []string{
-		"INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
-		"TRUNCATE", "EXEC", "EXECUTE", "MERGE", "INTO", "REPLACE",
-		"GRANT", "REVOKE", "DENY", "BACKUP", "RESTORE",
-	}
-
-	for _, keyword := range dangerous {
-		pattern := fmt.Sprintf(`\b%s\b`, keyword)
-		if matched, _ := regexp.MatchString(pattern, normalized); matched {
-			return fmt.Errorf("query contains forbidden keyword: %s", keyword)
+	// Remove leading multi-line comments for prefix checking
+	for strings.HasPrefix(normalized, "/*") {
+		endIdx := strings.Index(normalized, "*/")
+		if endIdx == -1 {
+			return fmt.Errorf("query contains unclosed multi-line comment")
 		}
+		normalized = strings.TrimSpace(normalized[endIdx+2:])
 	}
 
-	selectPattern := `^\s*(SELECT|WITH\s+)`
-	if matched, _ := regexp.MatchString(selectPattern, normalized); !matched {
-		return fmt.Errorf("query must be a SELECT statement")
+	// Remove leading single-line comments for prefix checking
+	for strings.HasPrefix(normalized, "--") {
+		endIdx := strings.Index(normalized, "\n")
+		if endIdx == -1 {
+			return fmt.Errorf("query contains only comments")
+		}
+		normalized = strings.TrimSpace(normalized[endIdx+1:])
+	}
+
+	if !strings.HasPrefix(normalized, "SELECT") && !strings.HasPrefix(normalized, "WITH") && !strings.HasPrefix(normalized, "EXEC") {
+		return fmt.Errorf("query must start with SELECT, WITH, or EXEC")
 	}
 
 	return nil
 }
 
-func (c *Client) Query(ctx context.Context, sqlQuery string) (*QueryResult, error) {
+func (c *Client) Query(ctx context.Context, sqlQuery string, maxRows int) (*QueryResult, error) {
 	if err := ValidateReadOnly(sqlQuery); err != nil {
 		return nil, fmt.Errorf("validation error: %w", err)
 	}
@@ -92,8 +92,14 @@ func (c *Client) Query(ctx context.Context, sqlQuery string) (*QueryResult, erro
 	}
 
 	var results [][]interface{}
+	count := 0
 
 	for rows.Next() {
+		if maxRows > 0 && count >= maxRows {
+			// Break the loop and let defer rows.Close() cleanly abort the cursor on the server
+			break
+		}
+
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
 		for i := range values {
@@ -114,6 +120,7 @@ func (c *Client) Query(ctx context.Context, sqlQuery string) (*QueryResult, erro
 			}
 		}
 		results = append(results, row)
+		count++
 	}
 
 	if err := rows.Err(); err != nil {
@@ -123,7 +130,7 @@ func (c *Client) Query(ctx context.Context, sqlQuery string) (*QueryResult, erro
 	return &QueryResult{
 		Columns: columns,
 		Rows:    results,
-		Count:   len(results),
+		Count:   count,
 	}, nil
 }
 

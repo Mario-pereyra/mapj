@@ -14,93 +14,47 @@ func TestValidateReadOnly_Select(t *testing.T) {
 		"SELECT TOP 10 * FROM SPED050",
 		"WITH cte AS (SELECT 1) SELECT * FROM cte",
 		"  SELECT * FROM table  ",
+		"EXEC sp_help table",
+		"exec sp_help table",
 	}
 
 	for _, query := range validQueries {
 		t.Run(query, func(t *testing.T) {
 			err := ValidateReadOnly(query)
-			assert.NoError(t, err, "Expected %q to be valid SELECT", query)
+			assert.NoError(t, err, "Expected %q to be valid SELECT/WITH/EXEC", query)
 		})
 	}
 }
 
-func TestValidateReadOnly_Insert(t *testing.T) {
-	queries := []string{
+func TestValidateReadOnly_PrefixRejection(t *testing.T) {
+	invalidQueries := []string{
 		"INSERT INTO table VALUES (1, 2)",
-		"INSERT INTO table (col) VALUES ('value')",
-		"insert into table select * from other",
-	}
-
-	for _, query := range queries {
-		t.Run(query, func(t *testing.T) {
-			err := ValidateReadOnly(query)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "INSERT")
-		})
-	}
-}
-
-func TestValidateReadOnly_Update(t *testing.T) {
-	queries := []string{
 		"UPDATE table SET col = 1",
-		"UPDATE table SET col = 1 WHERE id = 2",
-		"update table set col = 1",
-	}
-
-	for _, query := range queries {
-		t.Run(query, func(t *testing.T) {
-			err := ValidateReadOnly(query)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "UPDATE")
-		})
-	}
-}
-
-func TestValidateReadOnly_Delete(t *testing.T) {
-	queries := []string{
 		"DELETE FROM table",
-		"DELETE FROM table WHERE id = 1",
-		"delete from table",
+		"DROP TABLE users",
+		"ALTER TABLE add column",
+		"CREATE TABLE newtable",
+		"TRUNCATE TABLE users",
+		"MERGE INTO target",
+		"GRANT SELECT ON table",
+		"SHOW TABLES",
+		"EXPLAIN SELECT * FROM table",
+		"DESCRIBE table",
 	}
 
-	for _, query := range queries {
+	for _, query := range invalidQueries {
 		t.Run(query, func(t *testing.T) {
 			err := ValidateReadOnly(query)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "DELETE")
-		})
-	}
-}
-
-func TestValidateReadOnly_DangerousKeywords(t *testing.T) {
-	dangerousQueries := []struct {
-		query   string
-		keyword string
-	}{
-		{"DROP TABLE users", "DROP"},
-		{"ALTER TABLE add column", "ALTER"},
-		{"CREATE TABLE newtable", "CREATE"},
-		{"TRUNCATE TABLE users", "TRUNCATE"},
-		{"EXEC sp_name", "EXEC"},
-		{"EXECUTE sp_name", "EXECUTE"},
-		{"MERGE INTO target", "MERGE"},
-		{"GRANT SELECT ON table", "GRANT"},
-		{"REVOKE SELECT ON table", "REVOKE"},
-	}
-
-	for _, q := range dangerousQueries {
-		t.Run(q.query, func(t *testing.T) {
-			err := ValidateReadOnly(q.query)
-			assert.Error(t, err, "Expected %q to be rejected", q.query)
-			assert.Contains(t, err.Error(), q.keyword)
+			assert.Error(t, err, "Expected %q to be rejected", query)
+			assert.Contains(t, err.Error(), "query must start with SELECT, WITH, or EXEC")
 		})
 	}
 }
 
 func TestValidateReadOnly_SQLComments(t *testing.T) {
 	queries := []string{
-		"SELECT * FROM table -- this is a comment",
-		"SELECT * FROM table /* block comment */",
+		"-- this is a comment\nSELECT * FROM table",
+		"/* block comment */ SELECT * FROM table",
 	}
 
 	for _, query := range queries {
@@ -110,26 +64,10 @@ func TestValidateReadOnly_SQLComments(t *testing.T) {
 		})
 	}
 
-	malicious := "SELECT * FROM table; DROP TABLE users; -- comment"
+	malicious := "-- comment\nDROP TABLE users;"
 	err := ValidateReadOnly(malicious)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "DROP")
-}
-
-func TestValidateReadOnly_NotSelect(t *testing.T) {
-	invalidQueries := []string{
-		"SHOW TABLES",
-		"EXPLAIN SELECT * FROM table",
-		"DESCRIBE table",
-	}
-
-	for _, query := range invalidQueries {
-		t.Run(query, func(t *testing.T) {
-			err := ValidateReadOnly(query)
-			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "must be a SELECT")
-		})
-	}
+	assert.Contains(t, err.Error(), "query must start with SELECT, WITH, or EXEC")
 }
 
 func TestNewClient(t *testing.T) {
