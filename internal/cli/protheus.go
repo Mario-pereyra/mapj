@@ -232,7 +232,14 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 	var resultPayload any
 	var fileFormatter output.Formatter
 
-	resultPayload = result
+	_, isToon := formatter.(output.TOONFormatter)
+	_, isAuto := formatter.(output.AutoFormatter)
+	if isToon || isAuto {
+		resultPayload = buildToonPayload(result)
+	} else {
+		resultPayload = result
+	}
+	
 	fileFormatter = formatter
 
 	// ── --output-file: write to file, print summary to stdout ─────────────────
@@ -281,4 +288,17 @@ func protheusVPNHint(server string) string {
 	default:
 		return fmt.Sprintf("💡 VPN: Verify the VPN for server %s is active.", server)
 	}
+}
+
+// buildToonPayload converts a QueryResult into a slice of maps for tabular TOON output.
+func buildToonPayload(result *protheus.QueryResult) []map[string]any {
+	payload := make([]map[string]any, 0, len(result.Rows))
+	for _, row := range result.Rows {
+		obj := make(map[string]any, len(result.Columns))
+		for i, col := range result.Columns {
+			obj[col] = row[i]
+		}
+		payload = append(payload, obj)
+	}
+	return payload
 }
