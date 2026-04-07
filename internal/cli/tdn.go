@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
@@ -45,11 +43,6 @@ OUTPUT SCHEMA:
       "type":        "page",
       "title":       "AdvPL",
       "url":         "https://tdn.totvs.com/...",
-      "space":       {"key":"PROT","name":"Linha Microsiga Protheus"},
-      "ancestors":   [{"id":"...","title":"..."}],   // breadcrumb
-      "labels":      ["versao_12","ponto_de_entrada"],
-      "version":     {"number":5},
-      "lastUpdated": "2024-03-10T14:22:00Z",
       "childCount":  3               // only present with --check-children
     }],
     "count":   25,                   // results in this page
@@ -66,7 +59,7 @@ GOTCHAS:
   - --export-to pipelines search results directly into confluence export (no extra step)
 
 EXAMPLES:
-  mapj tdn search "AdvPL" --space PROT --limit 10
+  mapj tdn search "AdvPL" --space PROT --max-results 100
   mapj tdn search "ponto de entrada" --space PROT --since 1m
   mapj tdn search "advpl" --space PROT --label versao_12
   mapj tdn search "advpl" --space PROT --check-children
@@ -78,9 +71,9 @@ EXAMPLES:
 }
 
 var (
-	tdnSpace    string
-	tdnSpaces   []string
-	tdnLimit    int
+	tdnSpace         string
+	tdnSpaces        []string
+	tdnMaxResults    int
 	tdnStart         int
 	tdnType          string
 	tdnSince         string
@@ -100,7 +93,7 @@ func init() {
 	f := tdnSearchCmd.Flags()
 	f.StringVar(&tdnSpace, "space", "", "Filter by single space key (e.g. PROT)")
 	f.StringSliceVar(&tdnSpaces, "spaces", nil, "Filter by multiple space keys (e.g. PROT,LDT)")
-	f.IntVar(&tdnLimit, "limit", 25, "Max results per page (1–100)")
+	f.IntVar(&tdnMaxResults, "max-results", 25, "Max results to return (auto-paginates up to this number)")
 	f.IntVar(&tdnStart, "start", 0, "Pagination offset")
 	f.StringVar(&tdnType, "type", "page", "Content type: page, blogpost, attachment")
 	f.StringVar(&tdnSince, "since", "", `Filter by last modified date. Supports: "1w", "4d", "2m", "1y", "2024-01-01"`)
@@ -115,8 +108,8 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	formatter := GetFormatter()
 
-	if tdnLimit <= 0 || tdnLimit > 100 {
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", "--limit must be between 1 and 100", false)
+	if tdnMaxResults <= 0 {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR", "--max-results must be > 0", false)
 		fmt.Println(formatter.Format(env))
 		return errors.New("USAGE_ERROR")
 	}
@@ -150,7 +143,7 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 		Type:     tdnType,
 		Ancestor: tdnAncestor,
 		Since:    tdnSince,
-		Limit:    tdnLimit,
+		Limit:    tdnMaxResults,
 		Start:    tdnStart,
 	}
 
@@ -163,96 +156,21 @@ func tdnSearchRun(cmd *cobra.Command, args []string) error {
 
 	// ── Check children (optional enrichment) ──────────────────────────────────
 	if tdnCheckChildren {
-		enrichWithChildCount(ctx, client, result)
+		client.EnrichWithChildCount(ctx, result)
 	}
 
 	// ── Search → Export pipeline ─────────────────────────────────────────────
 	if tdnExportTo != "" {
-		return runSearchExportPipeline(ctx, cmd, formatter, client, result, opts)
+		summary, err := client.RunSearchExportPipeline(ctx, result, tdnExportTo)
+		if err != nil {
+			return err
+		}
+		env := output.NewEnvelope(cmd.CommandPath(), summary)
+		fmt.Println(formatter.Format(env))
+		return nil
 	}
 
 	env := output.NewEnvelope(cmd.CommandPath(), result)
-	fmt.Println(formatter.Format(env))
-	return nil
-}
-
-// enrichWithChildCount fetches child counts for all results concurrently.
-// Uses a semaphore to limit concurrent API calls to 5 at a time.
-func enrichWithChildCount(ctx context.Context, client *confluence.Client, result *confluence.SearchResult) {
-	const maxConcurrent = 5
-	sem := make(chan struct{}, maxConcurrent)
-	var wg sync.WaitGroup
-
-	for i := range result.Results {
-		if result.Results[i].Type != "page" || result.Results[i].ID == "" {
-			count := 0
-			result.Results[i].ChildCount = &count
-			continue
-		}
-
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
-			sem <- struct{}{}
-			defer func() { <-sem }()
-
-			count, err := client.GetChildCount(ctx, result.Results[idx].ID)
-			if err != nil {
-				count = -1 // -1 = fetch error
-			}
-			result.Results[idx].ChildCount = &count
-		}(i)
-	}
-	wg.Wait()
-}
-
-// runSearchExportPipeline exports every page found in the search results.
-func runSearchExportPipeline(
-	ctx context.Context,
-	cmd *cobra.Command,
-	formatter output.Formatter,
-	client *confluence.Client,
-	result *confluence.SearchResult,
-	opts *confluence.SearchOpts,
-) error {
-	type pipelineResult struct {
-		Searched  int      `json:"searched"`
-		Exported  int      `json:"exported"`
-		Failed    int      `json:"failed"`
-		OutputDir string   `json:"outputDir"`
-		Pages     []string `json:"pages"`
-		Errors    []string `json:"errors,omitempty"`
-	}
-
-	absDir, _ := filepath.Abs(tdnExportTo)
-	summary := pipelineResult{
-		Searched:  result.Count,
-		OutputDir: absDir,
-	}
-
-	exportOpts := &confluence.ExportOpts{
-		OutputPath:      absDir,
-		WithDescendants: false,
-		WithAttachments: false,
-	}
-
-	for _, page := range result.Results {
-		if page.ID == "" {
-			summary.Failed++
-			summary.Errors = append(summary.Errors, fmt.Sprintf("page '%s' has no ID", page.Title))
-			continue
-		}
-		_, err := client.Export(ctx, page.ID, exportOpts)
-		if err != nil {
-			summary.Failed++
-			summary.Errors = append(summary.Errors, fmt.Sprintf("%s (%s): %v", page.Title, page.ID, err))
-		} else {
-			summary.Exported++
-			summary.Pages = append(summary.Pages, fmt.Sprintf("%s (%s)", page.Title, page.ID))
-		}
-	}
-
-	env := output.NewEnvelope(cmd.CommandPath(), summary)
 	fmt.Println(formatter.Format(env))
 	return nil
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 )
 
 // SearchOpts configures a CQL search against the Confluence REST API.
@@ -18,35 +17,28 @@ type SearchOpts struct {
 	Type     string   // Content type: page, blogpost, attachment (default: page)
 	Ancestor string   // Page ID: return all descendants of this page
 	Since    string   // Date expression: "2024-01-01", "1w", "4d", "2m"
-	Limit    int      // Max results per request (default: 25)
+	Limit    int      // Max results to return (auto-paginated)
 	Start    int      // Pagination offset
 }
 
 // SearchResult is the structured output of a CQL search.
 type SearchResult struct {
-	Results  []PageRef `json:"results"`
-	Count    int       `json:"count"`
-	Total    int       `json:"total"`
-	Start    int       `json:"start"`
-	HasNext  bool      `json:"hasNext"`
-	NextStart int      `json:"nextStart,omitempty"`
-	CQL      string    `json:"cql"`
+	Results   []PageRef `json:"results"`
+	Count     int       `json:"count"`
+	Total     int       `json:"total"`
+	Start     int       `json:"start"`
+	HasNext   bool      `json:"hasNext"`
+	NextStart int       `json:"nextStart,omitempty"`
+	CQL       string    `json:"cql"`
 }
 
-// PageRef is a single search result item.
+// PageRef is a single search result item, optimized for token efficiency.
 type PageRef struct {
-	ID            string        `json:"id"`
-	Type          string        `json:"type"`
-	Title         string        `json:"title"`
-	URL           string        `json:"url,omitempty"`
-	Space         SpaceRef      `json:"space"`
-	Labels        []string      `json:"labels,omitempty"`
-	Excerpt       string        `json:"excerpt,omitempty"`
-	Ancestors     []AncestorRef `json:"ancestors,omitempty"`
-	Version       int           `json:"version,omitempty"`
-	LastUpdated   *time.Time    `json:"lastUpdated,omitempty"`
-	LastUpdatedBy string        `json:"lastUpdatedBy,omitempty"`
-	ChildCount    *int          `json:"childCount,omitempty"` // nil = not fetched, 0 = leaf, N = has children
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	URL        string `json:"url,omitempty"`
+	ChildCount *int   `json:"childCount,omitempty"` // nil = not fetched, 0 = leaf, N = has children
+	Type       string `json:"-"` // Internal use
 }
 
 // SpaceRef is the space-key+name pair included in each result.
@@ -55,11 +47,7 @@ type SpaceRef struct {
 	Name string `json:"name"`
 }
 
-// AncestorRef is defined in pages.go — breadcrumb item (parent page chain).
-
 // GetChildCount returns the number of direct child pages for a given page ID.
-// Use this to decide whether --with-descendants is worth running.
-// Returns 0 for leaf pages, N for pages with children.
 func (c *Client) GetChildCount(ctx context.Context, pageID string) (int, error) {
 	params := map[string]string{
 		"limit":  "1", // We only need size, not actual children
@@ -80,14 +68,9 @@ func (c *Client) GetChildCount(ctx context.Context, pageID string) (int, error) 
 	return resp.Size, nil
 }
 
-
-// Search executes a CQL search against /rest/api/content/search.
-//
-// The siteSearch field is a TOTVS-custom Confluence field that searches across
-// title, body, and labels simultaneously. It is more powerful than the standard
-// `text` field for TDN searches.
+// Search executes a CQL search against /rest/api/content/search with auto-pagination.
 func (c *Client) Search(ctx context.Context, opts *SearchOpts) (*SearchResult, error) {
-	if opts.Limit == 0 {
+	if opts.Limit <= 0 {
 		opts.Limit = 25
 	}
 	if opts.Type == "" {
@@ -95,123 +78,104 @@ func (c *Client) Search(ctx context.Context, opts *SearchOpts) (*SearchResult, e
 	}
 
 	cql := buildCQL(opts)
-
-	params := map[string]string{
-		"cql":    cql,
-		"limit":  fmt.Sprintf("%d", opts.Limit),
-		"start":  fmt.Sprintf("%d", opts.Start),
-		"expand": "space,metadata.labels,version,history.lastUpdated,ancestors",
+	
+	var allRefs []PageRef
+	currentStart := opts.Start
+	remainingLimit := opts.Limit
+	
+	// API typically allows up to 100 per request
+	batchSize := 100
+	if remainingLimit < 100 {
+		batchSize = remainingLimit
 	}
+	
+	hasNext := false
+	nextStart := 0
+	total := 0
 
-	body, err := c.do(ctx, "GET", "/rest/api/content/search", params)
-	if err != nil {
-		return nil, err
-	}
+	for remainingLimit > 0 {
+		batchSize = 100
+		if remainingLimit < 100 {
+			batchSize = remainingLimit
+		}
 
-	var raw struct {
-		Results []struct {
-			ID    string `json:"id"`
-			Type  string `json:"type"`
-			Title string `json:"title"`
-			Space struct {
-				Key  string `json:"key"`
-				Name string `json:"name"`
-			} `json:"space"`
-			Version struct {
-				Number int `json:"number"`
-			} `json:"version"`
-			History struct {
-				LastUpdated struct {
-					When string `json:"when"`
-					By   struct {
-						DisplayName string `json:"displayName"`
-					} `json:"by"`
-				} `json:"lastUpdated"`
-			} `json:"history"`
-			Metadata struct {
-				Labels struct {
-					Results []struct {
-						Name string `json:"name"`
-					} `json:"results"`
-				} `json:"labels"`
-			} `json:"metadata"`
-			Ancestors []struct {
+		params := map[string]string{
+			"cql":    cql,
+			"limit":  fmt.Sprintf("%d", batchSize),
+			"start":  fmt.Sprintf("%d", currentStart),
+			// Minimal expand to reduce payload size
+			"expand": "space", 
+		}
+
+		body, err := c.do(ctx, "GET", "/rest/api/content/search", params)
+		if err != nil {
+			return nil, err
+		}
+
+		var raw struct {
+			Results []struct {
 				ID    string `json:"id"`
+				Type  string `json:"type"`
 				Title string `json:"title"`
-			} `json:"ancestors"`
+				Space struct {
+					Key  string `json:"key"`
+				} `json:"space"`
+				Links struct {
+					WebUI  string `json:"webui"`
+				} `json:"_links"`
+			} `json:"results"`
+			Size  int `json:"size"`
+			Start int `json:"start"`
 			Links struct {
-				WebUI  string `json:"webui"`
-				TinyUI string `json:"tinyui"`
+				Next string `json:"next"`
+				Base string `json:"base"`
 			} `json:"_links"`
-		} `json:"results"`
-		Size  int `json:"size"`
-		Start int `json:"start"`
-		Links struct {
-			Next string `json:"next"`
-			Base string `json:"base"`
-		} `json:"_links"`
-	}
-
-	if err := json.Unmarshal(body, &raw); err != nil {
-		return nil, fmt.Errorf("failed to parse search response: %w", err)
-	}
-
-	baseURL := raw.Links.Base
-	if baseURL == "" {
-		baseURL = c.BaseURL
-	}
-
-	refs := make([]PageRef, 0, len(raw.Results))
-	for _, r := range raw.Results {
-		ref := PageRef{
-			ID:      r.ID,
-			Type:    r.Type,
-			Title:   r.Title,
-			Space:   SpaceRef{Key: r.Space.Key, Name: r.Space.Name},
-			Version: r.Version.Number,
 		}
 
-		// Build canonical URL from webui link
-		if r.Links.WebUI != "" {
-			ref.URL = baseURL + r.Links.WebUI
-		} else if r.Space.Key != "" && r.ID != "" {
-			ref.URL = fmt.Sprintf("%s/pages/viewpage.action?pageId=%s", baseURL, r.ID)
+		if err := json.Unmarshal(body, &raw); err != nil {
+			return nil, fmt.Errorf("failed to parse search response: %w", err)
 		}
 
-		// Extract labels
-		for _, l := range r.Metadata.Labels.Results {
-			ref.Labels = append(ref.Labels, l.Name)
+		baseURL := raw.Links.Base
+		if baseURL == "" {
+			baseURL = c.BaseURL
 		}
 
-		// Parse last updated time
-		if r.History.LastUpdated.When != "" {
-			t, err := time.Parse(time.RFC3339, r.History.LastUpdated.When)
-			if err == nil {
-				ref.LastUpdated = &t
+		for _, r := range raw.Results {
+			ref := PageRef{
+				ID:    r.ID,
+				Title: r.Title,
+				Type:  r.Type,
 			}
-			ref.LastUpdatedBy = r.History.LastUpdated.By.DisplayName
-		}
 
-		// Build ancestors breadcrumb
-		for _, a := range r.Ancestors {
-			ref.Ancestors = append(ref.Ancestors, AncestorRef{
-				ID:    a.ID,
-				Title: a.Title,
-			})
+			// Build canonical URL
+			if r.Links.WebUI != "" {
+				ref.URL = baseURL + r.Links.WebUI
+			} else if r.Space.Key != "" && r.ID != "" {
+				ref.URL = fmt.Sprintf("%s/pages/viewpage.action?pageId=%s", baseURL, r.ID)
+			}
+			
+			allRefs = append(allRefs, ref)
 		}
-
-		refs = append(refs, ref)
+		
+		total += raw.Size
+		remainingLimit -= raw.Size
+		currentStart += raw.Size
+		
+		if raw.Links.Next == "" || raw.Size == 0 {
+			hasNext = false
+			break
+		} else {
+			hasNext = true
+			nextStart = currentStart
+		}
 	}
-
-	// Determine next page
-	hasNext := raw.Links.Next != ""
-	nextStart := opts.Start + raw.Size
 
 	return &SearchResult{
-		Results:   refs,
-		Count:     raw.Size,
-		Total:     raw.Size, // REST API /content/search doesn't return total easily — use count
-		Start:     raw.Start,
+		Results:   allRefs,
+		Count:     total,
+		Total:     total, 
+		Start:     opts.Start,
 		HasNext:   hasNext,
 		NextStart: nextStart,
 		CQL:       cql,
