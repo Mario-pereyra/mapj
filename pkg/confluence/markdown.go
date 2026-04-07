@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/JohannesKaufmann/html-to-markdown/v2/converter"
 	"github.com/JohannesKaufmann/html-to-markdown/v2/plugin/base"
@@ -14,21 +15,31 @@ import (
 	"golang.org/x/net/html"
 )
 
+var (
+	mdConverter *converter.Converter
+	mdOnce      sync.Once
+)
+
+func getConverter() *converter.Converter {
+	mdOnce.Do(func() {
+		mdConverter = converter.NewConverter(
+			converter.WithPlugins(
+				base.NewBasePlugin(),
+				commonmark.NewCommonmarkPlugin(),
+				table.NewTablePlugin(),
+				strikethrough.NewStrikethroughPlugin(),
+			),
+		)
+		registerExportViewHandlers(mdConverter)
+	})
+	return mdConverter
+}
+
 // ConvertToMarkdown converts Confluence export_view HTML to Markdown.
 // This expects the pre-rendered HTML from body.export_view or body.view,
 // NOT the raw body.storage XML with ac:* tags.
 func ConvertToMarkdown(htmlInput string) string {
-	conv := converter.NewConverter(
-		converter.WithPlugins(
-			base.NewBasePlugin(),
-			commonmark.NewCommonmarkPlugin(),
-			table.NewTablePlugin(),
-			strikethrough.NewStrikethroughPlugin(),
-		),
-	)
-
-	// Register handlers for Confluence-specific elements in export_view format
-	registerExportViewHandlers(conv)
+	conv := getConverter()
 
 	markdown, err := conv.ConvertString(htmlInput)
 	if err != nil {

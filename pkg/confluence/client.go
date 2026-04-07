@@ -75,39 +75,61 @@ func (c *Client) do(ctx context.Context, method, path string, params map[string]
 		u.RawQuery = q.Encode()
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+	maxRetries := 3
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, method, u.String(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+
+		for k, v := range c._getHeaders() {
+			req.Header.Set(k, v)
+		}
+
+		if c.UseBasic && c.Username != "" && c.Password != "" {
+			auth := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Password))
+			req.Header.Set("Authorization", "Basic "+auth)
+		} else if c.Token != "" {
+			req.Header.Set("Authorization", "Bearer "+c.Token)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request failed: %w", err)
+			// Network errors can be retried
+			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		
+		if err != nil {
+			lastErr = fmt.Errorf("failed to read response: %w", err)
+			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			continue
+		}
+
+		if resp.StatusCode >= 400 {
+			lastErr = fmt.Errorf("API error: status %d, body: %s", resp.StatusCode, string(body))
+			
+			// Retry on Rate Limit (429) or Server Errors (50x)
+			if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+				if attempt < maxRetries {
+					time.Sleep(time.Duration(1<<attempt) * time.Second)
+					continue
+				}
+			}
+			return nil, lastErr
+		}
+
+		return body, nil
 	}
 
-	for k, v := range c._getHeaders() {
-		req.Header.Set(k, v)
-	}
-
-	if c.UseBasic && c.Username != "" && c.Password != "" {
-		auth := base64.StdEncoding.EncodeToString([]byte(c.Username + ":" + c.Password))
-		req.Header.Set("Authorization", "Basic "+auth)
-	} else if c.Token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.Token)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("API error: status %d, body: %s", resp.StatusCode, string(body))
-	}
-
-	return body, nil
+	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
 
 func (c *Client) Ping(ctx context.Context) error {

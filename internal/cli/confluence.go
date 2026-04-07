@@ -27,7 +27,6 @@ AUTH REQUIRED:
 SUBCOMMANDS:
   mapj confluence export <url-or-id>     Export one page (or tree with --with-descendants)
   mapj confluence export-space <key>     Export every page in a space
-  mapj confluence retry-failed           Retry pages from export-errors.jsonl
 
 Run 'mapj confluence <command> --help' for full schema.`,
 }
@@ -35,13 +34,11 @@ Run 'mapj confluence <command> --help' for full schema.`,
 // ==================== FLAGS ====================
 
 var (
-	confluenceFormat    string
-	confluenceOutputPath string
-	confluenceVerbose      bool
-	confluenceDebug        bool
-	confluenceDumpDebug    bool
-	confluenceDescendants  bool
-	confluenceAttachments  bool
+	confluenceFormat      string
+	confluenceOutputPath  string
+	confluenceVerbose     bool
+	confluenceDescendants bool
+	confluenceAttachments bool
 )
 
 // ==================== COMMANDS ====================
@@ -64,7 +61,6 @@ OUTPUT STRUCTURE (files created under --output-path):
   │   └── pages/
   │       └── PAGE_ID-slug.md       ← one file per page, YAML front matter
   ├── manifest.jsonl                ← one JSON line per exported page (inventory)
-  └── export-errors.jsonl           ← one JSON line per failure (use retry-failed)
 
 STDOUT SCHEMA (final summary):
   {"ok":true,"command":"mapj confluence export","result":{
@@ -76,16 +72,13 @@ GOTCHAS:
   - --with-descendants exports the full subtree recursively.
     Use 'mapj tdn search --check-children' BEFORE to know how large the tree is.
     childCount:1 can mean 171+ total pages. Preview first.
-  - Pages with errors are logged to export-errors.jsonl, not stdout.
-    Run 'mapj confluence retry-failed --output-path ./docs' to retry them.
   - Without --output-path, single-page export prints Markdown to stdout.
 
 EXAMPLES:
   mapj confluence export 235312129 --output-path ./docs
   mapj confluence export 235312129 --output-path ./docs --with-descendants
   mapj confluence export https://tdn.totvs.com/display/PROT/AdvPL --output-path ./docs
-  mapj confluence export 235312129 --output-path ./docs --with-attachments
-  mapj confluence export 235312129 --output-path ./docs --dump-debug`,
+  mapj confluence export 235312129 --output-path ./docs --with-attachments`,
 	Args: cobra.ExactArgs(1),
 	RunE: confluenceExportRun,
 }
@@ -102,7 +95,6 @@ OUTPUT STRUCTURE (same as 'confluence export'):
     README.md          ← full index
     pages/*.md         ← one file per page
   manifest.jsonl       ← inventory of all exported pages
-  export-errors.jsonl  ← failures (retry with 'confluence retry-failed')
 
 STDOUT SCHEMA:
   {"ok":true,"command":"mapj confluence export-space","result":{
@@ -126,14 +118,11 @@ func init() {
 	confluenceExportCmd.Flags().BoolVar(&confluenceDescendants, "with-descendants", false, "Also export all child pages recursively")
 	confluenceExportCmd.Flags().BoolVar(&confluenceAttachments, "with-attachments", false, "Download page attachments (images, files, etc.)")
 	confluenceExportCmd.Flags().BoolVar(&confluenceVerbose, "verbose", false, "Show detailed progress and warnings")
-	confluenceExportCmd.Flags().BoolVar(&confluenceDebug, "debug", false, "Save raw HTML to .debug/ for troubleshooting")
-	confluenceExportCmd.Flags().BoolVar(&confluenceDumpDebug, "dump-debug", false, "Full diagnostic dump for a single page")
 
 	// Export-space command flags
 	confluenceExportSpaceCmd.Flags().StringVar(&confluenceOutputPath, "output-path", "", "Directory to save exported files")
 	confluenceExportSpaceCmd.Flags().BoolVar(&confluenceAttachments, "with-attachments", false, "Download page attachments (images, files, etc.)")
 	confluenceExportSpaceCmd.Flags().BoolVar(&confluenceVerbose, "verbose", false, "Show detailed progress")
-	confluenceExportSpaceCmd.Flags().BoolVar(&confluenceDebug, "debug", false, "Save raw HTML to .debug/")
 	confluenceExportSpaceCmd.MarkFlagRequired("output-path")
 
 	// Register subcommands
@@ -191,9 +180,6 @@ func getConfluenceClient(cmd *cobra.Command) (*confluence.Client, *auth.Confluen
 
 // getLogLevel returns the appropriate log level based on CLI flags.
 func getLogLevel() confluence.LogLevel {
-	if confluenceDebug || confluenceDumpDebug {
-		return confluence.LogDebug
-	}
 	if confluenceVerbose {
 		return confluence.LogVerbose
 	}
@@ -242,8 +228,6 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 		WithDescendants: confluenceDescendants,
 		WithAttachments: confluenceAttachments,
 		Verbose:         confluenceVerbose,
-		Debug:           confluenceDebug,
-		DumpDebug:       confluenceDumpDebug,
 	}
 
 	// Single page without descendants and no output path -> inline result
@@ -327,7 +311,6 @@ func confluenceExportSpaceRun(cmd *cobra.Command, args []string) error {
 		OutputPath:      confluenceOutputPath,
 		WithAttachments: confluenceAttachments,
 		Verbose:         confluenceVerbose,
-		Debug:           confluenceDebug,
 	}
 
 	results, _ := client.ExportPages(ctx, pageIDs, opts, logger)

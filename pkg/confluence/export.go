@@ -19,8 +19,6 @@ type ExportOpts struct {
 	WithDescendants bool   // Export child pages recursively
 	WithAttachments bool   // Download page attachments (default: false)
 	Verbose         bool
-	Debug           bool
-	DumpDebug       bool   // Full diagnostic dump for a single page
 }
 
 // ExportResult holds the result of a single page export.
@@ -79,24 +77,7 @@ func (c *Client) Export(ctx context.Context, pageID string, opts *ExportOpts) (*
 		result.ExportPath = exportPath
 
 		// Write manifest entry
-		entry := &ManifestEntry{
-			PageID:     page.ID,
-			Title:      page.Title,
-			Slug:       slugify(page.Title, 80),
-			SourceURL:  page.SourceURL(c.BaseURL),
-			SpaceKey:   page.SpaceKey(),
-			SpaceName:  page.Space.Name,
-			Labels:     page.GetLabels(),
-			ExportPath: exportPath,
-			ExportedAt: time.Now().UTC().Format(time.RFC3339),
-			Depth:      len(page.Ancestors),
-			Ancestors:  page.Ancestors,
-			Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
-		}
-		if len(page.Ancestors) > 0 {
-			entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
-			entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
-		}
+		entry := buildManifestEntry(page, c.BaseURL, exportPath)
 		_ = WriteManifest(opts.OutputPath, entry)
 	}
 
@@ -119,7 +100,7 @@ func (c *Client) ExportWithDescendants(ctx context.Context, pageID string, opts 
 	return c.ExportPages(ctx, pageIDs, opts, logger)
 }
 
-// ExportPages exports a list of pages by ID, with structured logging.
+// ExportPages exports a list of pages by ID, concurrently.
 func (c *Client) ExportPages(ctx context.Context, pageIDs []string, opts *ExportOpts, logger *ExportLogger) ([]*ExportResult, error) {
 	if opts.OutputPath != "" {
 		// Clean up old manifest
@@ -132,45 +113,39 @@ func (c *Client) ExportPages(ctx context.Context, pageIDs []string, opts *Export
 	entries := make(map[string][]*ManifestEntry) // grouped by space key
 
 	total := len(pageIDs)
+
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 10) // Pool of 10 workers
+
 	for i, pageID := range pageIDs {
-		// Log progress
-		logger.LogProgress(i+1, total, pageID, "")
+		wg.Add(1)
+		sem <- struct{}{}
 
-		// Export single page with error recovery
-		result, err := c.exportSinglePage(ctx, pageID, opts, logger)
-		if err != nil {
-			continue // Error already logged
-		}
+		go func(idx int, id string) {
+			defer wg.Done()
+			defer func() { <-sem }()
 
-		mu.Lock()
-		results = append(results, result)
+			// Log progress
+			logger.LogProgress(idx+1, total, id, "")
 
-		// Track for space index generation
-		if page, err := c.GetPage(ctx, pageID, "space,metadata.labels,ancestors"); err == nil {
-			entry := &ManifestEntry{
-				PageID:     page.ID,
-				Title:      page.Title,
-				Slug:       slugify(page.Title, 80),
-				SourceURL:  page.SourceURL(c.BaseURL),
-				SpaceKey:   page.SpaceKey(),
-				SpaceName:  page.Space.Name,
-				Labels:     page.GetLabels(),
-				ExportPath: result.ExportPath,
-				ExportedAt: time.Now().UTC().Format(time.RFC3339),
-				Depth:      len(page.Ancestors),
-				Ancestors:  page.Ancestors,
-				Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
+			// Export single page with error recovery
+			result, entry, err := c.exportSinglePage(ctx, id, opts, logger)
+			if err != nil {
+				return // Error already logged
 			}
-			if len(page.Ancestors) > 0 {
-				entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
-				entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
-			}
-			entries[page.SpaceKey()] = append(entries[page.SpaceKey()], entry)
-		}
-		mu.Unlock()
 
-		logger.LogSuccess(pageID, result.Title)
+			mu.Lock()
+			results = append(results, result)
+			if entry != nil {
+				entries[entry.SpaceKey] = append(entries[entry.SpaceKey], entry)
+			}
+			mu.Unlock()
+
+			logger.LogSuccess(id, result.Title)
+		}(i, pageID)
 	}
+
+	wg.Wait()
 
 	// Generate space indexes
 	if opts.OutputPath != "" {
@@ -188,8 +163,8 @@ func (c *Client) ExportPages(ctx context.Context, pageIDs []string, opts *Export
 	return results, nil
 }
 
-// exportSinglePage exports one page with comprehensive error handling.
-func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *ExportOpts, logger *ExportLogger) (*ExportResult, error) {
+// exportSinglePage exports one page with comprehensive error handling. Returns the ExportResult and ManifestEntry.
+func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *ExportOpts, logger *ExportLogger) (*ExportResult, *ManifestEntry, error) {
 	// Fetch page
 	page, err := c.GetPage(ctx, pageID, "")
 	if err != nil {
@@ -203,12 +178,7 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 			code = ErrHTTP429
 		}
 		logger.LogError(NewExportError(pageID, "", PhaseAPIFetch, code, errMsg, opts.OutputPath))
-		return nil, err
-	}
-
-	// Debug dump if requested
-	if opts.DumpDebug {
-		dumpPageDebug(logger, page, c.BaseURL)
+		return nil, nil, err
 	}
 
 	// Convert to markdown
@@ -227,6 +197,8 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 		URL:    page.SourceURL(c.BaseURL),
 	}
 
+	var entry *ManifestEntry
+
 	// Write to disk
 	if opts.OutputPath != "" {
 		exportPath, err := WriteExportedPage(opts.OutputPath, page, fullContent)
@@ -239,31 +211,16 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 			exportErr := NewExportError(pageID, page.Title, PhaseWrite, code, err.Error(), opts.OutputPath)
 			exportErr.GeneratedPath = exportPath
 			logger.LogError(exportErr)
-			return nil, err
+			return nil, nil, err
 		}
 		result.ExportPath = exportPath
 
 		// Write manifest entry
-		entry := &ManifestEntry{
-			PageID:     page.ID,
-			Title:      page.Title,
-			Slug:       slugify(page.Title, 80),
-			SourceURL:  page.SourceURL(c.BaseURL),
-			SpaceKey:   page.SpaceKey(),
-			SpaceName:  page.Space.Name,
-			Labels:     page.GetLabels(),
-			ExportPath: exportPath,
-			ExportedAt: time.Now().UTC().Format(time.RFC3339),
-			Depth:      len(page.Ancestors),
-			Ancestors:  page.Ancestors,
-			Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
-		}
-		if len(page.Ancestors) > 0 {
-			entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
-			entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
-		}
+		entry = buildManifestEntry(page, c.BaseURL, exportPath)
+		mu := sync.Mutex{}
+		mu.Lock()
 		_ = WriteManifest(opts.OutputPath, entry)
-
+		mu.Unlock()
 
 		// Download attachments (only if explicitly requested)
 		if opts.WithAttachments {
@@ -271,7 +228,7 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 		}
 	}
 
-	return result, nil
+	return result, entry, nil
 }
 
 // downloadPageAttachments downloads all attachments for a page.
@@ -305,21 +262,24 @@ func (c *Client) downloadPageAttachments(ctx context.Context, page *Page, opts *
 	}
 }
 
-// dumpPageDebug writes diagnostic files for a single page.
-func dumpPageDebug(logger *ExportLogger, page *Page, baseURL string) {
-	logger.DumpDebugFile(page.ID, "raw_export_view.html", []byte(page.GetExportViewHTML()))
-	logger.DumpDebugFile(page.ID, "raw_storage.html", []byte(page.GetStorageHTML()))
-	logger.DumpDebugFile(page.ID, "converted.md", []byte(ConvertToMarkdown(page.GetExportViewHTML())))
-
-	metadata, _ := json.MarshalIndent(map[string]interface{}{
-		"id":        page.ID,
-		"title":     page.Title,
-		"space":     page.Space,
-		"ancestors": page.Ancestors,
-		"labels":    page.GetLabels(),
-		"version":   page.Version,
-		"links":     page.Links,
-		"sourceURL": page.SourceURL(baseURL),
-	}, "", "  ")
-	logger.DumpDebugFile(page.ID, "metadata.json", metadata)
+func buildManifestEntry(page *Page, baseURL, exportPath string) *ManifestEntry {
+	entry := &ManifestEntry{
+		PageID:     page.ID,
+		Title:      page.Title,
+		Slug:       slugify(page.Title, 80),
+		SourceURL:  page.SourceURL(baseURL),
+		SpaceKey:   page.SpaceKey(),
+		SpaceName:  page.Space.Name,
+		Labels:     page.GetLabels(),
+		ExportPath: exportPath,
+		ExportedAt: time.Now().UTC().Format(time.RFC3339),
+		Depth:      len(page.Ancestors),
+		Ancestors:  page.Ancestors,
+		Breadcrumb: strings.Join(append(page.AncestorTitles(), page.Title), " > "),
+	}
+	if len(page.Ancestors) > 0 {
+		entry.ParentID = page.Ancestors[len(page.Ancestors)-1].ID
+		entry.ParentTitle = page.Ancestors[len(page.Ancestors)-1].Title
+	}
+	return entry
 }
