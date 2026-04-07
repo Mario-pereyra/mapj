@@ -145,6 +145,33 @@ mapj tdn search "AdvPL" --space PROT --limit 1 -o json
 | *(default)* | Compact JSON | LLM/agent consumption |
 | `-o json` | Indented JSON + metadata | Human debugging |
 | `-o csv` | RFC 4180 CSV | Protheus results → spreadsheet |
+| `-o toon` | TOON (Tabular Object Notation) | Token-efficient tabular output (~40% savings vs JSON) |
+
+#### TOON Format Example
+
+```bash
+mapj tdn search "AdvPL" --space PROT --limit 2 -o toon
+```
+
+```
+ok: true
+command: "mapj tdn search"
+result:
+  count: 2
+  hasNext: true
+  results[2]{childCount,id,title,type,url}:
+    5,235312129,AdvPL,page,"https://tdn.totvs.com/display/PROT/AdvPL"
+    3,187531295,AdvPL - Pontos de Entrada,page,"https://tdn.totvs.com/display/PROT/AdvPL+-+Pontos+de+Entrada"
+  total: 2
+```
+
+TOON format rules:
+- **Objects**: YAML-like `key: value` with 2-space indentation
+- **Primitive arrays**: `key[N]: v1,v2,v3` (inline, comma-separated)
+- **Uniform object arrays**: `key[N]{field1,field2}:` header + CSV rows
+- **Non-uniform arrays**: List format with `-` markers
+- **String quoting**: Strings containing `:`, `,`, `"`, `\`, whitespace, or starting with `-` are quoted
+- **Escape sequences**: `\n`, `\t`, `\"`, `\\`
 
 ### Exit codes
 

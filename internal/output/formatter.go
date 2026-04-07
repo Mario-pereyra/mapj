@@ -113,12 +113,15 @@ func WriteToFile(path string, content string) error {
 // "json" / "human" → HumanFormatter — indented JSON with timestamp
 // "csv"            → CSVFormatter   — RFC 4180 CSV
 // "table"          → HumanFormatter — alias for json (table was never implemented)
+// "toon"           → TOONFormatter  — token-efficient tabular format
 func NewFormatter(format string) Formatter {
 	switch strings.ToLower(format) {
 	case "json", "human", "table":
 		return HumanFormatter{}
 	case "csv":
 		return CSVFormatter{}
+	case "toon":
+		return TOONFormatter{}
 	default: // "llm" or empty
 		return LLMFormatter{}
 	}

@@ -44,17 +44,24 @@ var protheusQueryCmd = &cobra.Command{
 SOURCE OF TRUTH: run 'mapj protheus connection list' first to know the active profile.
 Run 'mapj auth status' to confirm protheus is authenticated.
 
-OUTPUT SCHEMA (--format json, default):
+OUTPUT SCHEMA (-o json, default):
   {"ok":true,"command":"mapj protheus query","result":{
     "columns": ["A1_COD","A1_NOME"],
     "rows":    [["000001","CLIENTE TESTE"],...],
     "count":   10
   }}
 
-OUTPUT SCHEMA (--format csv):
+OUTPUT SCHEMA (-o csv):
   A1_COD,A1_NOME
   000001,CLIENTE TESTE
   (raw RFC 4180 CSV, no envelope wrapper)
+
+OUTPUT SCHEMA (-o toon):
+  ok: true
+  command: "mapj protheus query"
+  result[N]{A1_COD,A1_NOME}:
+    000001,CLIENTE TESTE
+    ...
 
 OUTPUT SCHEMA (--output-file, any format):
   stdout → {"ok":true,"result":{"rows":1500,"columns":45,"format":"json","output_file":"./r.json"}}
@@ -71,7 +78,7 @@ FLAGS:
   --connection NAME    Run against specific profile WITHOUT switching active
                        Use to compare data across environments:
                        mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD
-  --format json|csv    Output format (default: json)
+  -o, --output FORMAT  Output format: llm (default), json, csv, toon
   --max-rows N         Client-side row cap, default 10000. Prefer TOP N in SQL.
   --output-file PATH   Write result to file, stdout gets summary only.
 
@@ -80,19 +87,18 @@ EXAMPLES:
   mapj protheus query "SELECT DB_NAME() AS db, @@SERVERNAME AS srv"
   mapj protheus query "SELECT COUNT(*) AS total FROM SA1010" --connection TOTALPEC_PRD
   mapj protheus query "SELECT * FROM SA1010" --output-file ./sa1010.json
-  mapj protheus query "SELECT * FROM SA1010" --format csv --output-file ./sa1010.csv`,
+  mapj protheus query "SELECT * FROM SA1010" -o csv --output-file ./sa1010.csv
+  mapj protheus query "SELECT * FROM SA1010" -o toon`,
 	Args: cobra.ExactArgs(1),
 	RunE: protheusQueryRun,
 }
 
-var protheusFormat string
 var protheusMaxRows int
 var protheusConnection string // --connection: run against specific profile without switching
-var protheusOutputFile string  // --output-file: write result to file instead of stdout
+var protheusOutputFile string // --output-file: write result to file instead of stdout
 
 func init() {
 	protheusCmd.AddCommand(protheusQueryCmd)
-	protheusQueryCmd.Flags().StringVar(&protheusFormat, "format", "json", "Result format inside output: json, csv")
 	protheusQueryCmd.Flags().IntVar(&protheusMaxRows, "max-rows", 10000, "Max rows to return (0 = no limit)")
 	protheusQueryCmd.Flags().StringVar(&protheusConnection, "connection", "", "Run against this named profile without switching the active connection")
 	protheusQueryCmd.Flags().StringVar(&protheusOutputFile, "output-file", "", "Write query result to this file path instead of stdout (useful for large result sets)")
@@ -168,10 +174,11 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 	var resultPayload any
 	var fileFormatter output.Formatter
 
-	if protheusFormat == "csv" {
+	// Check if global formatter is CSVFormatter (via type assertion)
+	if _, isCSV := formatter.(output.CSVFormatter); isCSV {
 		csvPayload := buildCSVPayload(result)
 		resultPayload = csvPayload
-		fileFormatter = output.CSVFormatter{}
+		fileFormatter = formatter
 	} else {
 		resultPayload = result
 		fileFormatter = formatter
@@ -193,10 +200,18 @@ func protheusQueryRun(cmd *cobra.Command, args []string) error {
 		}
 
 		// Print a minimal summary to stdout (not the data)
+		format := "json"
+		if _, isCSV := formatter.(output.CSVFormatter); isCSV {
+			format = "csv"
+		} else if _, isTOON := formatter.(output.TOONFormatter); isTOON {
+			format = "toon"
+		} else if _, isLLM := formatter.(output.LLMFormatter); isLLM {
+			format = "llm"
+		}
 		summary := output.NewEnvelope(cmd.CommandPath(), map[string]any{
 			"rows":        result.Count,
 			"columns":     len(result.Columns),
-			"format":      protheusFormat,
+			"format":      format,
 			"output_file": protheusOutputFile,
 		})
 		fmt.Println(formatter.Format(summary))

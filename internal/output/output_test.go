@@ -153,15 +153,17 @@ func TestNewFormatter(t *testing.T) {
 		expected Formatter
 	}{
 		{"llm", LLMFormatter{}},
-		{"", LLMFormatter{}},          // empty = llm (default)
-		{"unknown", LLMFormatter{}},   // unknown = llm (safe default)
+		{"", LLMFormatter{}},        // empty = llm (default)
+		{"unknown", LLMFormatter{}}, // unknown = llm (safe default)
 		{"json", HumanFormatter{}},
 		{"human", HumanFormatter{}},
-		{"table", HumanFormatter{}},   // table is alias for human
+		{"table", HumanFormatter{}}, // table is alias for human
 		{"csv", CSVFormatter{}},
-		{"JSON", HumanFormatter{}},    // case-insensitive
+		{"toon", TOONFormatter{}},
+		{"JSON", HumanFormatter{}}, // case-insensitive
 		{"LLM", LLMFormatter{}},
 		{"CSV", CSVFormatter{}},
+		{"TOON", TOONFormatter{}}, // case-insensitive
 	}
 
 	for _, tt := range tests {
