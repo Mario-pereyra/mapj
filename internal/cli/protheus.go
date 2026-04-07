@@ -46,50 +46,39 @@ var protheusQueryCmd = &cobra.Command{
 SOURCE OF TRUTH: run 'mapj protheus connection list' first to know the active profile.
 Run 'mapj auth status' to confirm protheus is authenticated.
 
-OUTPUT SCHEMA (-o json, default):
-  {"ok":true,"command":"mapj protheus query","result":{
-    "columns": ["A1_COD","A1_NOME"],
-    "rows":    [["000001","CLIENTE TESTE"],...],
-    "count":   10
-  }}
+OUTPUT SCHEMA (-o llm):
+  {"ok":true,"command":"mapj protheus query","result":{"columns":["A1_COD","A1_NOME"],"rows":[["000001","CLIENTE TESTE"]],"count":1}}
 
-OUTPUT SCHEMA (-o csv):
-  A1_COD,A1_NOME
-  000001,CLIENTE TESTE
-  (raw RFC 4180 CSV, no envelope wrapper)
-
-OUTPUT SCHEMA (-o toon):
+OUTPUT SCHEMA (-o toon / auto):
   ok: true
   command: "mapj protheus query"
-  result[N]{A1_COD,A1_NOME}:
-    000001,CLIENTE TESTE
-    ...
+  result[1]{A1_COD,A1_NOME}:
+    000001,"CLIENTE TESTE"
 
 OUTPUT SCHEMA (--output-file, any format):
-  stdout → {"ok":true,"result":{"rows":1500,"columns":45,"format":"json","output_file":"./r.json"}}
-  file   → full result (json or csv)
-  Use when result > ~200 rows to avoid saturating LLM context.
+  stdout → {"ok":true,"command":"...","result":{"rows":1500,"columns":45,"format":"toon","output_file":"./r.toon"}}
+  file   → full result (toon or llm)
+  Use when result > ~500 rows to avoid saturating LLM context.
+  Note: A Safety Tripwire will automatically enforce this for > 500 rows.
 
 SECURITY — SELECT-only enforcement:
-  Blocked keywords: INSERT UPDATE DELETE MERGE CREATE ALTER DROP TRUNCATE
-                    EXEC EXECUTE INTO REPLACE GRANT REVOKE BACKUP RESTORE
-  Only SELECT and WITH (CTEs) are allowed. Error code: USAGE_ERROR, exit 2.
+  Blocked: query must start with SELECT, WITH, or EXEC. 
+  Only read-only queries are allowed. Error code: USAGE_ERROR, exit 2.
   Tip: avoid SELECT INTO #temp — use CTEs: WITH t AS (SELECT ...) SELECT * FROM t
 
 FLAGS:
   --connection NAME    Run against specific profile WITHOUT switching active
                        Use to compare data across environments:
                        mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD
-  -o, --output FORMAT  Output format: llm (default), json, csv, toon
-  --max-rows N         Client-side row cap, default 10000. Prefer TOP N in SQL.
+  -o, --output FORMAT  Output format: auto (default), llm, toon, json
+  --max-rows N         Client-side row cap, default 10000. Closes cursor early.
   --output-file PATH   Write result to file, stdout gets summary only.
 
 EXAMPLES:
   mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"
   mapj protheus query "SELECT DB_NAME() AS db, @@SERVERNAME AS srv"
   mapj protheus query "SELECT COUNT(*) AS total FROM SA1010" --connection TOTALPEC_PRD
-  mapj protheus query "SELECT * FROM SA1010" --output-file ./sa1010.json
-  mapj protheus query "SELECT * FROM SA1010" -o csv --output-file ./sa1010.csv
+  mapj protheus query "SELECT * FROM SA1010" --output-file ./sa1010.toon
   mapj protheus query "SELECT * FROM SA1010" -o toon`,
 	Args: cobra.ExactArgs(1),
 	RunE: protheusQueryRun,

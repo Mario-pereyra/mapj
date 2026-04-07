@@ -3,15 +3,15 @@ name: mapj-confluence-export
 description: >
   Export Confluence pages to Markdown files with YAML front matter, metadata, and structure.
   Use when: exporting a single Confluence page, exporting a page tree recursively (with descendants),
-  exporting an entire Confluence space, downloading page attachments, or retrying failed exports.
+  exporting an entire Confluence space, or downloading page attachments.
   Do NOT use when: searching Confluence content (use mapj-tdn-search), creating or modifying
   Confluence pages, or querying Protheus database.
   Triggers: "export confluence", "export to markdown", "download confluence page",
   "export with children", "export space", "with descendants", "confluence to markdown",
-  "retry failed export", "export attachments", "bulk export confluence".
+  "export attachments", "bulk export confluence".
 compatibility: Requires mapj CLI at PATH. Bearer PAT for Server/DC, Basic Auth for atlassian.net.
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   language: en
   author: Mario Pereira
   tags:
@@ -27,18 +27,20 @@ metadata:
     - export-recursive
     - export-space
     - export-attachments
-    - retry-failures
     - url-resolution
+    - auto-healing
+    - concurrent-export
   related:
     - mapj-tdn-search
     - mapj-protheus-query
 allowed-tools: Bash
 ---
 
-# mapj confluence export — Agent Skill v2.0
+# mapj confluence export — Agent Skill v2.1
 
 Export Confluence pages to Markdown files with YAML front matter. Supports single pages,
-recursive page trees, full spaces, and binary attachments.
+recursive page trees, full spaces, and binary attachments. Features **native Auto-Healing**
+(exponential backoff for 429/50x) and **Concurrent Worker Pool** for high-speed exports.
 
 > ⚠️ **Auth matters**: Using `--username` on Server/DC (non-atlassian.net) causes 401.
 > Bear PAT is the correct auth for `tdninterno.totvs.com` and similar instances.
@@ -81,12 +83,8 @@ What do you need to export?
 │   mapj confluence export <url-or-id> --output-path ./docs \
 │     --with-descendants --with-attachments
 │
-├─ Entire Confluence space
-│   mapj confluence export-space <SPACE_KEY> --output-path ./docs
-│
-└─ Retry only the pages that failed in a previous run
-    mapj confluence retry-failed --output-path ./docs
-    mapj confluence retry-failed --output-path ./docs --error-code HTTP_TIMEOUT
+└─ Entire Confluence space (Concurrent)
+    mapj confluence export-space <SPACE_KEY> --output-path ./docs
 ```
 
 ---
@@ -125,8 +123,7 @@ output-path/
 │       │   └── ID-slug-title.md  ← one per page, with YAML front matter
 │       └── attachments/
 │           └── PAGE_ID/        ← only present with --with-attachments
-├── manifest.jsonl              ← one JSON line per exported page
-└── export-errors.jsonl         ← one JSON line per failure (with retry_cmd)
+└── manifest.jsonl              ← one JSON line per exported page
 ```
 
 Each page file has YAML front matter:
@@ -144,21 +141,14 @@ exported_at: "2026-03-28T22:00:00Z"
 
 ---
 
-## Debugging Failed Exports
+## Debugging and Progress
 
 ```bash
-# Verbose — shows per-page progress
+# Verbose — shows per-page progress and successful exports
 mapj confluence export <url> --output-path ./docs --verbose
-
-# Debug — saves raw HTML to .debug/
-mapj confluence export <url> --output-path ./docs --debug
-
-# Full diagnostic dump
-mapj confluence export <url> --output-path ./docs --dump-debug
-
-# Retry only failed pages
-mapj confluence retry-failed --output-path ./docs
 ```
+
+**Auto-Healing:** The CLI automatically retries failed requests (429 Rate Limit, 50x Server Error) using exponential backoff. You don't need to manually retry unless it fails permanently.
 
 ---
 
@@ -178,7 +168,7 @@ mapj confluence retry-failed --output-path ./docs
 | `401 Unauthorized` | Wrong auth type (username on Server/DC) | Re-login without `--username` |
 | `NOT_AUTHENTICATED` | No credentials stored | `mapj auth login confluence ...` |
 | `PAGE_NOT_FOUND` | Wrong URL or private page | Try with `?pageId=N` format, check access |
-| `HTTP_TIMEOUT` | Slow server or large page | Retry; use `retry-failed` for bulk |
+| `HTTP_TIMEOUT` | Slow server or network issue | CLI auto-retries 3x; if fails, check VPN |
 | `SPACE_NOT_FOUND` | Wrong space key | Check key in Confluence URL |
 
 ---

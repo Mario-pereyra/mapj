@@ -134,27 +134,28 @@ mapj protheus connection add TOTALPEC_BIB \
 
 | Flag | Format | Use when |
 |---|---|---|
-| *(default)* `--output llm` | Compact JSON, no metadata | **Agent/LLM consumption** (~40% fewer tokens) |
-| `-o json` | Pretty JSON + `schemaVersion` + `timestamp` | Human debugging / logging |
-| `-o csv` | RFC 4180 CSV (Protheus only) | Spreadsheet import |
+| *(default)* `--output auto` | **TOON** or compact JSON | **Agent/LLM consumption** (~40% fewer tokens) |
+| `--output llm` | Compact JSON, no metadata | Deterministic JSON parsing |
+| `--output toon` | TOON (Tabular Object Notation) | Token-efficient tables and lists |
+| `-o json` | Pretty JSON + metadata | Human debugging / logging |
 
-### LLM mode (default) — optimized for token efficiency
-```json
-{"ok":true,"command":"mapj tdn search","result":{"results":[...],"count":5,"hasNext":true,"cql":"..."}}
+### TOON mode (default for tables) — optimized for token efficiency
+```yaml
+ok: true
+command: "mapj tdn search"
+result:
+  count: 2
+  results[2]{id,title,url}:
+    224440806,"AdvPL - Sobre","https://..."
+    23888829,"Funções AdvPL","https://..."
 ```
 
-### Human mode (`-o json`) — for debugging
+### LLM mode (`--output llm`) — compact JSON
 ```json
-{
-  "ok": true,
-  "command": "mapj tdn search",
-  "result": { "..." },
-  "schemaVersion": "1.0",
-  "timestamp": "2026-03-29T00:07:08Z"
-}
+{"ok":true,"command":"mapj tdn search","result":{"results":[...],"count":5,"hasNext":true}}
 ```
 
-### Error envelope (both modes)
+### Error envelope
 ```json
 {
   "ok": false,
@@ -162,7 +163,7 @@ mapj protheus connection add TOTALPEC_BIB \
   "error": {
     "code": "USAGE_ERROR",
     "message": "query contains forbidden keyword: INSERT",
-    "hint": "Only SELECT queries are allowed. Rewrite without INSERT/UPDATE/DELETE/EXEC.",
+    "hint": "Only SELECT queries are allowed.",
     "retryable": false
   }
 }
