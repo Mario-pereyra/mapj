@@ -14,8 +14,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "mapj",
-	Short: "CLI for LLM agents: search TDN docs, export Confluence, query Protheus ERP",
+	Use:     "mapj",
+	Version: "0.2.0-agentic",
+	Short:   "CLI for LLM agents: search TDN docs, export Confluence, query Protheus ERP",
 	Long: `mapj — Agentic CLI for the TOTVS ecosystem.
 
 What it does:
