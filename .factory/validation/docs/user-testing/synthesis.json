@@ -1,0 +1,64 @@
+{
+  "milestone": "docs",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": ["VAL-DOC-001", "VAL-DOC-002"],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "validationDetails": {
+    "VAL-DOC-001": {
+      "description": "Breaking Changes section in CHANGELOG with migration guide",
+      "evidence": {
+        "file": "CHANGELOG.md",
+        "sections": [
+          {
+            "title": "Breaking Changes",
+            "location": "Line 10",
+            "content": "Section covers 3 breaking changes with migration examples"
+          },
+          {
+            "item": "csv/human formats removed",
+            "migrationGuide": "Antes/Ahora examples provided for TOON/JSON alternatives"
+          },
+          {
+            "item": "retry-failed command removed",
+            "migrationGuide": "Auto-retry with exponential backoff documented"
+          },
+          {
+            "item": "--limit renamed to --max-results",
+            "migrationGuide": "Before/after command examples provided"
+          }
+        ]
+      }
+    },
+    "VAL-DOC-002": {
+      "description": "Known Gotchas section in CONTRIBUTING.md",
+      "evidence": {
+        "file": "CONTRIBUTING.md",
+        "sections": [
+          {
+            "title": "Known Gotchas",
+            "location": "Section 6",
+            "itemCount": 6,
+            "items": [
+              "Auth type stored, not inferred",
+              "ProtheusCreds (v1) must stay",
+              "WAF bypass for tdn.totvs.com",
+              "export_view -> storage fallback",
+              "Semicolons are blocked in Protheus queries",
+              "Credentials file is machine-bound by default"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
