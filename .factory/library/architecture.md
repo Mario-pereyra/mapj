@@ -1,96 +1,163 @@
 # Architecture
 
-**What belongs here:** Descripción de la arquitectura del sistema para referencia de workers.
+How the preset system works - components, relationships, data flows.
 
 ---
 
-## Estructura del Proyecto mapj_cli
+## System Overview
 
 ```
-mapj_cli/
-├── cmd/mapj/main.go          # Entry point (minimal)
-├── internal/
-│   ├── auth/                 # Autenticación y credential store
-│   ├── cli/                  # Comandos CLI (cobra)
-│   ├── errors/               # Códigos de error centralizados
-│   └── output/               # Formateadores de salida
-└── pkg/
-    ├── confluence/           # Cliente Confluence API + export
-    └── protheus/             # Cliente SQL Server Protheus
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLI Layer                                │
+│  protheus_preset.go - Cobra commands (add/list/run/show/etc)   │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────────┐
+│                     Business Layer                              │
+│  preset/store.go - Persistence (Load/Save)                      │
+│  preset/params.go - Detection & Validation                      │
+│  preset/escape.go - SQL Security                                │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────────┐
+│                     Data Layer                                  │
+│  ~/.config/mapj/presets.json - JSON file storage               │
+│  QueryPreset, ParamDef, PresetFile structures                   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Dominios
+---
 
-### Confluence
-- Cliente HTTP para API de Confluence
-- Export de páginas a Markdown con front matter YAML
-- Búsqueda CQL con paginación
-- Auto-detección de auth type (Bearer vs Basic)
+## Data Structures
 
-### TDN
-- Reutiliza `pkg/confluence` como cliente
-- Autenticación opcional (público funciona sin token)
-- Search→Export pipeline con `--export-to`
-
-### Protheus
-- Cliente SQL Server para queries read-only
-- Multi-perfil con migración v1→v2
-- Validación SQL estricta (SELECT-only)
-- VPN hints contextuales por IP range
-
-## Sistema de Output
-
-### Formateadores (Strategy Pattern)
-- `LLMFormatter`: JSON compacto para agentes
-- `HumanFormatter`: JSON pretty con timestamp
-- `CSVFormatter`: RFC 4180 compliant
-- `TOONFormatter`: Token-efficient (nuevo en gem)
-
-### Envelope
-Todas las respuestas siguen: `{ok, command, result, error}`
-
-## Exit Codes
-
-| Code | Significado |
-|------|-------------|
-| 0 | Success |
-| 1 | Error genérico |
-| 2 | Usage error |
-| 3 | Auth error |
-| 4 | Retryable error |
-| 5 | Conflict error |
-
-## Patrones de Concurrencia
-
-### Mutex en Struct Compartido
-Para sincronizar acceso concurrente a recursos compartidos (como escritura de archivos), usar un campo mutex en el struct que contiene el estado compartido:
-
+### QueryPreset
 ```go
-type Client struct {
-    // ... otros campos
-    manifestMu sync.Mutex  // protege escritura concurrente del manifest
-}
-
-func (c *Client) exportSinglePage(...) {
-    c.manifestMu.Lock()
-    // ... operaciones protegidas
-    c.manifestMu.Unlock()
+type QueryPreset struct {
+    Name        string                 `json:"name"`
+    Description string                 `json:"description,omitempty"`
+    Query       string                 `json:"query"`
+    Connection  string                 `json:"connection,omitempty"`
+    MaxRows     int                    `json:"maxRows,omitempty"`
+    Parameters  map[string]*ParamDef   `json:"parameters,omitempty"`
+    Tags        []string               `json:"tags,omitempty"`
+    CreatedAt   string                 `json:"createdAt,omitempty"`
+    UpdatedAt   string                 `json:"updatedAt,omitempty"`
 }
 ```
 
-**No** declarar el mutex como variable local dentro de una goroutine - cada goroutine tendría su propia instancia, sin sincronización real.
+### ParamDef
+```go
+type ParamDef struct {
+    Type        string `json:"type"`                  // string, int, date, datetime, bool, list
+    Required    bool   `json:"required"`              // default: true
+    Default     string `json:"default,omitempty"`     // fallback value
+    Description string `json:"description,omitempty"` // human-readable
+    Pattern     string `json:"pattern,omitempty"`     // regex validation
+}
+```
 
-**Evidencia**: `pkg/confluence/client.go:23`, `pkg/confluence/export.go:219-222`
+### PresetFile
+```go
+type PresetFile struct {
+    Presets       map[string]*QueryPreset `json:"presets"`
+    ActivePreset  string                  `json:"activePreset,omitempty"`
+}
+```
 
-## Diferencias entre Ramas
+---
 
-### main (8.5/10 código)
-- Arquitectura más limpia
-- Menor complejidad ciclomática
-- Sin TOON formatter
+## Data Flows
 
-### gem (8.1/10 código, mejor tests/docs)
-- Introduce TOON formatter
-- +339 líneas de tests
-- Documentación significativamente mejor
-- **3 bugs críticos**: SQL validation, mutex, breaking changes
+### Add Preset Flow
+```
+CLI add command
+    │
+    ├── Parse flags (--query, --param-def, --tags, etc.)
+    │
+    ├── DetectParameters(query) → ["param1", "param2"]
+    │
+    ├── Build QueryPreset with timestamps
+    │
+    └── PresetStore.Save()
+            │
+            ├── Create ~/.config/mapj/ if needed
+            ├── Write to temp file
+            ├── Rename to presets.json (atomic)
+            └── Set permissions 0600
+```
+
+### Run Preset Flow
+```
+CLI run command
+    │
+    ├── PresetStore.Load() → QueryPreset
+    │
+    ├── Parse --param flags
+    │
+    ├── Validate all required params present
+    │
+    ├── For each param:
+    │       ├── ValidateParamType(value, type)
+    │       └── DetectSQLInjection(value)
+    │
+    ├── InterpolateQuery(query, params, paramDefs)
+    │       ├── EscapeStringValue() for strings
+    │       ├── EscapeListValue() for lists
+    │       └── Replace :placeholders with escaped values
+    │
+    ├── ValidateReadOnly(interpolatedQuery) ← existing check
+    │
+    └── protheus.Query() → QueryResult
+```
+
+---
+
+## Invariants
+
+1. **Atomic Writes**: presets.json is never in partial state
+2. **Type Safety**: All parameter values validated before interpolation
+3. **SQL Injection Defense**: Multiple detection layers before execution
+4. **Connection Priority**: CLI flag > preset saved > active profile > error
+5. **Timestamp Integrity**: createdAt set once, updatedAt refreshed on edits
+6. **Active Preset Cleanup**: Deleting active preset clears reference
+
+---
+
+## Integration Points
+
+### With Existing Code
+- `pkg/protheus/query.go`: `ValidateReadOnly()` called post-interpolation
+- `pkg/protheus/query.go`: `Query()` used for execution
+- `internal/auth/store.go`: Connection profiles referenced by name
+- `internal/output/envelope.go`: All outputs use envelope format
+
+### Storage Location
+- Path: `~/.config/mapj/presets.json`
+- Permissions: `0600` (owner read/write only)
+- Format: JSON with indentation (human-readable)
+
+---
+
+## Security Model
+
+### SQL Injection Prevention (Defense in Depth)
+
+1. **Detection Layer**: Regex patterns detect:
+   - `; DROP`, `; DELETE`, etc.
+   - `OR 1=1`, `OR '1'='1'`
+   - `UNION SELECT`
+   - `--` comment injection
+
+2. **Escaping Layer**: Values escaped for SQL Server:
+   - `'` → `''` (quote doubling)
+   - List values individually escaped
+
+3. **Validation Layer**: Post-interpolation:
+   - `ValidateReadOnly()` ensures SELECT/WITH/EXEC prefix
+   - Forbidden keywords checked anywhere in query
+
+### Error Handling
+- All errors have structured JSON format
+- Error codes are UPPER_SNAKE_CASE
+- Hints are actionable for agents and humans
+- `retryable` flag indicates recovery possible

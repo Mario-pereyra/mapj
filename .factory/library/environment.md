@@ -1,31 +1,75 @@
 # Environment
 
-**What belongs here:** Variables de entorno, dependencias externas, notas de setup.
+Environment variables, external dependencies, and setup notes.
 
 ---
 
-## Dependencias
+## What belongs here:
+Required env vars, external dependencies, platform-specific notes.
 
-- **Go 1.21+**: Runtime principal
-- **Cobra**: Framework CLI
-- **stretchr/testify**: Testing framework
-- **go-mssqldb**: Driver SQL Server (Protheus)
-- **go-resty**: Cliente HTTP (Confluence)
+## What does NOT belong here:
+Service ports/commands (use `.factory/services.yaml`).
 
-## Variables de Entorno
+---
 
-| Variable | Descripción |
-|----------|-------------|
-| `MAPJ_CONFIG_DIR` | Directorio de configuración (default: ~/.config/mapj) |
-| `MAPJ_DEBUG` | Habilita debug logging |
-| `CONFLUENCE_TOKEN` | Token de autenticación Confluence |
-| `CONFLUENCE_URL` | URL base de Confluence |
-| `PROTHEUS_DSN` | DSN de conexión SQL Server |
+## Project: mapj CLI
 
-## Credenciales
+### Language & Runtime
+- **Go**: 1.26.1
+- **Build target**: Windows (mapj.exe)
 
-Almacenadas en `~/.config/mapj/credentials.json` (encriptadas con age).
+### Key Dependencies
+```
+github.com/spf13/cobra v1.10.2      - CLI framework
+github.com/stretchr/testify v1.11.1 - Testing assertions
+github.com/denisenkom/go-mssqldb    - SQL Server driver
+```
 
-## No hay servicios externos requeridos para análisis
+### No External Environment Variables Required
+The preset system uses local file storage only.
 
-Esta misión es de análisis documental, no requiere servicios ejecutándose.
+### Platform Notes
+- **Windows**: File permissions may not enforce 0600 strictly
+- **Config directory**: `~/.config/mapj/` (or `%APPDATA%\mapj\` on Windows)
+
+### No External Services
+- Presets stored in local JSON file
+- No network services required for preset management
+- Database connection only needed for `preset run` with real queries
+
+---
+
+## Setup for Development
+
+```bash
+# Download dependencies
+go mod download
+
+# Run tests
+go test ./... -cover
+
+# Build
+go build -o mapj.exe ./cmd/mapj
+```
+
+---
+
+## Directory Structure
+
+```
+internal/
+├── preset/          # NEW: Preset storage and parameter system
+│   ├── store.go     # Load/Save, QueryPreset, ParamDef
+│   ├── params.go    # Detection and validation
+│   └── escape.go    # SQL escaping and injection detection
+├── cli/
+│   ├── protheus.go           # Existing: query commands
+│   ├── protheus_connection.go # Existing: connection CRUD
+│   └── protheus_preset.go    # NEW: preset CRUD commands
+└── auth/
+    └── store.go     # Existing: credential storage (reference only)
+
+pkg/
+└── protheus/
+    └── query.go     # Existing: Query execution (use, don't modify)
+```

@@ -1,40 +1,126 @@
-# User Testing Guide
+# User Testing
 
-## Mission Context
+Testing surface, required skills, and resource classification for preset system.
 
-This mission is a **documentation/analysis mission** producing a comparative report between `main` and `gem` branches. No services or applications are started.
+---
 
-## Testing Surfaces
+## Validation Surface
 
-### Document Validation (manual-review)
+**Primary Surface:** CLI (Terminal)
 
-For analysis missions, assertions use `manual-review` tool. Validation involves:
-1. Reading the produced document
-2. Verifying required sections exist
-3. Checking quantitative and qualitative justifications
-4. Ensuring consistency between sections
-5. Verifying traceability (code citations, file references)
+**Tools:** bash (command execution), jq (JSON validation)
 
-## Validation Concurrency
+**No browser required** - Pure CLI testing
 
-This mission has **no concurrency constraints** - document validation is done by a single validator reading the report file.
+---
 
-## Flow Validator Guidance: Document Validation
+## Required Testing Skills/Tools
 
-**Isolation boundary:** None required - read-only document analysis.
+| Tool | Purpose |
+|------|---------|
+| `bash` | Execute CLI commands |
+| `jq` | Parse and validate JSON output |
+| `diff` | Compare expected vs actual output |
 
-**Constraints:**
-- Only read files, do not modify
-- Check document structure matches validation contract requirements
-- Verify each conclusion has supporting evidence (file paths, line numbers, code snippets)
+---
 
-**Tools:**
-- Read tool for document content
-- Grep/Glob for code verification if needed
+## Resource Cost Classification
 
-## Previous Runs
+### Per Validator Instance
 
-| Milestone | Round | Status | Notes |
-|-----------|-------|--------|-------|
-| synthesis | 1 | pass | All 12 assertions validated for code, functionality, tests, docs |
-| report | 1 | pass | All 4 assertions validated for recommendation, plan, coherence, traceability |
+| Resource | Usage | Notes |
+|----------|-------|-------|
+| Memory | ~50 MB | CLI process only |
+| CPU | Minimal | No heavy computation |
+| Processes | 1 | Single CLI invocation |
+
+### Max Concurrent Validators: 5
+
+CLI testing is lightweight. Each validator only runs CLI commands and parses JSON output. No database connections required for preset management tests.
+
+---
+
+## Test Prerequisites
+
+1. **CLI Built**: `go build -o mapj.exe ./cmd/mapj`
+2. **Config Directory**: Will be auto-created at `~/.config/mapj/`
+3. **Clean State**: Delete `presets.json` between test runs for isolation
+
+---
+
+## Test Isolation Strategy
+
+### Per-Assertion Isolation
+
+- Each test run uses unique preset names (timestamp-prefixed)
+- Tests clean up created presets after execution
+- File operations use temp directories where possible
+
+### Parallel Execution
+
+- Safe to run multiple CLI tests in parallel
+- Each test uses different preset names
+- No shared mutable state (file is written atomically)
+
+---
+
+## Key Test Flows
+
+### Flow 1: Basic CRUD
+```
+preset add → preset list → preset show → preset remove
+```
+
+### Flow 2: Parameter Execution
+```
+preset add (with params) → preset show → preset run (with values) → verify output
+```
+
+### Flow 3: Security Validation
+```
+preset run (with injection attempt) → verify error → verify no execution
+```
+
+### Flow 4: Connection Integration
+```
+preset add (with connection) → preset run → preset run --connection override
+```
+
+---
+
+## Expected Output Format
+
+### Success Response
+```json
+{
+  "ok": true,
+  "command": "mapj protheus preset <cmd>",
+  "result": { ... }
+}
+```
+
+### Error Response
+```json
+{
+  "ok": false,
+  "command": "mapj protheus preset <cmd>",
+  "error": {
+    "code": "ERROR_CODE_HERE",
+    "message": "Human readable message",
+    "hint": "Actionable suggestion",
+    "retryable": true
+  }
+}
+```
+
+---
+
+## Cleanup Commands
+
+```bash
+# Remove all presets
+rm ~/.config/mapj/presets.json
+
+# Or use CLI
+mapj protheus preset list --json | jq -r '.presets[].name' | xargs -I{} mapj protheus preset remove {} --force
+```

@@ -1,5 +1,9 @@
 commands:
+  install: go mod download
   test: go test ./... -cover
+  test-verbose: go test ./... -v -cover
   build: go build -o mapj.exe ./cmd/mapj
+  lint: go vet ./...
+  typecheck: go build ./...
 
 services: {}
