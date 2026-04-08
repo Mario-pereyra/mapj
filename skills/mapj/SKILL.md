@@ -48,6 +48,14 @@ optimized for token efficiency. All operations are **read-only** — no data is 
 
 ---
 
+## Role
+
+Eres un agente especializado en interactuar con el ecosistema TOTVS. Tu responsabilidad es conectar
+agentes de IA con TDN, Confluence y Protheus ERP. Operas de manera read-only, nunca modificando datos.
+Siempre enrutas a la sub-skill correcta según la tarea del usuario.
+
+---
+
 ## Step 1 — Verify Binary is Available
 
 ```bash
@@ -130,6 +138,41 @@ mapj protheus connection add TOTALPEC_BIB \
 
 ---
 
+## Examples
+
+### Example 1: Check authentication status
+**Input:** Usuario pregunta "verifica el estado de autenticación"
+**Command:** `mapj auth status`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {
+    "confluence": {"authenticated": true, "url": "https://tdninterno.totvs.com"},
+    "protheus": {"authenticated": true, "activeProfile": "TOTALPEC_BIB"},
+    "tdn": {"authenticated": true}
+  }
+}
+```
+
+### Example 2: Route to TDN search
+**Input:** Usuario pregunta "busca documentación sobre AdvPL"
+**Action:** Load sub-skill `mapj-tdn-search/SKILL.md`
+**Command:** `mapj tdn search "AdvPL"`
+**Output:** JSON con resultados de búsqueda
+
+### Example 3: Route to Confluence export
+**Input:** Usuario pregunta "exporta la página 22479548 a markdown"
+**Action:** Load sub-skill `mapj-confluence-export/SKILL.md`
+**Command:** `mapj confluence export 22479548 --output-path ./docs`
+
+### Example 4: Route to Protheus query
+**Input:** Usuario pregunta "consulta los clientes en Protheus"
+**Action:** Load sub-skill `mapj-protheus-query/SKILL.md`
+**Command:** `mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"`
+
+---
+
 ## Output Modes
 
 | Flag | Format | Use when |
@@ -196,6 +239,16 @@ if [ $? -ne 0 ]; then
   # if code == "AUTH_ERROR" → re-authenticate
 fi
 ```
+
+---
+
+## Success Criteria
+
+- [ ] Output es JSON válido con `ok: true`
+- [ ] Exit code es 0
+- [ ] Comando correcto ejecutado según la tarea solicitada
+- [ ] Sub-skill cargada cuando aplica (TDN search, Confluence export, Protheus query)
+- [ ] Auth status verificado antes de operaciones que requieren credenciales
 
 ---
 

@@ -41,11 +41,19 @@ allowed-tools: Bash
 # mapj protheus — Agent Skill v3.2
 
 Execute SELECT queries on Protheus ERP SQL Server and manage named connection profiles.
-All queries are **read-only** — the CLI enforces a strict **prefix-based validation** 
+All queries are **read-only** — the CLI enforces a strict **prefix-based validation**
 (SELECT, WITH, EXEC) before reaching the database.
 
 > ⚠️ **Security**: DML/DDL operations are blocked. No exceptions.
 > ⚠️ **VPN required**: Internal servers require VPN connection.
+
+---
+
+## Role
+
+Eres un agente especializado en consultar bases de datos Protheus ERP. Tu responsabilidad es
+ejecutar queries SELECT-only sobre tablas del ERP. Operas con validación estricta de seguridad SQL
+(prefix-based: SELECT, WITH, EXEC permitidos). Nunca modificas datos.
 
 ---
 
@@ -131,6 +139,66 @@ mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"
 # Filtered query with CTE
 mapj protheus query "WITH active AS (SELECT A1_COD FROM SA1010 WHERE A1_MSBLQL != '1') SELECT COUNT(*) FROM active"
 ```
+
+---
+
+## Examples
+
+### Example 1: Verify active database
+**Input:** Usuario pregunta "verifica la base de datos activa"
+**Command:** `mapj protheus query "SELECT DB_NAME() AS bd, @@SERVERNAME AS srv"`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {
+    "rows": [{"bd": "P1212410_BIB", "srv": "192.168.99.102"}]
+  }
+}
+```
+
+### Example 2: Query clients table
+**Input:** Usuario pregunta "lista los primeros 10 clientes"
+**Command:** `mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"`
+**Output:** JSON con rows conteniendo A1_COD y A1_NOME
+
+### Example 3: Count table rows
+**Input:** Usuario pregunta "cuántos clientes hay en la base"
+**Command:** `mapj protheus query "SELECT COUNT(*) AS total FROM SA1010"`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {"rows": [{"total": 15432}]}
+}
+```
+
+### Example 4: Query specific connection without switching
+**Input:** Usuario pregunta "consulta en producción sin cambiar la conexión activa"
+**Command:** `mapj protheus query "SELECT COUNT(*) FROM SA1010" --connection TOTALPEC_PRD`
+**Output:** JSON con resultado; conexión activa permanece igual
+
+### Example 5: Switch connection profile
+**Input:** Usuario pregunta "cambia a la conexión de producción"
+**Command:** `mapj protheus connection use TOTALPEC_PRD`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {"activeProfile": "TOTALPEC_PRD"}
+}
+```
+
+---
+
+## Success Criteria
+
+- [ ] Output es JSON válido con `ok: true`
+- [ ] Exit code es 0
+- [ ] Query retorna rows (o count correcto)
+- [ ] Schema válido cuando se usa `mapj protheus schema`
+- [ ] SELECT-only enforced (no DML/DDL ejecutado)
+- [ ] Conexión activa verificada antes de query
 
 ---
 

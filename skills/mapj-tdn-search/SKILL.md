@@ -45,6 +45,14 @@ Features **Native Auto-Pagination** to reach your desired result count in one go
 
 ---
 
+## Role
+
+Eres un agente especializado en buscar documentación TOTVS Developer Network (TDN). Tu responsabilidad
+es encontrar páginas relevantes usando CQL. Operas sin autenticación para contenido público en
+`tdn.totvs.com`. Siempre verificas que los resultados tengan URLs válidas.
+
+---
+
 ## Quick Routing
 
 ```
@@ -121,6 +129,52 @@ mapj tdn spaces list
 
 ---
 
+## Examples
+
+### Example 1: Basic keyword search
+**Input:** Usuario pregunta "busca documentación sobre AdvPL"
+**Command:** `mapj tdn search "AdvPL"`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {
+    "results": [
+      {"id": "224440806", "title": "AdvPL - Sobre", "url": "https://tdn.totvs.com/..."},
+      {"id": "23888829", "title": "Funções AdvPL", "url": "https://tdn.totvs.com/..."}
+    ],
+    "count": 10,
+    "hasNext": true
+  }
+}
+```
+
+### Example 2: Space-filtered search
+**Input:** Usuario pregunta "puntos de entrada en Protheus"
+**Command:** `mapj tdn search "ponto de entrada" --space PROT`
+**Output:** JSON con resultados filtrados al espacio PROT (documentación de Protheus)
+
+### Example 3: Recent content with label filter
+**Input:** Usuario pregunta "documentación nueva de la versión 12"
+**Command:** `mapj tdn search --space PROT --label versao_12 --since 1m`
+**Output:** JSON con páginas actualizadas en el último mes con label versao_12
+
+### Example 4: Search and export pipeline
+**Input:** Usuario pregunta "busca y exporta documentación de puntos de entrada"
+**Command:** `mapj tdn search "ponto de entrada" --space PROT --max-results 25 --export-to ./docs`
+**Output:**
+```json
+{
+  "ok": true,
+  "searched": 25,
+  "exported": 24,
+  "failed": 1,
+  "outputDir": "./docs"
+}
+```
+
+---
+
 ## Deciding: Single Page vs Full Tree (`--with-descendants`)
 
 Use `--check-children` to see if a page has children before exporting:
@@ -158,6 +212,16 @@ mapj tdn search "ponto de entrada" --space PROT --max-results 25 --export-to ./d
   "errors": ["page 'X' (ID): reason"]
 }
 ```
+
+---
+
+## Success Criteria
+
+- [ ] Output es JSON válido con `ok: true`
+- [ ] Exit code es 0
+- [ ] Results contiene URLs válidas de TDN
+- [ ] CQL fue ejecutado correctamente
+- [ ] `count > 0` si hay resultados; `count: 0` si no hay coincidencias
 
 ---
 

@@ -47,6 +47,14 @@ recursive page trees, full spaces, and binary attachments. Features **native Aut
 
 ---
 
+## Role
+
+Eres un agente especializado en exportar páginas Confluence a Markdown. Tu responsabilidad es
+convertir documentación estructurada a archivos con YAML front matter. Operas de manera read-only,
+preservando la estructura original y descargando attachments cuando aplica.
+
+---
+
 ## Prerequisites — One-Time Auth Setup
 
 ```
@@ -141,6 +149,49 @@ exported_at: "2026-03-28T22:00:00Z"
 
 ---
 
+## Examples
+
+### Example 1: Single page export to stdout
+**Input:** Usuario pregunta "exporta la página 22479548"
+**Command:** `mapj confluence export 22479548`
+**Output:** Markdown content printed to stdout with YAML front matter
+
+### Example 2: Single page to directory
+**Input:** Usuario pregunta "exporta la página SDK Protheus a ./docs"
+**Command:** `mapj confluence export "https://tdn.totvs.com/display/framework/SDK+Microsiga+Protheus" --output-path ./docs`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {
+    "pagesExported": 1,
+    "outputPath": "./docs/spaces/framework/pages/22479548-sdk-microsiga-protheus.md"
+  }
+}
+```
+
+### Example 3: Recursive export with attachments
+**Input:** Usuario pregunta "exporta la página raíz con todos los hijos y adjuntos"
+**Command:** `mapj confluence export 22479548 --output-path ./docs --with-descendants --with-attachments`
+**Output:**
+```json
+{
+  "ok": true,
+  "result": {
+    "pagesExported": 15,
+    "attachmentsDownloaded": 23,
+    "outputPath": "./docs"
+  }
+}
+```
+
+### Example 4: Export entire space
+**Input:** Usuario pregunta "exporta todo el espacio framework"
+**Command:** `mapj confluence export-space framework --output-path ./docs`
+**Output:** JSON con `pagesExported: N` y `outputPath`
+
+---
+
 ## Debugging and Progress
 
 ```bash
@@ -158,6 +209,17 @@ mapj confluence export <url> --output-path ./docs --verbose
 - ❌ **Search** Confluence content → use `mapj-tdn-search` skill instead
 - ❌ **Export non-Confluence** sources
 - ❌ **Preserve Confluence macros exactly** — complex macros become text/simplified Markdown
+
+---
+
+## Success Criteria
+
+- [ ] Output es JSON válido con `ok: true`
+- [ ] Exit code es 0
+- [ ] Archivo .md creado con YAML front matter
+- [ ] Attachments descargados si se usó `--with-attachments`
+- [ ] No hay errores de autenticación (401)
+- [ ] Estructura de directorios preservada con `--with-descendants`
 
 ---
 
