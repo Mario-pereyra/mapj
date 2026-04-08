@@ -1,0 +1,49 @@
+{
+  "milestone": "docs",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "go test ./... -cover",
+      "exitCode": 0,
+      "output": "All tests passed with coverage: cmd/mapj 0.0%, internal/auth 22.1%, internal/errors 66.7%, internal/output 76.7%, pkg/confluence 22.8%, pkg/protheus 36.5%"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "go build -o mapj.exe ./cmd/mapj",
+      "exitCode": 0,
+      "output": "Build completed successfully"
+    },
+    "lint": {
+      "passed": true,
+      "command": "go vet ./...",
+      "exitCode": 0,
+      "output": "No issues found",
+      "note": "golangci-lint not installed, used go vet as fallback"
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [],
+  "previousRound": null,
+  "featureReviews": {
+    "document-breaking-changes": {
+      "status": "pass",
+      "commitId": "25125e0",
+      "summary": "Breaking Changes documentation complete with clear migration guides for all three changes: csv/human format removal, retry-failed command removal, and --limit to --max-results rename. Spanish language consistent, follows existing CHANGELOG pattern."
+    },
+    "preserve-known-gotchas": {
+      "status": "pass",
+      "commitId": "2280cbb",
+      "summary": "Known Gotchas section successfully added with 6 relevant gotchas preserved. Obsolete gotchas correctly removed (CSV format, --max-rows client-side). Gotcha ⑤ updated to reflect semicolon-based SQL injection prevention."
+    }
+  }
+}

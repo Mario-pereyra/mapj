@@ -1,0 +1,15 @@
+{
+  "featureId": "preserve-known-gotchas",
+  "reviewedAt": "2026-04-08T15:30:00.000Z",
+  "commitId": "2280cbb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The worker correctly preserved relevant Known Gotchas from main's CONTRIBUTING.md (section 11) to gem's CONTRIBUTING.md (new section 6). Obsolete gotchas were appropriately removed (CSV format removed in gem, --max-rows now server-side with Early Cursor Closure). Gotcha ⑤ was correctly updated from 'INTO is blocked' to 'Semicolons are blocked' to reflect gem's actual validation approach.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The Known Gotchas section was successfully added to CONTRIBUTING.md with 6 relevant gotchas preserved from main. Obsolete gotchas (CSV format, --max-rows client-side) were correctly removed. Gotcha ⑤ was accurately updated to reflect gem's semicolon-based SQL injection prevention. The documentation is helpful and accurately describes current behavior."
+}
