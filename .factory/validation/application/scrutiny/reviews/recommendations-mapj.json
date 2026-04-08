@@ -1,0 +1,21 @@
+{
+  "featureId": "recommendations-mapj",
+  "reviewedAt": "2026-04-08T16:45:00.000Z",
+  "commitId": "478d951a088144d63bb2142bc361c94160529bf3",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The recommendations document comprehensively fulfills all assertions (VAL-APP-003, VAL-CROSS-001, VAL-CROSS-002). It provides 17 specific, prioritized improvement recommendations across all 4 mapj_cli skills with concrete implementation examples, source citations, and an actionable implementation plan. The document demonstrates thorough analysis of the skill evaluation findings and translates them into specific, actionable improvements.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "knowledge",
+      "observation": "Skills are located in `skills/` directory at repository root, NOT in `.factory/skills/`. The worker discovered this via Glob search after the Read from `.factory/skills/` failed. This location should be documented in AGENTS.md or architecture.md.",
+      "evidence": "Transcript shows: worker first tried to read from '.factory/skills/mapj/SKILL.md' which failed, then used Glob to find actual location at 'skills/mapj/SKILL.md'"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The recommendations document is comprehensive and well-structured. It provides 17 specific recommendations organized by skill and priority, with full implementation examples including code snippets, before/after diffs, and checklists. Each recommendation cites its source (Anthropic, arXiv, Microsoft, Agent Skills Standard). The document includes an impact estimation showing improvement from 71.5/100 average to ~90/100, and a 3-phase implementation plan with time estimates. All assertions are fully satisfied."
+}

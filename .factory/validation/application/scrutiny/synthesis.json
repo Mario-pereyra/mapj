@@ -1,0 +1,56 @@
+{
+  "milestone": "application",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "go test ./... -cover",
+      "exitCode": 0,
+      "output": "All tests passed. Coverage: auth 22.1%, errors 66.7%, output 76.7%, confluence 22.8%, protheus 36.5%"
+    },
+    "build": {
+      "passed": true,
+      "command": "go build -o mapj.exe ./cmd/mapj",
+      "exitCode": 0
+    },
+    "vet": {
+      "passed": true,
+      "command": "go vet ./...",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add note about skills location: Skills are located in `skills/` directory at repository root (not `.factory/skills/`). Workers should use Glob to discover skill locations rather than assuming a path.",
+      "evidence": "recommendations-mapj worker first tried to read from '.factory/skills/mapj/SKILL.md' which failed, then used Glob to find actual location at 'skills/mapj/SKILL.md'",
+      "isSystemic": false
+    },
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Document the skill evaluation methodology (Discovery Layer 40pts, Execution Layer 50pts, Anti-patterns 10pts) as a reusable reference for future skill evaluations.",
+      "evidence": "evaluate-mapj-skills worker established a methodology in .factory/library/skill-evaluation-mapj_cli.md but this is a one-off document, not a reusable reference",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [
+    {
+      "observation": "mapj_cli skills use `metadata.tags` instead of top-level `keywords` field",
+      "reason": "already-documented"
+    },
+    {
+      "observation": "analysis-worker skill procedure was followed correctly",
+      "reason": "no-action-needed"
+    }
+  ],
+  "previousRound": null
+}
