@@ -11,6 +11,11 @@ import (
 
 var (
 	outputFormat string
+	jsonOutput   bool
+	verbose      bool
+	configPath   string
+	profileName  string
+	noColor      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -64,7 +69,17 @@ func init() {
 }
 
 func Execute() int {
+	// Output format flags
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: auto (default), llm, toon, json")
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in pure JSON format (alias for --output llm)")
+	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Include debug/trace fields in output (schemaVersion, timestamp)")
+
+	// Configuration flags
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "", "Path to config file (default: ~/.config/mapj/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&profileName, "profile", "", "Connection profile to use for this command")
+
+	// Display flags
+	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -76,6 +91,33 @@ func Execute() int {
 	return errors.ExitSuccess
 }
 
+// GetFormatter returns the appropriate formatter based on flags.
+// --json takes precedence over --output.
+// --verbose enables human-mode fields (schemaVersion, timestamp).
 func GetFormatter() output.Formatter {
-	return output.NewFormatter(outputFormat)
+	// --json takes precedence
+	if jsonOutput {
+		return output.NewFormatterWithVerbose("llm", verbose)
+	}
+	return output.NewFormatterWithVerbose(outputFormat, verbose)
+}
+
+// GetConfigPath returns the config file path from --config flag.
+func GetConfigPath() string {
+	return configPath
+}
+
+// GetProfile returns the profile name from --profile flag.
+func GetProfile() string {
+	return profileName
+}
+
+// IsNoColor returns true if --no-color was specified.
+func IsNoColor() bool {
+	return noColor
+}
+
+// IsVerbose returns true if --verbose was specified.
+func IsVerbose() bool {
+	return verbose
 }

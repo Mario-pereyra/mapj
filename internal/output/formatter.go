@@ -14,9 +14,16 @@ type Formatter interface {
 // ─── LLM Formatter ───────────────────────────────────────────────────────────
 
 // LLMFormatter produces compact, token-efficient JSON for LLM consumption.
-type LLMFormatter struct{}
+type LLMFormatter struct {
+	Verbose bool // When true, includes schemaVersion and timestamp fields
+}
 
 func (f LLMFormatter) Format(env *Envelope) string {
+	// Add verbose fields if requested
+	if f.Verbose {
+		env = env.withHumanFields()
+	}
+
 	b, err := json.Marshal(env)
 	if err != nil {
 		return `{"ok":false,"command":"","error":{"code":"SERIALIZATION_ERROR","message":"failed to serialize output"}}`
@@ -32,12 +39,14 @@ func (f LLMFormatter) Format(env *Envelope) string {
 
 // ─── Auto Formatter ──────────────────────────────────────────────────────────
 
-type AutoFormatter struct{}
+type AutoFormatter struct {
+	Verbose bool // When true, includes schemaVersion and timestamp fields
+}
 
 func (f AutoFormatter) Format(env *Envelope) string {
 	// If error, return JSON
 	if env.Error != nil {
-		return LLMFormatter{}.Format(env)
+		return LLMFormatter{Verbose: f.Verbose}.Format(env)
 	}
 
 	// Simple heuristic: if it's a slice or contains a large slice as a top-level property,
@@ -48,7 +57,7 @@ func (f AutoFormatter) Format(env *Envelope) string {
 	// and if TOONFormatter handles objects and arrays natively, we just use it!
 	// Let's use TOONFormatter if it's available and returns a good string, else fallback.
 	// We'll just default to TOONFormatter if it can format anything, but TOONFormatter is implemented in toon_formatter.go.
-	return TOONFormatter{}.Format(env)
+	return TOONFormatter{Verbose: f.Verbose}.Format(env)
 }
 
 // ─── File Writer ─────────────────────────────────────────────────────────────
@@ -63,14 +72,20 @@ func WriteToFile(path string, content string) error {
 // NewFormatter returns the correct Formatter for the given format string.
 // Auto-detects if format is empty.
 func NewFormatter(format string) Formatter {
+	return NewFormatterWithVerbose(format, false)
+}
+
+// NewFormatterWithVerbose returns a Formatter with verbose mode support.
+// When verbose is true, the envelope includes additional fields like schemaVersion and timestamp.
+func NewFormatterWithVerbose(format string, verbose bool) Formatter {
 	switch strings.ToLower(format) {
 	case "llm", "json":
-		return LLMFormatter{}
+		return LLMFormatter{Verbose: verbose}
 	case "toon":
-		return TOONFormatter{}
+		return TOONFormatter{Verbose: verbose}
 	default:
 		// Auto-discovery
-		return AutoFormatter{}
+		return AutoFormatter{Verbose: verbose}
 	}
 }
 

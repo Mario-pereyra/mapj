@@ -10,15 +10,30 @@ import (
 
 // TOONFormatter produces token-efficient TOON format output.
 // TOON (Tabular Object Notation) is designed for ~40% token savings vs JSON.
-type TOONFormatter struct{}
+type TOONFormatter struct {
+	Verbose bool // When true, includes schemaVersion and timestamp fields
+}
 
 // Format serializes an Envelope to TOON format.
 func (f TOONFormatter) Format(env *Envelope) string {
+	// Add verbose fields if requested
+	if f.Verbose {
+		env = env.withHumanFields()
+	}
+
 	var sb strings.Builder
 
 	// Write envelope fields
 	sb.WriteString(fmt.Sprintf("ok: %t\n", env.OK))
 	sb.WriteString(fmt.Sprintf("command: %s\n", f.formatString(env.Command)))
+
+	// Write verbose fields if present
+	if env.SchemaVersion != "" {
+		sb.WriteString(fmt.Sprintf("schemaVersion: %s\n", env.SchemaVersion))
+	}
+	if env.Timestamp != "" {
+		sb.WriteString(fmt.Sprintf("timestamp: %s\n", env.Timestamp))
+	}
 
 	// Write error or result
 	if env.Error != nil {
@@ -87,9 +102,8 @@ func (f *TOONFormatter) encodeError(sb *strings.Builder, err *ErrDetail, indent 
 	if err.Hint != "" {
 		sb.WriteString(fmt.Sprintf("%shint: %s\n", prefix, f.formatString(err.Hint)))
 	}
-	if err.Retryable {
-		sb.WriteString(fmt.Sprintf("%sretryable: true\n", prefix))
-	}
+	// VAL-CLI-035: Always include retryable field
+	sb.WriteString(fmt.Sprintf("%sretryable: %t\n", prefix, err.Retryable))
 	if err.RetryAfterMs > 0 {
 		sb.WriteString(fmt.Sprintf("%sretryAfterMs: %d\n", prefix, err.RetryAfterMs))
 	}

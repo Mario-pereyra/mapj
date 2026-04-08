@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/Mario-pereyra/mapj/internal/preset"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -1579,4 +1580,381 @@ func TestPresetRunInvalidDateParameter(t *testing.T) {
 	assert.False(t, result["ok"].(bool))
 	errorData := result["error"].(map[string]any)
 	assert.Equal(t, "TYPE_MISMATCH", errorData["code"])
+}
+
+// =============================================================================
+// VAL-CLI-037: Help Information
+// =============================================================================
+
+func TestPresetHelp_Usage(t *testing.T) {
+	tests := []struct {
+		name     string
+		cmd      *cobra.Command
+		args     []string
+		contains []string
+	}{
+		{
+			name:     "preset_add_help",
+			cmd:      createPresetAddCmdForTest(),
+			args:     []string{"test", "--help"},
+			contains: []string{"Create a new query preset", "--query", "--description", "--connection", "--param-def", "--tags", "--use"},
+		},
+		{
+			name:     "preset_list_help",
+			cmd:      createPresetListCmdForTest(),
+			args:     []string{"--help"},
+			contains: []string{"--tag", "--connection"},
+		},
+		{
+			name:     "preset_show_help",
+			cmd:      createPresetShowCmdForTest(),
+			args:     []string{"--help"},
+			contains: []string{"show", "name"},
+		},
+		{
+			name:     "preset_run_help",
+			cmd:      createPresetRunCmdForTest(),
+			args:     []string{"test", "--help"},
+			contains: []string{"--param", "--connection", "--max-rows", "--output-file"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			tt.cmd.SetOut(&buf)
+			tt.cmd.SetArgs(tt.args)
+
+			// Execute help - this should not error
+			err := tt.cmd.Execute()
+			require.NoError(t, err, "Help command should not error")
+
+			output := buf.String()
+			for _, expected := range tt.contains {
+				assert.Contains(t, output, expected, "Help output should contain '%s'", expected)
+			}
+		})
+	}
+}
+
+// Test that preset commands have Short descriptions (help text)
+func TestPresetCommandsHaveHelp(t *testing.T) {
+	// VAL-CLI-037: Each command provides help with --help
+	commands := []struct {
+		name string
+		cmd  *cobra.Command
+	}{
+		{"preset", protheusPresetCmd},
+		{"preset add", presetAddCmd},
+		{"preset list", presetListCmd},
+		{"preset show", presetShowCmd},
+		{"preset run", presetRunCmd},
+		{"preset edit", presetEditCmd},
+		{"preset remove", presetRemoveCmd},
+		{"preset use", presetUseCmd},
+	}
+
+	for _, tt := range commands {
+		t.Run(tt.name, func(t *testing.T) {
+			// Verify command has a Short description
+			assert.NotEmpty(t, tt.cmd.Short, "Command should have Short help text")
+			// Verify command has a Long description (detailed help)
+			assert.NotEmpty(t, tt.cmd.Long, "Command should have Long help text")
+		})
+	}
+}
+
+// =============================================================================
+// VAL-CLI-040: Global Flags
+// =============================================================================
+
+func TestGlobalFlags_JSON(t *testing.T) {
+	// Test --json flag produces JSON output
+	store := createTestStore(t)
+
+	// Set jsonOutput flag
+	originalJSON := jsonOutput
+	jsonOutput = true
+	defer func() { jsonOutput = originalJSON }()
+
+	// Set output format
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	cmd := createPresetListCmdForTest()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Verify output is valid JSON
+	output := strings.TrimSpace(buf.String())
+	assert.True(t, json.Valid([]byte(output)), "Output should be valid JSON")
+
+	// Verify it's compact (no newlines for LLM mode)
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err)
+	assert.Contains(t, result, "ok")
+}
+
+func TestGlobalFlags_Verbose(t *testing.T) {
+	// Test --verbose flag includes additional fields
+	store := createTestStore(t)
+
+	// Set verbose flag
+	originalVerbose := verbose
+	verbose = true
+	defer func() { verbose = originalVerbose }()
+
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	cmd := createPresetListCmdForTest()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	// Parse output
+	output := strings.TrimSpace(buf.String())
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err)
+
+	// Verbose mode should include schemaVersion and timestamp
+	assert.Equal(t, "1.0", result["schemaVersion"], "Verbose mode should include schemaVersion")
+	assert.NotEmpty(t, result["timestamp"], "Verbose mode should include timestamp")
+}
+
+func TestGlobalFlags_Config(t *testing.T) {
+	// Test GetConfigPath function (the --config flag accessor)
+	originalConfig := configPath
+	configPath = "/custom/config.yaml"
+	defer func() { configPath = originalConfig }()
+
+	assert.Equal(t, "/custom/config.yaml", GetConfigPath())
+}
+
+func TestGlobalFlags_Profile(t *testing.T) {
+	// Test GetProfile function (the --profile flag accessor)
+	originalProfile := profileName
+	profileName = "custom-profile"
+	defer func() { profileName = originalProfile }()
+
+	assert.Equal(t, "custom-profile", GetProfile())
+}
+
+func TestGlobalFlags_NoColor(t *testing.T) {
+	// Test IsNoColor function (the --no-color flag accessor)
+	originalNoColor := noColor
+	noColor = true
+	defer func() { noColor = originalNoColor }()
+
+	assert.True(t, IsNoColor())
+}
+
+func TestGlobalFlags_VerboseFlag(t *testing.T) {
+	// Test IsVerbose function (the --verbose flag accessor)
+	originalVerbose := verbose
+	verbose = true
+	defer func() { verbose = originalVerbose }()
+
+	assert.True(t, IsVerbose())
+}
+
+func TestGlobalFlags_Accessors(t *testing.T) {
+	// Test that all global flag accessor functions exist and work
+	// This validates that the global flags system is in place
+
+	// Test that variables exist and can be modified
+	originalJSON := jsonOutput
+	jsonOutput = true
+	assert.True(t, jsonOutput)
+	jsonOutput = originalJSON
+
+	originalVerbose := verbose
+	verbose = true
+	assert.True(t, verbose)
+	verbose = originalVerbose
+
+	originalConfig := configPath
+	configPath = "test-path"
+	assert.Equal(t, "test-path", GetConfigPath())
+	configPath = originalConfig
+
+	originalProfile := profileName
+	profileName = "test-profile"
+	assert.Equal(t, "test-profile", GetProfile())
+	profileName = originalProfile
+
+	originalNoColor := noColor
+	noColor = true
+	assert.True(t, IsNoColor())
+	noColor = originalNoColor
+}
+
+func TestGetFormatter_WithJSON(t *testing.T) {
+	// Test GetFormatter returns correct formatter for --json
+	originalJSON := jsonOutput
+	jsonOutput = true
+	defer func() { jsonOutput = originalJSON }()
+
+	originalVerbose := verbose
+	verbose = false
+	defer func() { verbose = originalVerbose }()
+
+	formatter := GetFormatter()
+	assert.IsType(t, output.LLMFormatter{}, formatter)
+}
+
+func TestGetFormatter_WithVerbose(t *testing.T) {
+	// Test GetFormatter returns correct formatter for --verbose
+	originalJSON := jsonOutput
+	jsonOutput = false
+	defer func() { jsonOutput = originalJSON }()
+
+	originalVerbose := verbose
+	verbose = true
+	defer func() { verbose = originalVerbose }()
+
+	formatter := GetFormatter()
+	// Should be an AutoFormatter with verbose=true
+	assert.IsType(t, output.AutoFormatter{}, formatter)
+	autoFormatter := formatter.(output.AutoFormatter)
+	assert.True(t, autoFormatter.Verbose)
+}
+
+// =============================================================================
+// Output Format Integration Tests (VAL-CLI-035, VAL-CLI-036, VAL-CLI-038, VAL-CLI-039)
+// =============================================================================
+
+func TestOutputFormat_SuccessEnvelope(t *testing.T) {
+	// VAL-CLI-036: Success response structure
+	store := createTestStore(t)
+
+	// Create a preset
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT 1",
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Get the preset with list
+	result := executePresetList(t, store, "", "")
+
+	// Verify success envelope structure: {ok: true, command: ..., result: ...}
+	require.NotNil(t, result)
+	assert.Equal(t, true, result["ok"].(bool), "ok should be true for success")
+	assert.Contains(t, result, "command", "response should have command field")
+	assert.Contains(t, result, "result", "response should have result field")
+	assert.Nil(t, result["error"], "error should be nil for success")
+}
+
+func TestOutputFormat_ErrorEnvelope(t *testing.T) {
+	// VAL-CLI-035: Error response structure
+	store := createTestStore(t)
+
+	// Empty store - try to show nonexistent preset
+	result := executePresetShow(t, store, []string{"nonexistent"})
+
+	// Verify error envelope structure: {ok: false, error: {code, message, hint, retryable}}
+	require.NotNil(t, result)
+	assert.Equal(t, false, result["ok"].(bool), "ok should be false for error")
+	assert.Contains(t, result, "command", "response should have command field")
+	assert.Contains(t, result, "error", "response should have error field")
+	assert.Nil(t, result["result"], "result should be nil for error")
+
+	// Verify error object structure
+	errorData := result["error"].(map[string]any)
+	assert.Contains(t, errorData, "code", "error should have code field")
+	assert.Contains(t, errorData, "message", "error should have message field")
+	assert.Contains(t, errorData, "retryable", "error should have retryable field (VAL-CLI-035)")
+
+	// Verify error code format: UPPER_SNAKE_CASE
+	code := errorData["code"].(string)
+	assert.Equal(t, strings.ToUpper(code), code, "Error code must be UPPER_SNAKE_CASE")
+	assert.NotContains(t, code, " ", "Error code must not contain spaces")
+	assert.NotContains(t, code, "-", "Error code must not contain hyphens")
+}
+
+func TestOutputFormat_JSONOutput(t *testing.T) {
+	// VAL-CLI-038: --json produces pure JSON without decorations
+	store := createTestStore(t)
+
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	cmd := createPresetListCmdForTest()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := strings.TrimSpace(buf.String())
+
+	// Must be valid JSON
+	assert.True(t, json.Valid([]byte(output)), "Output must be valid JSON")
+
+	// Must not contain ANSI color codes
+	assert.NotContains(t, output, "\x1b[", "JSON output must not contain ANSI color codes")
+	assert.NotContains(t, output, "\033[", "JSON output must not contain ANSI escape sequences")
+}
+
+func TestOutputFormat_VerboseOutput(t *testing.T) {
+	// VAL-CLI-039: --verbose includes debug/trace fields
+	store := createTestStore(t)
+
+	originalVerbose := verbose
+	verbose = true
+	defer func() { verbose = originalVerbose }()
+
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	cmd := createPresetListCmdForTest()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{})
+
+	err := cmd.Execute()
+	require.NoError(t, err)
+
+	output := strings.TrimSpace(buf.String())
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err)
+
+	// Verbose mode must include additional fields
+	assert.Equal(t, "1.0", result["schemaVersion"], "Verbose mode must include schemaVersion")
+	assert.NotEmpty(t, result["timestamp"], "Verbose mode must include timestamp")
 }

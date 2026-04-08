@@ -21,7 +21,7 @@ type ErrDetail struct {
 	Code         string `json:"code"`
 	Message      string `json:"message"`
 	Hint         string `json:"hint,omitempty"`    // actionable recovery suggestion for LLM
-	Retryable    bool   `json:"retryable,omitempty"`
+	Retryable    bool   `json:"retryable"`          // always included per VAL-CLI-035
 	RetryAfterMs int    `json:"retryAfterMs,omitempty"`
 }
 
