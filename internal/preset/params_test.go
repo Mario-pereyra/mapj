@@ -1,6 +1,8 @@
 package preset
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -504,6 +506,468 @@ func TestDetectAndValidateParameters(t *testing.T) {
 			assert.Len(t, errs, tt.errCount)
 		})
 	}
+}
+
+// =============================================================================
+// Type Validation Tests
+// =============================================================================
+
+// TestValidateString tests string type validation
+// VAL-PARAM-003: String Type Validation
+func TestValidateString(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		// Accept any value including empty and Unicode
+		{"empty string", "", false},
+		{"simple string", "hello", false},
+		{"string with spaces", "hello world", false},
+		{"string with numbers", "abc123", false},
+		{"string with special chars", "hello!@#$%", false},
+		{"unicode characters", "héllo wörld 日本語", false},
+		{"emoji", "😀🎉", false},
+		{"newlines and tabs", "line1\nline2\ttab", false},
+		{"SQL-like content", "SELECT * FROM users", false},
+		{"single quote", "O'Brien", false},
+		{"double quote", `"quoted"`, false},
+		{"backslash", `path\to\file`, false},
+		{"very long string", strings.Repeat("a", 1000), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateParamType(tt.value, ParamTypeString, "testParam")
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestValidateInt tests integer type validation
+// VAL-PARAM-004: Integer Type Validation
+// VAL-PARAM-005: Integer Rejects Floats
+func TestValidateInt(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string // substring expected in error message
+	}{
+		// Valid integers
+		{"zero", "0", false, ""},
+		{"positive", "123", false, ""},
+		{"negative", "-456", false, ""},
+		{"large positive", "999999999999", false, ""},
+		{"large negative", "-999999999999", false, ""},
+		{"single digit", "5", false, ""},
+		{"positive with plus", "+42", false, ""},
+
+		// Invalid - floats
+		{"float", "3.14", true, "float"},
+		{"negative float", "-2.5", true, "float"},
+		{"scientific notation", "1e10", true, "integer"},
+		{"comma decimal", "1,5", true, "integer"},
+
+		// Invalid - non-numeric
+		{"text", "abc", true, "integer"},
+		{"mixed", "123abc", true, "integer"},
+		{"empty", "", true, "integer"},
+		{"spaces", "  ", true, "integer"},
+		{"special chars", "12@3", true, "integer"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ValidateParamType(tt.value, ParamTypeInt, "intParam")
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				// Verify error message includes param name, expected type, received value
+				assert.Contains(t, err.Error(), "intParam")
+				assert.Contains(t, err.Error(), "int")
+				assert.Contains(t, err.Error(), tt.value)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.value, result)
+			}
+		})
+	}
+}
+
+// TestValidateDate tests date type validation
+// VAL-PARAM-006: Date Type Validation
+func TestValidateDate(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		// Valid dates
+		{"standard date", "2024-01-15", false, ""},
+		{"min month", "2024-01-01", false, ""},
+		{"max month", "2024-12-31", false, ""},
+		{"leap year feb 29", "2024-02-29", false, ""},
+		{"non-leap year feb 28", "2023-02-28", false, ""},
+		{"31 day month", "2024-01-31", false, ""},
+		{"30 day month", "2024-04-30", false, ""},
+		{"epoch", "1970-01-01", false, ""},
+		{"far future", "2099-12-31", false, ""},
+
+		// Invalid format
+		{"wrong separator", "2024/01/15", true, "format"},
+		{"no separator", "20240115", true, "format"},
+		{"european format", "15-01-2024", true, "format"},
+		{"month name", "2024-Jan-15", true, "format"},
+		{"two digit year", "24-01-15", true, "format"},
+
+		// Invalid month
+		{"month zero", "2024-00-15", true, "month"},
+		{"month 13", "2024-13-15", true, "month"},
+		{"month 99", "2024-99-15", true, "month"},
+
+		// Invalid day
+		{"day zero", "2024-01-00", true, "day"},
+		{"day 32", "2024-01-32", true, "day"},
+		{"day 31 in 30-day month", "2024-04-31", true, "day"},
+		{"feb 30", "2024-02-30", true, "day"},
+		{"feb 29 non-leap", "2023-02-29", true, "day"},
+
+		// Non-date values
+		{"empty", "", true, "format"},
+		{"text", "not-a-date", true, "format"},
+		{"partial", "2024-01", true, "format"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ValidateParamType(tt.value, ParamTypeDate, "dateParam")
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				// Verify error includes context
+				assert.Contains(t, err.Error(), "dateParam")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.value, result)
+			}
+		})
+	}
+}
+
+// TestValidateDateTime tests datetime type validation
+// VAL-PARAM-007: DateTime Type Validation
+func TestValidateDateTime(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+		errMsg  string
+	}{
+		// Valid datetime with space separator
+		{"standard datetime", "2024-01-15 14:30:00", false, ""},
+		{"midnight", "2024-01-15 00:00:00", false, ""},
+		{"end of day", "2024-01-15 23:59:59", false, ""},
+		{"noon", "2024-01-15 12:00:00", false, ""},
+
+		// Valid datetime with T separator (ISO 8601)
+		{"ISO 8601", "2024-01-15T14:30:00", false, ""},
+		{"ISO midnight", "2024-01-15T00:00:00", false, ""},
+		{"ISO end of day", "2024-01-15T23:59:59", false, ""},
+
+		// Invalid format
+		{"no time", "2024-01-15", true, "format"},
+		{"wrong time separator", "2024-01-15T14:30:00", false, ""}, // This is valid (ISO)
+		{"time only", "14:30:00", true, "format"},
+		{"slash date", "2024/01/15 14:30:00", true, "invalid date"},
+		{"no seconds", "2024-01-15 14:30", true, "format"},
+
+		// Invalid time values
+		{"hour 25", "2024-01-15 25:00:00", true, "hour"},
+		{"minute 60", "2024-01-15 14:60:00", true, "minute"},
+		{"second 60", "2024-01-15 14:30:60", true, "second"},
+
+		// Non-datetime values
+		{"empty", "", true, "format"},
+		{"text", "not-a-datetime", true, "format"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ValidateParamType(tt.value, ParamTypeDateTime, "dtParam")
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.value, result)
+			}
+		})
+	}
+}
+
+// TestValidateBool tests boolean type validation
+// VAL-PARAM-008: Boolean Type Validation
+func TestValidateBool(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		wantErr  bool
+		expected string // normalized value
+	}{
+		// true variations
+		{"lowercase true", "true", false, "true"},
+		{"uppercase TRUE", "TRUE", false, "true"},
+		{"mixed case True", "True", false, "true"},
+		{"mixed case TrUe", "TrUe", false, "true"},
+		{"numeric 1", "1", false, "true"},
+		{"lowercase yes", "yes", false, "true"},
+		{"uppercase YES", "YES", false, "true"},
+		{"mixed case Yes", "Yes", false, "true"},
+
+		// false variations
+		{"lowercase false", "false", false, "false"},
+		{"uppercase FALSE", "FALSE", false, "false"},
+		{"mixed case False", "False", false, "false"},
+		{"mixed case FaLsE", "FaLsE", false, "false"},
+		{"numeric 0", "0", false, "false"},
+		{"lowercase no", "no", false, "false"},
+		{"uppercase NO", "NO", false, "false"},
+		{"mixed case No", "No", false, "false"},
+
+		// Invalid values
+		{"empty", "", true, ""},
+		{"maybe", "maybe", true, ""},
+		{"2", "2", true, ""},
+		{"-1", "-1", true, ""},
+		{"y", "y", true, ""},
+		{"n", "n", true, ""},
+		{"t", "t", true, ""},
+		{"f", "f", true, ""},
+		{"spaces", " true ", true, ""}, // no trimming
+		{"TRUE with spaces", "TRUE ", true, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ValidateParamType(tt.value, ParamTypeBool, "boolParam")
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "bool")
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestValidateList tests list type validation
+// VAL-PARAM-009: List Type Conversion
+func TestValidateList(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		wantErr bool
+	}{
+		// Valid lists
+		{"single item", "item1", false},
+		{"two items", "item1,item2", false},
+		{"multiple items", "a,b,c,d,e", false},
+		{"numeric items", "1,2,3,4,5", false},
+		{"mixed items", "a1,b2,c3", false},
+		{"items with spaces", "item 1,item 2", false},
+		{"empty item allowed", "item1,,item3", false}, // empty item is preserved
+		{"single item no comma", "single", false},
+		{"quoted items", `'a',"b",c`, false},
+		{"unicode items", "日本,中国,韩国", false},
+
+		// Edge cases - lists can be empty string (will result in empty list)
+		{"empty string", "", false},
+		{"trailing comma", "a,b,c,", false},
+		{"leading comma", ",a,b,c", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ValidateParamType(tt.value, ParamTypeList, "listParam")
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestValidateParamType_InvalidType tests error handling for unknown types
+func TestValidateParamType_InvalidType(t *testing.T) {
+	_, err := ValidateParamType("value", "unknown_type", "param")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown type")
+}
+
+// =============================================================================
+// Type Conversion Tests
+// =============================================================================
+
+// TestNormalizeBool tests boolean normalization
+func TestNormalizeBool(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+		hasError bool
+	}{
+		{"true", "true", false},
+		{"TRUE", "true", false},
+		{"1", "true", false},
+		{"yes", "true", false},
+		{"YES", "true", false},
+		{"false", "false", false},
+		{"FALSE", "false", false},
+		{"0", "false", false},
+		{"no", "false", false},
+		{"NO", "false", false},
+		{"invalid", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result, err := NormalizeBool(tt.input)
+			if tt.hasError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+// TestIsLeapYear tests leap year detection
+func TestIsLeapYear(t *testing.T) {
+	tests := []struct {
+		year  int
+		leap  bool
+	}{
+		{2000, true},  // divisible by 400
+		{1900, false}, // divisible by 100 but not 400
+		{2024, true},  // divisible by 4
+		{2023, false}, // not divisible by 4
+		{2100, false}, // divisible by 100 but not 400
+		{2400, true},  // divisible by 400
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%d", tt.year), func(t *testing.T) {
+			assert.Equal(t, tt.leap, isLeapYear(tt.year))
+		})
+	}
+}
+
+// TestDaysInMonth tests days in month calculation
+func TestDaysInMonth(t *testing.T) {
+	tests := []struct {
+		year   int
+		month  int
+		days   int
+	}{
+		{2024, 1, 31},  // January
+		{2024, 2, 29},  // February leap year
+		{2023, 2, 28},  // February non-leap year
+		{2024, 3, 31},  // March
+		{2024, 4, 30},  // April
+		{2024, 5, 31},  // May
+		{2024, 6, 30},  // June
+		{2024, 7, 31},  // July
+		{2024, 8, 31},  // August
+		{2024, 9, 30},  // September
+		{2024, 10, 31}, // October
+		{2024, 11, 30}, // November
+		{2024, 12, 31}, // December
+		{2000, 2, 29},  // February leap year (divisible by 400)
+		{1900, 2, 28},  // February non-leap (divisible by 100 but not 400)
+	}
+
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%d-%02d", tt.year, tt.month), func(t *testing.T) {
+			assert.Equal(t, tt.days, daysInMonth(tt.year, tt.month))
+		})
+	}
+}
+
+// =============================================================================
+// Error Message Quality Tests
+// =============================================================================
+
+// TestValidationErrorMessage_Quality tests VAL-PARAM-023, VAL-PARAM-024
+// Error messages must include param name, expected type, and received value
+func TestValidationErrorMessage_Quality(t *testing.T) {
+	t.Run("int type mismatch", func(t *testing.T) {
+		_, err := ValidateParamType("not-an-int", ParamTypeInt, "myParam")
+		require.Error(t, err)
+		errMsg := err.Error()
+
+		// Must include param name
+		assert.Contains(t, errMsg, "myParam")
+		// Must include expected type
+		assert.Contains(t, errMsg, "int")
+		// Must include received value
+		assert.Contains(t, errMsg, "not-an-int")
+	})
+
+	t.Run("date format error", func(t *testing.T) {
+		_, err := ValidateParamType("invalid-date", ParamTypeDate, "birthDate")
+		require.Error(t, err)
+		errMsg := err.Error()
+
+		assert.Contains(t, errMsg, "birthDate")
+		assert.Contains(t, errMsg, "date")
+		assert.Contains(t, errMsg, "invalid-date")
+	})
+
+	t.Run("bool invalid value", func(t *testing.T) {
+		_, err := ValidateParamType("maybe", ParamTypeBool, "isActive")
+		require.Error(t, err)
+		errMsg := err.Error()
+
+		assert.Contains(t, errMsg, "isActive")
+		assert.Contains(t, errMsg, "bool")
+		assert.Contains(t, errMsg, "maybe")
+	})
+}
+
+// =============================================================================
+// Automatic Type Conversion Tests
+// =============================================================================
+
+// TestAutoTypeConversion tests VAL-PARAM-025
+// Compatible types should be auto-converted
+func TestAutoTypeConversion(t *testing.T) {
+	t.Run("numeric string to int", func(t *testing.T) {
+		// String "123" should be accepted as int
+		result, err := ValidateParamType("123", ParamTypeInt, "numParam")
+		require.NoError(t, err)
+		assert.Equal(t, "123", result)
+	})
+
+	t.Run("int string remains string", func(t *testing.T) {
+		// String "123" as string type should remain string
+		result, err := ValidateParamType("123", ParamTypeString, "strParam")
+		require.NoError(t, err)
+		assert.Equal(t, "123", result)
+	})
+
+	t.Run("ISO date to datetime", func(t *testing.T) {
+		// Date format should NOT be accepted as datetime (needs time)
+		_, err := ValidateParamType("2024-01-15", ParamTypeDateTime, "dtParam")
+		require.Error(t, err)
+	})
 }
 
 // TestDetectParameters_EdgeCases tests various edge cases
