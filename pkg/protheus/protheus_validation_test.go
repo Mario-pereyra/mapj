@@ -1,6 +1,7 @@
 package protheus
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,7 +68,80 @@ func TestValidateReadOnly_SQLComments(t *testing.T) {
 	malicious := "-- comment\nDROP TABLE users;"
 	err := ValidateReadOnly(malicious)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "query must start with SELECT, WITH, or EXEC")
+	// Error can be about forbidden keyword (DROP), semicolon, or prefix check
+	errMsg := err.Error()
+	assert.True(t, strings.Contains(errMsg, "forbidden") || strings.Contains(errMsg, "semicolon") || strings.Contains(errMsg, "query must start with SELECT, WITH, or EXEC"),
+		"Error should mention forbidden keyword, semicolon, or prefix requirement, got: %s", errMsg)
+}
+
+func TestValidateReadOnly_SQLInjection(t *testing.T) {
+	// These are SQL injection attempts that start with valid SELECT
+	// but contain malicious statements after semicolon or inline
+	injectionQueries := []string{
+		"SELECT * FROM users; DROP TABLE users;",
+		"SELECT * FROM users; DELETE FROM users;",
+		"SELECT * FROM users; INSERT INTO users VALUES (1, 'hacker');",
+		"SELECT * FROM users; UPDATE users SET admin = 1;",
+		"SELECT * FROM users; TRUNCATE TABLE users;",
+		"SELECT * FROM users; ALTER TABLE users ADD column hack;",
+		"SELECT * FROM users; CREATE TABLE hack (id int);",
+		"SELECT * FROM users; GRANT ALL ON users TO hacker;",
+		"SELECT * FROM users; REVOKE ALL ON users FROM admin;",
+		"SELECT * FROM users; EXEC sp_hack;",
+		"SELECT * FROM users; EXECUTE sp_hack;",
+		"SELECT * FROM users; MERGE INTO users USING hack;",
+		"SELECT * FROM users; BACKUP DATABASE x;",
+		"SELECT * FROM users; RESTORE DATABASE x;",
+		"SELECT * FROM users; DENY SELECT ON users TO admin;",
+		// Inline dangerous keywords
+		"SELECT * FROM (DELETE FROM users) AS x",
+		"SELECT * FROM users WHERE id = 1 OR DROP TABLE users",
+	}
+
+	for _, query := range injectionQueries {
+		t.Run(query, func(t *testing.T) {
+			err := ValidateReadOnly(query)
+			assert.Error(t, err, "Expected SQL injection %q to be rejected", query)
+			// Error should mention forbidden keyword or semicolon
+			errMsg := err.Error()
+			assert.True(t, strings.Contains(errMsg, "forbidden") || strings.Contains(errMsg, "semicolon"),
+				"Error should mention forbidden keyword or semicolon, got: %s", errMsg)
+		})
+	}
+}
+
+func TestValidateReadOnly_SemicolonAsSeparator(t *testing.T) {
+	// Semicolon as statement separator should be detected
+	queries := []string{
+		"SELECT 1; SELECT 2",
+		"SELECT * FROM users; -- comment",
+		"WITH cte AS (SELECT 1) SELECT * FROM cte; SELECT 2",
+	}
+
+	for _, query := range queries {
+		t.Run(query, func(t *testing.T) {
+			err := ValidateReadOnly(query)
+			assert.Error(t, err, "Query with semicolon should be rejected")
+			assert.Contains(t, err.Error(), "semicolon", "Error should mention semicolon")
+		})
+	}
+}
+
+func TestValidateReadOnly_LegitimateExec(t *testing.T) {
+	// Valid EXEC calls should still be accepted (but not with semicolon)
+	validExecs := []string{
+		"EXEC sp_help 'table'",
+		"EXEC sp_columns 'users'",
+		"EXECUTE sp_helpfile",
+		"exec dbo.sp_test",
+	}
+
+	for _, query := range validExecs {
+		t.Run(query, func(t *testing.T) {
+			err := ValidateReadOnly(query)
+			assert.NoError(t, err, "Legitimate EXEC should be accepted")
+		})
+	}
 }
 
 func TestNewClient(t *testing.T) {

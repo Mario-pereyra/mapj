@@ -41,6 +41,24 @@ func (c *Client) connectionString() string {
 	)
 }
 
+// forbiddenKeywords are SQL keywords that indicate write operations
+// These must be detected anywhere in the query to prevent SQL injection
+var forbiddenKeywords = []string{
+	"INSERT",
+	"UPDATE",
+	"DELETE",
+	"DROP",
+	"ALTER",
+	"CREATE",
+	"TRUNCATE",
+	"MERGE",
+	"GRANT",
+	"REVOKE",
+	"DENY",
+	"BACKUP",
+	"RESTORE",
+}
+
 func ValidateReadOnly(sqlQuery string) error {
 	normalized := strings.ToUpper(strings.TrimSpace(sqlQuery))
 
@@ -62,11 +80,56 @@ func ValidateReadOnly(sqlQuery string) error {
 		normalized = strings.TrimSpace(normalized[endIdx+1:])
 	}
 
-	if !strings.HasPrefix(normalized, "SELECT") && !strings.HasPrefix(normalized, "WITH") && !strings.HasPrefix(normalized, "EXEC") {
+	// Check for semicolon as statement separator (SQL injection pattern)
+	// This prevents multiple statements like: SELECT * FROM users; DROP TABLE users;
+	if strings.Contains(normalized, ";") {
+		return fmt.Errorf("query contains semicolon: multiple statements not allowed")
+	}
+
+	// Check prefix for valid read-only keywords
+	if !strings.HasPrefix(normalized, "SELECT") && !strings.HasPrefix(normalized, "WITH") && !strings.HasPrefix(normalized, "EXEC") && !strings.HasPrefix(normalized, "EXECUTE") {
 		return fmt.Errorf("query must start with SELECT, WITH, or EXEC")
 	}
 
+	// Check for forbidden keywords anywhere in the query (SQL injection detection)
+	// This catches patterns like: SELECT * FROM users WHERE id = 1 OR DROP TABLE users
+	for _, keyword := range forbiddenKeywords {
+		// Use word boundary matching to avoid false positives
+		// e.g., "SELECT" should not match "SELECTED"
+		if containsWord(normalized, keyword) {
+			return fmt.Errorf("query contains forbidden keyword: %s", keyword)
+		}
+	}
+
 	return nil
+}
+
+// containsWord checks if a string contains a keyword as a complete word
+// This prevents false positives like "SELECTED" matching "SELECT"
+func containsWord(s, word string) bool {
+	// Find all occurrences of the word
+	idx := strings.Index(s, word)
+	for idx != -1 {
+		// Check character before the match
+		validBefore := idx == 0 || !isAlphaNum(rune(s[idx-1]))
+		// Check character after the match
+		validAfter := idx+len(word) >= len(s) || !isAlphaNum(rune(s[idx+len(word)]))
+
+		if validBefore && validAfter {
+			return true
+		}
+		// Look for next occurrence
+		idx = strings.Index(s[idx+1:], word)
+		if idx != -1 {
+			idx = idx + len(word) // Adjust index relative to original string
+		}
+	}
+	return false
+}
+
+// isAlphaNum checks if a character is alphanumeric
+func isAlphaNum(c rune) bool {
+	return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')
 }
 
 func (c *Client) Query(ctx context.Context, sqlQuery string, maxRows int) (*QueryResult, error) {
