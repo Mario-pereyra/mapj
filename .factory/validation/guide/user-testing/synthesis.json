@@ -1,0 +1,36 @@
+{
+  "milestone": "guide",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": ["VAL-APP-001"],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "validationDetails": {
+    "VAL-APP-001": {
+      "description": "El informe incluye un template de SKILL.md listo para usar.",
+      "evidence": {
+        "file": ".factory/library/practical-guide-skill-template.md",
+        "templateLocation": "Section 2 - Template Completo (Copy-Paste Ready)",
+        "verifiedComponents": [
+          "YAML frontmatter with required fields (name, description)",
+          "Optional fields (keywords, version, author)",
+          "All required body sections (Role, Procedure, Examples, Success Criteria, Limitations)",
+          "HTML comments with guidance for each placeholder",
+          "Fenced code block format for easy copying"
+        ]
+      },
+      "conclusion": "Template fully satisfies VAL-APP-001 requirements"
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "notes": "This is a documentation mission with no services. Validation performed via manual review of the produced document. Template guide is comprehensive, well-structured, and ready for immediate use."
+}

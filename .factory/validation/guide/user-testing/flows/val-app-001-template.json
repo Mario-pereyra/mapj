@@ -1,0 +1,46 @@
+{
+  "flowId": "val-app-001-template",
+  "milestone": "guide",
+  "assertions": ["VAL-APP-001"],
+  "tool": "manual-review",
+  "status": "pass",
+  "validatedAt": "2026-04-08T16:50:00.000Z",
+  "validationDetails": {
+    "VAL-APP-001": {
+      "description": "El informe incluye un template de SKILL.md listo para usar.",
+      "expectedEvidence": "Bloque de código con template completo",
+      "actualEvidence": {
+        "file": ".factory/library/practical-guide-skill-template.md",
+        "templateSection": "## 2. Template Completo (Copy-Paste Ready)",
+        "templateFormat": "Fenced code block with complete SKILL.md template",
+        "components": [
+          {
+            "name": "YAML frontmatter",
+            "present": true,
+            "details": "Complete frontmatter with name, description, keywords, version, author fields"
+          },
+          {
+            "name": "Placeholder sections",
+            "present": true,
+            "details": "Role, Context, Procedure, Examples, Success Criteria, Limitations, Error Handling, References with HTML comments"
+          },
+          {
+            "name": "Example content",
+            "present": true,
+            "details": "Each section includes commented placeholder with example content structure"
+          },
+          {
+            "name": "Copy-paste ready",
+            "present": true,
+            "details": "Template enclosed in ```markdown fence block for easy copying"
+          }
+        ]
+      },
+      "conclusion": "PASS - Template fully satisfies all requirements for VAL-APP-001"
+    }
+  },
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["Read", "LS", "Glob"],
+  "isolationBoundary": "None required - read-only document analysis"
+}
