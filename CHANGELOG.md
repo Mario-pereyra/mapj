@@ -7,6 +7,63 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versio
 
 ## [0.2.0-agentic] — 2026-04-07
 
+### Breaking Changes
+
+Esta versión introduce cambios significativos para optimizar la interacción con agentes LLM. Si vienes de la versión 1.x o 2.x, lee esta guía de migración:
+
+#### 1. Formatos `csv` y `human` eliminados
+Los formateadores `CSVFormatter` y `HumanFormatter` han sido removidos. Ahora debes usar `toon` o `json`.
+
+**Antes (v1.x/v2.x):**
+```bash
+mapj protheus query --sql "SELECT * FROM users" --format csv
+mapj protheus query --sql "SELECT * FROM users" --format human
+```
+
+**Ahora (v0.2.0+):**
+```bash
+# TOON: formato tabular optimizado para LLMs (~40% menos tokens)
+mapj protheus query --sql "SELECT * FROM users" -o toon
+
+# JSON: formato estructurado clásico
+mapj protheus query --sql "SELECT * FROM users" -o json
+
+# Auto: detección automática (TOON para tablas, JSON para objetos)
+mapj protheus query --sql "SELECT * FROM users"  # default
+```
+
+#### 2. Comando `retry-failed` removido
+El comando manual `mapj confluence retry-failed` y el archivo `export-errors.jsonl` han sido eliminados. El sistema ahora implementa reintentos automáticos internos con backoff exponencial.
+
+**Antes (v1.x/v2.x):**
+```bash
+# Reintentar exports fallidos manualmente
+mapj confluence retry-failed
+```
+
+**Ahora (v0.2.0+):**
+```bash
+# No se requiere acción manual
+# Los errores HTTP 429 (rate limit) y 50x se reintentan automáticamente
+# con backoff exponencial: 1s → 2s → 4s → 8s (máx 4 reintentos)
+mapj confluence export --page-id 12345
+```
+
+**Nota:** Los errores permanentes (4xx, auth) se reportan inmediatamente sin reintentos.
+
+#### 3. Flag `--limit` renombrado a `--max-results`
+En `tdn search`, el flag `--limit` ha sido renombrado a `--max-results` para mayor claridad semántica.
+
+**Antes (v1.x/v2.x):**
+```bash
+mapj tdn search "protheus" --limit 50
+```
+
+**Ahora (v0.2.0+):**
+```bash
+mapj tdn search "protheus" --max-results 50
+```
+
 ### Added
 - **Safety Tripwire (Protheus)**: Automatically intercepts large query results (> 500 rows) and saves them to a temporary `.toon` file to protect the LLM context window.
 - **Auto-Healing (Confluence)**: Native exponential backoff for HTTP 429 (Rate Limit) and 50x (Server Error) in the core client.
