@@ -60,6 +60,28 @@ Todas las respuestas siguen: `{ok, command, result, error}`
 | 4 | Retryable error |
 | 5 | Conflict error |
 
+## Patrones de Concurrencia
+
+### Mutex en Struct Compartido
+Para sincronizar acceso concurrente a recursos compartidos (como escritura de archivos), usar un campo mutex en el struct que contiene el estado compartido:
+
+```go
+type Client struct {
+    // ... otros campos
+    manifestMu sync.Mutex  // protege escritura concurrente del manifest
+}
+
+func (c *Client) exportSinglePage(...) {
+    c.manifestMu.Lock()
+    // ... operaciones protegidas
+    c.manifestMu.Unlock()
+}
+```
+
+**No** declarar el mutex como variable local dentro de una goroutine - cada goroutine tendría su propia instancia, sin sincronización real.
+
+**Evidencia**: `pkg/confluence/client.go:23`, `pkg/confluence/export.go:219-222`
+
 ## Diferencias entre Ramas
 
 ### main (8.5/10 código)

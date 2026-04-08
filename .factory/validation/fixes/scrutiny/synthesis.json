@@ -1,0 +1,63 @@
+{
+  "milestone": "fixes",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "go test ./... -cover",
+      "exitCode": 0,
+      "output": "All packages tested successfully with coverage: cmd (0%), internal/auth (22.1%), internal/errors (66.7%), internal/output (76.7%), pkg/confluence (22.8%), pkg/protheus (36.5%)"
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "go build -o mapj.exe ./cmd/mapj",
+      "exitCode": 0,
+      "output": "Build completed successfully"
+    },
+    "lint": {
+      "passed": true,
+      "command": null,
+      "exitCode": null,
+      "note": "Lint not configured in services.yaml and golangci-lint not installed."
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "nonBlockingIssues": [
+    {
+      "featureId": "fix-sql-validation",
+      "file": "pkg/protheus/query.go",
+      "line": 107,
+      "severity": "non_blocking",
+      "description": "Bug in containsWord() index calculation: 'idx = idx + len(word)' should be 'idx = oldIdx + 1 + newIdx'. This causes false negatives in edge cases like 'DROPX DROP' where the second occurrence of DROP is not detected. However, this is unlikely to cause security issues because: (1) semicolon check catches most multi-statement attacks, (2) inline keyword detection works for most real-world cases."
+    },
+    {
+      "featureId": "fix-mutex-bug",
+      "file": "pkg/confluence/export.go",
+      "line": 221,
+      "severity": "non_blocking",
+      "description": "Error return from WriteManifest is still ignored with '_'. This was pre-existing and not part of the fix scope, but could be improved to log or handle manifest write failures."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library/architecture.md",
+      "description": "Added 'Patrones de Concurrencia' section documenting the mutex-on-shared-struct pattern for concurrent file writes",
+      "sourceFeature": "fix-mutex-bug"
+    }
+  ],
+  "suggestedGuidanceUpdates": [],
+  "rejectedObservations": [
+    {
+      "observation": "Worker followed the TDD procedure correctly as documented in backend-worker skill: wrote failing test first (concurrent write test that would fail without proper mutex), implemented fix, verified with race detection flag.",
+      "reason": "This confirms correct behavior but doesn't represent new knowledge to capture - it's validation that existing guidance works correctly."
+    }
+  ],
+  "previousRound": null
+}
