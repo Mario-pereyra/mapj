@@ -1,0 +1,15 @@
+{
+  "featureId": "preset-cli-output-format",
+  "reviewedAt": "2026-04-08T22:45:00Z",
+  "commitId": "efc6035",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation fully covers all expected behavior from the feature description. Consistent JSON output format is implemented with proper envelope structures, global flags (--json, --verbose, --config, --profile, --no-color) work correctly, and error codes follow UPPER_SNAKE_CASE convention. The retryable field is now always included in error envelopes per VAL-CLI-035.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "PASS - Feature preset-cli-output-format is fully implemented. All 6 validation assertions (VAL-CLI-035 to VAL-CLI-040) are satisfied. The implementation adds global flags support, ensures retryable field is always present in error envelopes, and provides comprehensive test coverage for output format validation."
+}

@@ -33,21 +33,22 @@ How the preset system works - components, relationships, data flows.
 ### QueryPreset
 ```go
 type QueryPreset struct {
-    Name        string                 `json:"name"`
-    Description string                 `json:"description,omitempty"`
-    Query       string                 `json:"query"`
-    Connection  string                 `json:"connection,omitempty"`
-    MaxRows     int                    `json:"maxRows,omitempty"`
-    Parameters  map[string]*ParamDef   `json:"parameters,omitempty"`
-    Tags        []string               `json:"tags,omitempty"`
-    CreatedAt   string                 `json:"createdAt,omitempty"`
-    UpdatedAt   string                 `json:"updatedAt,omitempty"`
+    Name        string      `json:"name"`
+    Description string      `json:"description,omitempty"`
+    Query       string      `json:"query"`
+    Connection  string      `json:"connection,omitempty"`
+    MaxRows     int         `json:"maxRows,omitempty"`
+    Parameters  []ParamDef  `json:"parameters,omitempty"` // slice preserves order
+    Tags        []string    `json:"tags,omitempty"`
+    CreatedAt   string      `json:"createdAt,omitempty"`
+    UpdatedAt   string      `json:"updatedAt,omitempty"`
 }
 ```
 
 ### ParamDef
 ```go
 type ParamDef struct {
+    Name        string `json:"name"`                  // parameter name (e.g., "user_id")
     Type        string `json:"type"`                  // string, int, date, datetime, bool, list
     Required    bool   `json:"required"`              // default: true
     Default     string `json:"default,omitempty"`     // fallback value
@@ -55,6 +56,8 @@ type ParamDef struct {
     Pattern     string `json:"pattern,omitempty"`     // regex validation
 }
 ```
+
+Note: Parameters uses a slice (not map) to preserve parameter order and ensure consistent JSON serialization.
 
 ### PresetFile
 ```go

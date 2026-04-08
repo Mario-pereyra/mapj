@@ -1,0 +1,15 @@
+{
+  "featureId": "preset-cli-list-show",
+  "reviewedAt": "2026-04-08T22:30:00.000Z",
+  "commitId": "9c1a804",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The implementation correctly adds 'preset list' and 'preset show' CLI commands with all required functionality. The code follows established patterns from AGENTS.md including proper output envelope format, error codes, and hints. All 8 expected behaviors (VAL-CLI-006 through VAL-CLI-009 and VAL-CLI-019 through VAL-CLI-022) are fully implemented and tested with 10 test cases.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Feature implementation is complete and correct. The 'preset list' command returns JSON with presets array and count, supports --tag and --connection filters, and returns empty array (not error) when no matches. The 'preset show' command displays all preset fields including parameters, shows active preset when no name is provided, returns null when no active preset exists, and returns PRESET_NOT_FOUND error with hint for nonexistent presets. Code follows established conventions and all tests pass."
+}

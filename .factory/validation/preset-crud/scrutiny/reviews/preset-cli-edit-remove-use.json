@@ -1,0 +1,22 @@
+{
+  "featureId": "preset-cli-edit-remove-use",
+  "reviewedAt": "2026-04-08T22:30:00.000Z",
+  "commitId": "de03e9a",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation fully covers the feature requirements for preset edit, remove, and use commands. All 15 test cases pass and cover the required assertions. Code follows existing patterns in the codebase with consistent error handling and output formatting.",
+    "issues": [
+      {
+        "file": "internal/cli/protheus_preset.go",
+        "line": 580,
+        "severity": "non_blocking",
+        "description": "When editing the query with --query flag, the code re-detects parameters and validates them, but does not automatically update the preset's Parameters field unless --param-def is also provided. This could lead to inconsistencies where the stored parameter definitions don't match the actual query parameters. While not required by the contract, consider either auto-updating parameters on query change or adding a warning when parameters would become stale."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "PASS - The preset edit, remove, and use commands are correctly implemented with full test coverage. All validation assertions (VAL-CLI-023 through VAL-CLI-034, VAL-STORAGE-009, VAL-STORAGE-011, VAL-CROSS-004) are verified by tests. Error handling follows the agent-friendly pattern with proper error codes and hints. The single non-blocking issue relates to query editing not auto-updating parameter definitions, which is a minor usability concern not specified in the contract."
+}
