@@ -5,21 +5,26 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
 type Client struct {
-	BaseURL    string
-	Token      string // For Bearer token (PAT)
-	Username   string // For Basic auth (email)
-	Password   string // For Basic auth (API token)
-	UseBasic   bool   // Use Basic auth instead of Bearer
+	BaseURL  string
+	Token    string // For Bearer token (PAT)
+	Username string // For Basic auth (email)
+	Password string // For Basic auth (API token)
+	UseBasic bool   // Use Basic auth instead of Bearer
 
 	httpClient *http.Client
 	basicUser  string
 	basicPass  string
+
+	// manifestMu protects concurrent writes to the manifest file during parallel exports
+	manifestMu sync.Mutex
 }
 
 type APIResponse struct {
@@ -99,27 +104,26 @@ func (c *Client) do(ctx context.Context, method, path string, params map[string]
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			lastErr = fmt.Errorf("request failed: %w", err)
-			// Network errors can be retried
-			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			backoffWithJitter(attempt)
 			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
-		
+
 		if err != nil {
 			lastErr = fmt.Errorf("failed to read response: %w", err)
-			time.Sleep(time.Duration(1<<attempt) * time.Second)
+			backoffWithJitter(attempt)
 			continue
 		}
 
 		if resp.StatusCode >= 400 {
-			lastErr = fmt.Errorf("API error: status %d, body: %s", resp.StatusCode, string(body))
-			
-			// Retry on Rate Limit (429) or Server Errors (50x)
-			if resp.StatusCode == 429 || resp.StatusCode >= 500 {
+			apiErr := NewAPIError(resp.StatusCode, string(body))
+			lastErr = apiErr
+
+			if apiErr.Retryable {
 				if attempt < maxRetries {
-					time.Sleep(time.Duration(1<<attempt) * time.Second)
+					backoffWithJitter(attempt)
 					continue
 				}
 			}
@@ -130,6 +134,12 @@ func (c *Client) do(ctx context.Context, method, path string, params map[string]
 	}
 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
+}
+
+func backoffWithJitter(attempt int) {
+	base := time.Duration(1<<attempt) * time.Second
+	jitter := time.Duration(rand.Intn(500)) * time.Millisecond
+	time.Sleep(base + jitter)
 }
 
 func (c *Client) Ping(ctx context.Context) error {

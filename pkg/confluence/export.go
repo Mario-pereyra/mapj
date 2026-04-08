@@ -217,10 +217,9 @@ func (c *Client) exportSinglePage(ctx context.Context, pageID string, opts *Expo
 
 		// Write manifest entry
 		entry = buildManifestEntry(page, c.BaseURL, exportPath)
-		mu := sync.Mutex{}
-		mu.Lock()
+		c.manifestMu.Lock()
 		_ = WriteManifest(opts.OutputPath, entry)
-		mu.Unlock()
+		c.manifestMu.Unlock()
 
 		// Download attachments (only if explicitly requested)
 		if opts.WithAttachments {

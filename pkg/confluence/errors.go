@@ -4,18 +4,18 @@ import "fmt"
 
 // Error codes for structured error logging.
 const (
-	ErrHTTP403        = "HTTP_403"
-	ErrHTTP404        = "HTTP_404"
-	ErrHTTP429        = "HTTP_429"
-	ErrHTTPTimeout    = "HTTP_TIMEOUT"
-	ErrAuthFailed     = "AUTH_FAILED"
-	ErrPathTooLong    = "PATH_TOO_LONG"
+	ErrHTTP403         = "HTTP_403"
+	ErrHTTP404         = "HTTP_404"
+	ErrHTTP429         = "HTTP_429"
+	ErrHTTPTimeout     = "HTTP_TIMEOUT"
+	ErrAuthFailed      = "AUTH_FAILED"
+	ErrPathTooLong     = "PATH_TOO_LONG"
 	ErrWritePermission = "WRITE_PERMISSION"
-	ErrUnknownMacro   = "UNKNOWN_MACRO"
-	ErrConvertPanic   = "CONVERT_PANIC"
-	ErrAttachmentFail = "ATTACHMENT_FAIL"
-	ErrPageNotFound   = "PAGE_NOT_FOUND"
-	ErrParseFailed    = "PARSE_FAILED"
+	ErrUnknownMacro    = "UNKNOWN_MACRO"
+	ErrConvertPanic    = "CONVERT_PANIC"
+	ErrAttachmentFail  = "ATTACHMENT_FAIL"
+	ErrPageNotFound    = "PAGE_NOT_FOUND"
+	ErrParseFailed     = "PARSE_FAILED"
 )
 
 // Error phases identify where in the pipeline an error occurred.
@@ -56,6 +56,32 @@ func NewExportError(pageID, title, phase, code, message, outputPath string) *Exp
 		Code:     code,
 		Message:  message,
 		RetryCmd: fmt.Sprintf("mapj confluence export %s --output-path %s", pageID, outputPath),
+	}
+}
+
+// APIError is a structured error returned by the Confluence HTTP client.
+// It carries the HTTP status code and domain-specific error code so that
+// CLI layer can propagate them to the response envelope.
+type APIError struct {
+	StatusCode int
+	Code       string
+	Message    string
+	Retryable  bool
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("API error: status %d, code %s: %s", e.StatusCode, e.Code, e.Message)
+}
+
+// NewAPIError creates an APIError from an HTTP status code and body.
+func NewAPIError(statusCode int, body string) *APIError {
+	code := HTTPErrorCode(statusCode)
+	retryable := statusCode == 429 || statusCode >= 500
+	return &APIError{
+		StatusCode: statusCode,
+		Code:       code,
+		Message:    body,
+		Retryable:  retryable,
 	}
 }
 
