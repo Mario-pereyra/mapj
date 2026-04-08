@@ -547,3 +547,550 @@ func TestPresetAddErrorFormat(t *testing.T) {
 	assert.Contains(t, errorData, "code")
 	assert.Contains(t, errorData, "message")
 }
+
+// =============================================================================
+// PRESET LIST TESTS (VAL-CLI-006 to VAL-CLI-009)
+// =============================================================================
+
+// executePresetList executes the preset list command with given args and returns the JSON output.
+func executePresetList(t *testing.T, store *preset.PresetStore, tagFilter string, connectionFilter string) map[string]any {
+	// Set output format to LLM (JSON) for testing
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	// Set the test store
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	// Create a new command instance for this test
+	cmd := createPresetListCmdForTest()
+
+	// Set flag values on the command
+	if tagFilter != "" {
+		cmd.Flags().Set("tag", tagFilter)
+	}
+	if connectionFilter != "" {
+		cmd.Flags().Set("connection", connectionFilter)
+	}
+
+	// Capture output
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{})
+
+	// Execute
+	err := cmd.Execute()
+	require.NoError(t, err, "Command execution should not return Go errors")
+
+	// Parse JSON output
+	output := strings.TrimSpace(buf.String())
+	if output == "" {
+		return nil
+	}
+
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err, "Output should be valid JSON: %s", output)
+
+	return result
+}
+
+// createPresetListCmdForTest creates a fresh preset list command for testing.
+func createPresetListCmdForTest() *cobra.Command {
+	var tagFilter string
+	var connectionFilter string
+
+	cmd := &cobra.Command{
+		Use:  "list",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Copy local values to global for presetListRun to use
+			presetListTag = tagFilter
+			presetListConnection = connectionFilter
+			return presetListRun(cmd, args)
+		},
+	}
+
+	cmd.Flags().StringVar(&tagFilter, "tag", "", "Filter presets by tag")
+	cmd.Flags().StringVar(&connectionFilter, "connection", "", "Filter presets by connection")
+
+	return cmd
+}
+
+// VAL-CLI-006: Preset List - Success
+func TestPresetListSuccess(t *testing.T) {
+	store := createTestStore(t)
+
+	// Create some presets
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"preset-one": {
+				Name:      "preset-one",
+				Query:     "SELECT 1",
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+			"preset-two": {
+				Name:      "preset-two",
+				Query:     "SELECT 2",
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetList(t, store, "", "")
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool), "Expected ok=true, got: %v", result)
+
+	// Verify result structure
+	resultData := result["result"].(map[string]any)
+	assert.Contains(t, resultData, "presets")
+	assert.Contains(t, resultData, "count")
+
+	presets := resultData["presets"].([]any)
+	count := int(resultData["count"].(float64))
+	assert.Equal(t, 2, count)
+	assert.Len(t, presets, 2)
+}
+
+// VAL-CLI-007: Preset List - Filter by Tag
+func TestPresetListFilterByTag(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"report-daily": {
+				Name:      "report-daily",
+				Query:     "SELECT * FROM daily_reports",
+				Tags:      []string{"report", "daily"},
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+			"report-weekly": {
+				Name:      "report-weekly",
+				Query:     "SELECT * FROM weekly_reports",
+				Tags:      []string{"report", "weekly"},
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+			"admin-task": {
+				Name:      "admin-task",
+				Query:     "SELECT * FROM admin_tasks",
+				Tags:      []string{"admin"},
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetList(t, store, "report", "")
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+	presets := resultData["presets"].([]any)
+	count := int(resultData["count"].(float64))
+
+	// Should only include presets with "report" tag
+	assert.Equal(t, 2, count)
+	assert.Len(t, presets, 2)
+
+	// Verify only report presets are returned
+	names := make([]string, 0)
+	for _, p := range presets {
+		presetMap := p.(map[string]any)
+		names = append(names, presetMap["name"].(string))
+	}
+	assert.Contains(t, names, "report-daily")
+	assert.Contains(t, names, "report-weekly")
+	assert.NotContains(t, names, "admin-task")
+}
+
+// VAL-CLI-008: Preset List - Filter by Connection
+func TestPresetListFilterByConnection(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"prod-query-1": {
+				Name:       "prod-query-1",
+				Query:      "SELECT 1",
+				Connection: "protheus_prod",
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
+			"prod-query-2": {
+				Name:       "prod-query-2",
+				Query:      "SELECT 2",
+				Connection: "protheus_prod",
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
+			"dev-query": {
+				Name:       "dev-query",
+				Query:      "SELECT 3",
+				Connection: "protheus_dev",
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetList(t, store, "", "protheus_prod")
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+	presets := resultData["presets"].([]any)
+	count := int(resultData["count"].(float64))
+
+	// Should only include presets with protheus_prod connection
+	assert.Equal(t, 2, count)
+	assert.Len(t, presets, 2)
+
+	// Verify only prod presets are returned
+	names := make([]string, 0)
+	for _, p := range presets {
+		presetMap := p.(map[string]any)
+		names = append(names, presetMap["name"].(string))
+	}
+	assert.Contains(t, names, "prod-query-1")
+	assert.Contains(t, names, "prod-query-2")
+	assert.NotContains(t, names, "dev-query")
+}
+
+// VAL-CLI-009: Preset List - Empty Result
+func TestPresetListEmptyResult(t *testing.T) {
+	store := createTestStore(t)
+
+	// Empty store
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetList(t, store, "", "")
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool), "Empty list should return ok=true, not error")
+
+	resultData := result["result"].(map[string]any)
+	presets := resultData["presets"].([]any)
+	count := int(resultData["count"].(float64))
+
+	assert.Equal(t, 0, count)
+	assert.Len(t, presets, 0)
+}
+
+// VAL-CLI-009: Preset List - No Matches for Filter
+func TestPresetListNoMatchesForFilter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT 1",
+				Tags:      []string{"test"},
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Filter for non-existent tag
+	result := executePresetList(t, store, "nonexistent", "")
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool), "No matches should return ok=true with empty list")
+
+	resultData := result["result"].(map[string]any)
+	presets := resultData["presets"].([]any)
+	count := int(resultData["count"].(float64))
+
+	assert.Equal(t, 0, count)
+	assert.Len(t, presets, 0)
+}
+
+// =============================================================================
+// PRESET SHOW TESTS (VAL-CLI-019 to VAL-CLI-022)
+// =============================================================================
+
+// executePresetShow executes the preset show command with given args and returns the JSON output.
+func executePresetShow(t *testing.T, store *preset.PresetStore, args []string) map[string]any {
+	// Set output format to LLM (JSON) for testing
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	// Set the test store
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	// Create a new command instance for this test
+	cmd := createPresetShowCmdForTest()
+
+	// Capture output
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs(args)
+
+	// Execute
+	err := cmd.Execute()
+	require.NoError(t, err, "Command execution should not return Go errors")
+
+	// Parse JSON output
+	output := strings.TrimSpace(buf.String())
+	if output == "" {
+		return nil
+	}
+
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err, "Output should be valid JSON: %s", output)
+
+	return result
+}
+
+// createPresetShowCmdForTest creates a fresh preset show command for testing.
+func createPresetShowCmdForTest() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "show [name]",
+		Args: cobra.MaximumNArgs(1),
+		RunE: presetShowRun,
+	}
+
+	return cmd
+}
+
+// VAL-CLI-019: Preset Show - Success
+func TestPresetShowSuccess(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	expectedPreset := &preset.QueryPreset{
+		Name:        "test-preset",
+		Description: "Test preset description",
+		Query:       "SELECT :name FROM users WHERE id = :id",
+		Connection:  "protheus_prod",
+		MaxRows:     100,
+		Parameters: []preset.ParamDef{
+			{
+				Name:        "name",
+				Type:        "string",
+				Required:    true,
+				Description: "User name",
+			},
+			{
+				Name:     "id",
+				Type:     "int",
+				Required: true,
+				Default:  "0",
+			},
+		},
+		Tags:      []string{"report", "users"},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": expectedPreset,
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetShow(t, store, []string{"test-preset"})
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+
+	// Verify all fields are present
+	assert.Equal(t, "test-preset", resultData["name"])
+	assert.Equal(t, "Test preset description", resultData["description"])
+	assert.Equal(t, "SELECT :name FROM users WHERE id = :id", resultData["query"])
+	assert.Equal(t, "protheus_prod", resultData["connection"])
+	assert.Equal(t, float64(100), resultData["maxRows"])
+
+	// Verify tags
+	tags := resultData["tags"].([]any)
+	assert.Contains(t, tags, "report")
+	assert.Contains(t, tags, "users")
+
+	// Verify parameters array is present
+	params := resultData["parameters"].([]any)
+	assert.Len(t, params, 2)
+}
+
+// VAL-CLI-020: Preset Show - Parameter Detection
+func TestPresetShowParameterDetection(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	expectedPreset := &preset.QueryPreset{
+		Name:      "params-preset",
+		Query:     "SELECT :name, :age FROM users WHERE active = :active",
+		CreatedAt: now,
+		UpdatedAt: now,
+		Parameters: []preset.ParamDef{
+			{
+				Name:        "name",
+				Type:        "string",
+				Required:    true,
+				Description: "User name",
+			},
+			{
+				Name:     "age",
+				Type:     "int",
+				Required: true,
+			},
+			{
+				Name:     "active",
+				Type:     "bool",
+				Required: false,
+				Default:  "true",
+			},
+		},
+	}
+
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"params-preset": expectedPreset,
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetShow(t, store, []string{"params-preset"})
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+	params := resultData["parameters"].([]any)
+
+	require.Len(t, params, 3)
+
+	// Verify each parameter has required fields
+	for _, p := range params {
+		paramMap := p.(map[string]any)
+		assert.Contains(t, paramMap, "name", "Parameter should have 'name' field")
+		assert.Contains(t, paramMap, "type", "Parameter should have 'type' field")
+		assert.Contains(t, paramMap, "required", "Parameter should have 'required' field")
+	}
+
+	// Verify specific parameter values
+	nameParam := params[0].(map[string]any)
+	assert.Equal(t, "name", nameParam["name"])
+	assert.Equal(t, "string", nameParam["type"])
+	assert.Equal(t, true, nameParam["required"])
+	assert.Equal(t, "User name", nameParam["description"])
+
+	ageParam := params[1].(map[string]any)
+	assert.Equal(t, "age", ageParam["name"])
+	assert.Equal(t, "int", ageParam["type"])
+	assert.Equal(t, true, ageParam["required"])
+
+	activeParam := params[2].(map[string]any)
+	assert.Equal(t, "active", activeParam["name"])
+	assert.Equal(t, "bool", activeParam["type"])
+	assert.Equal(t, false, activeParam["required"])
+	assert.Equal(t, "true", activeParam["default"])
+}
+
+// VAL-CLI-021: Preset Show - Preset Not Found
+func TestPresetShowNotFound(t *testing.T) {
+	store := createTestStore(t)
+
+	// Empty store
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetShow(t, store, []string{"nonexistent-preset"})
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "PRESET_NOT_FOUND", errorData["code"])
+	assert.Contains(t, errorData["message"], "nonexistent-preset")
+}
+
+// VAL-CLI-022: Preset Show - No Name Shows Active
+func TestPresetShowNoNameShowsActive(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	activePreset := &preset.QueryPreset{
+		Name:      "active-preset",
+		Query:     "SELECT 1",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"active-preset": activePreset,
+		},
+		ActivePreset: "active-preset",
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Call show without name argument
+	result := executePresetShow(t, store, []string{})
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+	assert.Equal(t, "active-preset", resultData["name"])
+	assert.Equal(t, "SELECT 1", resultData["query"])
+}
+
+// VAL-CLI-022: Preset Show - No Name and No Active
+func TestPresetShowNoNameNoActive(t *testing.T) {
+	store := createTestStore(t)
+
+	// Empty store with no active preset
+	presetFile := &preset.PresetFile{
+		Presets:      map[string]*preset.QueryPreset{},
+		ActivePreset: "",
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Call show without name argument
+	result := executePresetShow(t, store, []string{})
+
+	require.NotNil(t, result)
+	assert.True(t, result["ok"].(bool))
+
+	resultData := result["result"].(map[string]any)
+	// Should show null for active preset
+	assert.Nil(t, resultData["activePreset"])
+}

@@ -376,11 +376,279 @@ func parseParamDef(s string) (preset.ParamDef, error) {
 	return def, nil
 }
 
+// ======================== LIST SUBCOMMAND ========================
+
+var presetListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List all saved presets",
+	Long: `List all saved presets with optional filtering.
+
+OUTPUT SCHEMA (success):
+  {"ok":true,"command":"mapj protheus preset list","result":{
+    "presets":[{"name":"preset1","query":"SELECT 1",...},...],
+    "count":2
+  }}
+
+FLAGS:
+  --tag TAG          Filter presets by tag
+  --connection NAME  Filter presets by connection profile
+
+EXAMPLES:
+  mapj protheus preset list
+  
+  mapj protheus preset list --tag report
+  
+  mapj protheus preset list --connection protheus_prod`,
+	Args: cobra.NoArgs,
+	RunE: presetListRun,
+}
+
+var (
+	presetListTag        string
+	presetListConnection string
+)
+
+func presetListRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	out := cmd.OutOrStdout()
+
+	// Initialize store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Get all preset names (sorted)
+	presetNames := presetFile.ListPresets()
+
+	// Filter and collect presets
+	presets := make([]map[string]any, 0)
+	for _, name := range presetNames {
+		p := presetFile.GetPreset(name)
+		if p == nil {
+			continue
+		}
+
+		// Apply tag filter
+		if presetListTag != "" {
+			if !containsTag(p.Tags, presetListTag) {
+				continue
+			}
+		}
+
+		// Apply connection filter
+		if presetListConnection != "" {
+			if p.Connection != presetListConnection {
+				continue
+			}
+		}
+
+		// Build preset output
+		presetOutput := map[string]any{
+			"name":      p.Name,
+			"query":     p.Query,
+			"createdAt": p.CreatedAt.Format(time.RFC3339),
+			"updatedAt": p.UpdatedAt.Format(time.RFC3339),
+		}
+
+		if p.Description != "" {
+			presetOutput["description"] = p.Description
+		}
+		if p.Connection != "" {
+			presetOutput["connection"] = p.Connection
+		}
+		if p.MaxRows > 0 {
+			presetOutput["maxRows"] = p.MaxRows
+		}
+		if len(p.Tags) > 0 {
+			presetOutput["tags"] = p.Tags
+		}
+		if len(p.Parameters) > 0 {
+			presetOutput["parameters"] = p.Parameters
+		}
+
+		// Mark if this is the active preset
+		if presetFile.ActivePreset == p.Name {
+			presetOutput["active"] = true
+		}
+
+		presets = append(presets, presetOutput)
+	}
+
+	// Build response
+	response := map[string]any{
+		"presets": presets,
+		"count":   len(presets),
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(env))
+	return nil
+}
+
+// containsTag checks if a tag exists in the tags slice.
+func containsTag(tags []string, tag string) bool {
+	for _, t := range tags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+// ======================== SHOW SUBCOMMAND ========================
+
+var presetShowCmd = &cobra.Command{
+	Use:   "show [name]",
+	Short: "Show preset details",
+	Long: `Show preset details including parameters.
+
+When no name is provided, shows the active preset.
+When no active preset is set, returns null for activePreset.
+
+OUTPUT SCHEMA (success):
+  {"ok":true,"command":"mapj protheus preset show","result":{
+    "name":"my-preset",
+    "query":"SELECT :name FROM users WHERE id = :id",
+    "parameters":[
+      {"name":"name","type":"string","required":true,"description":"User name"},
+      {"name":"id","type":"int","required":true}
+    ],
+    "description":"...",
+    "connection":"...",
+    "maxRows":100,
+    "tags":["report"],
+    "createdAt":"2024-01-15T10:30:00Z",
+    "updatedAt":"2024-01-15T10:30:00Z"
+  }}
+
+OUTPUT SCHEMA (no active preset):
+  {"ok":true,"command":"mapj protheus preset show","result":{
+    "activePreset":null
+  }}
+
+OUTPUT SCHEMA (error):
+  {"ok":false,"error":{"code":"PRESET_NOT_FOUND","message":"...","hint":"..."}}
+
+EXAMPLES:
+  mapj protheus preset show my-preset
+  
+  mapj protheus preset show  # Shows active preset`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: presetShowRun,
+}
+
+func presetShowRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	out := cmd.OutOrStdout()
+
+	// Initialize store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	var targetPreset *preset.QueryPreset
+	var presetName string
+
+	// Determine which preset to show
+	if len(args) > 0 && args[0] != "" {
+		// Specific preset requested
+		presetName = strings.TrimSpace(args[0])
+		targetPreset = presetFile.GetPreset(presetName)
+	} else {
+		// No name provided, show active preset
+		if presetFile.ActivePreset != "" {
+			targetPreset = presetFile.GetPreset(presetFile.ActivePreset)
+			presetName = presetFile.ActivePreset
+		}
+	}
+
+	// Handle preset not found
+	if targetPreset == nil {
+		if presetName != "" {
+			// Specific preset was requested but not found
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(),
+				"PRESET_NOT_FOUND",
+				fmt.Sprintf("preset '%s' not found", presetName),
+				"Use 'mapj protheus preset list' to see available presets",
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+
+		// No active preset set - return null response
+		response := map[string]any{
+			"activePreset": nil,
+		}
+		env := output.NewEnvelope(cmd.CommandPath(), response)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Build preset output with all fields
+	response := map[string]any{
+		"name":      targetPreset.Name,
+		"query":     targetPreset.Query,
+		"createdAt": targetPreset.CreatedAt.Format(time.RFC3339),
+		"updatedAt": targetPreset.UpdatedAt.Format(time.RFC3339),
+	}
+
+	if targetPreset.Description != "" {
+		response["description"] = targetPreset.Description
+	}
+	if targetPreset.Connection != "" {
+		response["connection"] = targetPreset.Connection
+	}
+	if targetPreset.MaxRows > 0 {
+		response["maxRows"] = targetPreset.MaxRows
+	}
+	if len(targetPreset.Tags) > 0 {
+		response["tags"] = targetPreset.Tags
+	}
+
+	// Include parameters with all their fields
+	if len(targetPreset.Parameters) > 0 {
+		response["parameters"] = targetPreset.Parameters
+	}
+
+	// Mark if this is the active preset
+	if presetFile.ActivePreset == targetPreset.Name {
+		response["active"] = true
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(env))
+	return nil
+}
+
 // ======================== INIT ========================
 
 func init() {
 	protheusCmd.AddCommand(protheusPresetCmd)
 	protheusPresetCmd.AddCommand(presetAddCmd)
+	protheusPresetCmd.AddCommand(presetListCmd)
+	protheusPresetCmd.AddCommand(presetShowCmd)
 
 	// Add flags for preset add command
 	presetAddCmd.Flags().StringVar(&presetAddQuery, "query", "", "SQL query with :parameter placeholders (required)")
@@ -393,4 +661,8 @@ func init() {
 
 	// Mark query as required (for help text, actual validation done in RunE for better error messages)
 	presetAddCmd.MarkFlagRequired("query")
+
+	// Add flags for preset list command
+	presetListCmd.Flags().StringVar(&presetListTag, "tag", "", "Filter presets by tag")
+	presetListCmd.Flags().StringVar(&presetListConnection, "connection", "", "Filter presets by connection profile")
 }
