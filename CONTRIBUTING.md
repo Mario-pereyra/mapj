@@ -158,7 +158,7 @@ type ServiceCreds struct {
 ## 5. Design Decisions
 
 ### ① Prefix-based SQL Validation
-Instead of regex blacklists, we use a whitelist of allowed prefixes (`SELECT`, `WITH`, `EXEC`). This prevents bypasses via comments or unusual syntax.
+Instead of regex blacklists, we use a whitelist of allowed prefixes (`SELECT`, `WITH`, `EXEC`). This prevents bypasses via comments or unusual syntax. We also check for forbidden keywords (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, GRANT, REVOKE, DENY, BACKUP, RESTORE) anywhere in the query to detect SQL injection patterns.
 
 ### ② Early Cursor Closure
 We stop reading from the DB driver as soon as the `--max-rows` limit is reached. Closing the rows cursor immediately signals the SQL Server to stop processing the query, saving significant resources.
@@ -171,7 +171,39 @@ The HTTP client internally handles retries for transient errors. Agents shouldn'
 
 ---
 
-## 6. Build & Test
+## 6. Known Gotchas
+
+### ① Auth type stored, not inferred
+
+Before the fix: `if username != "" → Basic Auth`. This broke PAT auth on Server/DC.  
+**Now:** `AuthType` field in `ConfluenceCreds` is the source of truth. `getConfluenceClient()` reads it. Auto-detected on login, overridable with `--auth-type`.
+
+### ② `ProtheusCreds` (v1) must stay
+
+The legacy `ProtheusCreds` struct and `Protheus *ProtheusCreds` field in `ServiceCreds` cannot be removed. Users with old credential files would fail to decrypt them if the JSON schema changes. `ActiveProtheusProfile()` transparently migrates v1 → v2.
+
+### ③ WAF bypass for tdn.totvs.com
+
+The public TDN portal blocks API authentication but serves public HTML. Strategy 3 in `ResolvePageID()` GETs the URL as a browser and scrapes `<meta name="ajs-page-id">`. This replicates what the original Python GUI did.
+
+### ④ `export_view` → `storage` fallback
+
+Some Confluence pages return empty body in `export_view` representation (typically pages with unsupported macros). The `fetchPage()` function automatically retries with `storage` format and logs that it happened.
+
+### ⑤ Semicolons are blocked in Protheus queries
+
+The validation rejects queries containing `;` to prevent multi-statement SQL injection attacks like `SELECT * FROM users; DROP TABLE users;`. Use CTEs (`WITH t AS (...)`) instead of temp tables.
+
+### ⑥ Credentials file is machine-bound by default
+
+Without `MAPJ_ENCRYPTION_KEY`, the key is derived from `sha256(hostname + username + homeDir)`. This means:
+- Credentials **cannot be shared** between machines
+- If username or hostname changes, credentials become unreadable
+- **For CI/CD:** Always set `MAPJ_ENCRYPTION_KEY` explicitly
+
+---
+
+## 7. Build & Test
 
 ```bash
 # Full check before committing
