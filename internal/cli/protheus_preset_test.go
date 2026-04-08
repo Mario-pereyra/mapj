@@ -1094,3 +1094,489 @@ func TestPresetShowNoNameNoActive(t *testing.T) {
 	// Should show null for active preset
 	assert.Nil(t, resultData["activePreset"])
 }
+
+// =============================================================================
+// PRESET RUN TESTS (VAL-CLI-010 to VAL-CLI-018)
+// =============================================================================
+
+// executePresetRun executes the preset run command with given args and returns the JSON output.
+func executePresetRun(t *testing.T, store *preset.PresetStore, args []string, params []string, connection string, maxRows int, outputFile string) map[string]any {
+	// Set output format to LLM (JSON) for testing
+	originalFormat := outputFormat
+	outputFormat = "llm"
+	defer func() { outputFormat = originalFormat }()
+
+	// Set the test store
+	SetPresetStoreForTest(store)
+	defer ResetPresetStore()
+
+	// Create a new command instance for this test
+	cmd := createPresetRunCmdForTest()
+
+	// Set flag values on the command
+	for _, p := range params {
+		cmd.Flags().Set("param", p)
+	}
+	if connection != "" {
+		cmd.Flags().Set("connection", connection)
+	}
+	if maxRows > 0 {
+		cmd.Flags().Set("max-rows", fmt.Sprintf("%d", maxRows))
+	}
+	if outputFile != "" {
+		cmd.Flags().Set("output-file", outputFile)
+	}
+
+	// Capture output
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs(args)
+
+	// Execute
+	err := cmd.Execute()
+	// Commands return nil even for "expected errors" (they output JSON errors instead)
+	require.NoError(t, err, "Command execution should not return Go errors")
+
+	// Parse JSON output
+	output := strings.TrimSpace(buf.String())
+	if output == "" {
+		return nil
+	}
+
+	var result map[string]any
+	err = json.Unmarshal([]byte(output), &result)
+	require.NoError(t, err, "Output should be valid JSON: %s", output)
+
+	return result
+}
+
+// createPresetRunCmdForTest creates a fresh preset run command for testing.
+func createPresetRunCmdForTest() *cobra.Command {
+	var params []string
+	var connection string
+	var maxRows int
+	var outputFile string
+
+	cmd := &cobra.Command{
+		Use:  "run <name>",
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Copy local values to global for presetRunRun to use
+			presetRunParams = params
+			presetRunConnection = connection
+			presetRunMaxRows = maxRows
+			presetRunOutputFile = outputFile
+			return presetRunRun(cmd, args)
+		},
+	}
+
+	cmd.Flags().StringArrayVar(&params, "param", nil, "Parameter value (repeatable): key=value")
+	cmd.Flags().StringVar(&connection, "connection", "", "Override the preset's connection profile")
+	cmd.Flags().IntVar(&maxRows, "max-rows", 0, "Limit number of rows returned")
+	cmd.Flags().StringVar(&outputFile, "output-file", "", "Write results to file instead of stdout")
+
+	return cmd
+}
+
+// VAL-CLI-015: Preset Run - Preset Not Found
+func TestPresetRunPresetNotFound(t *testing.T) {
+	store := createTestStore(t)
+
+	// Empty store
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	result := executePresetRun(t, store, []string{"nonexistent-preset"}, nil, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "PRESET_NOT_FOUND", errorData["code"])
+	assert.Contains(t, errorData["message"], "nonexistent-preset")
+	assert.Contains(t, errorData["hint"], "preset list")
+}
+
+// VAL-CLI-016: Preset Run - Missing Required Parameter
+func TestPresetRunMissingRequiredParameter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT :name, :age FROM users WHERE id = :id",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "name", Type: "string", Required: true},
+					{Name: "age", Type: "int", Required: true},
+					{Name: "id", Type: "int", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Provide only 'name' param, missing 'age' and 'id'
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"name=John"}, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "MISSING_PARAMETER", errorData["code"])
+	assert.Contains(t, errorData["message"], "missing required parameters")
+
+	// Verify hint includes the missing param names
+	hint := errorData["hint"].(string)
+	assert.Contains(t, hint, "--param")
+}
+
+// VAL-CLI-011: Preset Run - With Parameters (parameter interpolation test)
+func TestPresetRunWithParameters(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE name = :name AND age = :age",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "name", Type: "string", Required: true},
+					{Name: "age", Type: "int", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// This test will fail at connection time, but we can verify the parameter handling
+	// by checking the error type - it should be CONNECTION_FAILED or NO_CONNECTION, not MISSING_PARAMETER
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"name=John", "age=25"}, "", 0, "")
+
+	require.NotNil(t, result)
+	// The test should fail at connection stage since there's no real connection
+	// This verifies params were accepted and interpolation succeeded
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	// Should be connection error (either NO_CONNECTION or CONNECTION_FAILED), not parameter error
+	// Note: In a test environment with an active profile, CONNECTION_FAILED is expected
+	assert.Contains(t, []string{"NO_CONNECTION", "CONNECTION_FAILED"}, errorData["code"])
+}
+
+// Test parameter with default value
+func TestPresetRunParameterWithDefault(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE active = :active AND name = :name",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "active", Type: "bool", Required: false, Default: "true"},
+					{Name: "name", Type: "string", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Provide only 'name', 'active' should use default
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"name=John"}, "", 0, "")
+
+	require.NotNil(t, result)
+	// Should fail at connection, not missing parameter
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	// Default should be used, so we shouldn't get MISSING_PARAMETER
+	// Accept either NO_CONNECTION or CONNECTION_FAILED (both indicate params were processed)
+	assert.Contains(t, []string{"NO_CONNECTION", "CONNECTION_FAILED"}, errorData["code"])
+}
+
+// Test invalid --param format
+func TestPresetRunInvalidParamFormat(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT :name",
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Invalid param format (no '=' separator)
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"invalidformat"}, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "INVALID_PARAM_FORMAT", errorData["code"])
+}
+
+// Test SQL injection detection
+func TestPresetRunSQLInjectionDetection(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE name = :name",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "name", Type: "string", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Try SQL injection
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"name=1; DROP TABLE users"}, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "SQL_INJECTION_DETECTED", errorData["code"])
+}
+
+// Test type validation error
+func TestPresetRunTypeValidationError(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE age = :age",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "age", Type: "int", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Provide float instead of int
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"age=25.5"}, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "TYPE_MISMATCH", errorData["code"])
+}
+
+// Test connection not found
+func TestPresetRunConnectionNotFound(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:       "test-preset",
+				Query:      "SELECT 1",
+				Connection: "nonexistent-connection",
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// This will fail trying to find the connection profile
+	result := executePresetRun(t, store, []string{"test-preset"}, nil, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "CONNECTION_NOT_FOUND", errorData["code"])
+}
+
+// Test --connection override
+func TestPresetRunConnectionOverride(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:       "test-preset",
+				Query:      "SELECT 1",
+				Connection: "original-connection",
+				CreatedAt:  now,
+				UpdatedAt:  now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Override connection
+	result := executePresetRun(t, store, []string{"test-preset"}, nil, "override-connection", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	// Should fail trying to find override-connection (not original-connection)
+	assert.Equal(t, "CONNECTION_NOT_FOUND", errorData["code"])
+	assert.Contains(t, errorData["message"], "override-connection")
+}
+
+// Test list parameter type
+func TestPresetRunListParameter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE id IN (:ids)",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "ids", Type: "list", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Provide list parameter
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"ids=1,2,3"}, "", 0, "")
+
+	require.NotNil(t, result)
+	// Should fail at connection, not parameter
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	// Accept either NO_CONNECTION or CONNECTION_FAILED
+	assert.Contains(t, []string{"NO_CONNECTION", "CONNECTION_FAILED"}, errorData["code"])
+}
+
+// Test boolean parameter
+func TestPresetRunBooleanParameter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE active = :active",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "active", Type: "bool", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Test various boolean values
+	tests := []string{"true", "false", "yes", "no", "1", "0"}
+	for _, val := range tests {
+		t.Run("boolean_"+val, func(t *testing.T) {
+			result := executePresetRun(t, store, []string{"test-preset"}, []string{"active=" + val}, "", 0, "")
+			require.NotNil(t, result)
+			// Should fail at connection, not parameter validation
+			assert.False(t, result["ok"].(bool))
+			errorData := result["error"].(map[string]any)
+			// Accept either NO_CONNECTION or CONNECTION_FAILED
+			assert.Contains(t, []string{"NO_CONNECTION", "CONNECTION_FAILED"}, errorData["code"])
+		})
+	}
+}
+
+// Test date parameter
+func TestPresetRunDateParameter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE created = :date",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "date", Type: "date", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Valid date
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"date=2024-01-15"}, "", 0, "")
+
+	require.NotNil(t, result)
+	// Should fail at connection, not parameter
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	// Accept either NO_CONNECTION or CONNECTION_FAILED
+	assert.Contains(t, []string{"NO_CONNECTION", "CONNECTION_FAILED"}, errorData["code"])
+}
+
+// Test invalid date parameter
+func TestPresetRunInvalidDateParameter(t *testing.T) {
+	store := createTestStore(t)
+
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT * FROM users WHERE created = :date",
+				CreatedAt: now,
+				UpdatedAt: now,
+				Parameters: []preset.ParamDef{
+					{Name: "date", Type: "date", Required: true},
+				},
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Invalid date format
+	result := executePresetRun(t, store, []string{"test-preset"}, []string{"date=not-a-date"}, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool))
+	errorData := result["error"].(map[string]any)
+	assert.Equal(t, "TYPE_MISMATCH", errorData["code"])
+}

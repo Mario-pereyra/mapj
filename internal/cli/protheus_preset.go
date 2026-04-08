@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/Mario-pereyra/mapj/internal/preset"
+	"github.com/Mario-pereyra/mapj/pkg/protheus"
 	"github.com/spf13/cobra"
 )
 
@@ -642,6 +645,346 @@ func presetShowRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// ======================== RUN SUBCOMMAND ========================
+
+var presetRunCmd = &cobra.Command{
+	Use:   "run <name>",
+	Short: "Execute a preset query with parameters",
+	Long: `Execute a saved preset query with parameter interpolation.
+
+Parameters from the preset are substituted into the query with proper escaping
+and SQL injection protection.
+
+OUTPUT SCHEMA (success):
+  {"ok":true,"command":"mapj protheus preset run","result":{
+    "rows":[[...],...],
+    "columns":["col1","col2"],
+    "count":10,
+    "params_used":{"name":"value"},
+    "connection_used":"protheus_prod"
+  }}
+
+OUTPUT SCHEMA (success with --output-file):
+  {"ok":true,"command":"mapj protheus preset run","result":{
+    "rows":100,
+    "columns":5,
+    "output_file":"./results.json"
+  }}
+
+OUTPUT SCHEMA (error):
+  {"ok":false,"error":{"code":"MISSING_PARAMETER","message":"...","hint":"..."}}
+
+FLAGS:
+  --param KEY=VALUE     Parameter value (repeatable)
+                        Example: --param name=John --param id=123
+  --connection NAME     Override the preset's connection profile
+  --max-rows N          Limit number of rows returned (default: from preset or 10000)
+  --output-file PATH    Write results to file instead of stdout
+
+CONNECTION RESOLUTION:
+  1. --connection flag (highest priority)
+  2. preset.connection (saved with preset)
+  3. active connection profile
+  4. Error: NO_CONNECTION
+
+EXAMPLES:
+  mapj protheus preset run myquery
+  
+  mapj protheus preset run user-query \\
+    --param name=John \\
+    --param id=123
+  
+  mapj protheus preset run report \\
+    --connection protheus_prod \\
+    --max-rows 100 \\
+    --output-file ./report.json`,
+	Args: cobra.ExactArgs(1),
+	RunE: presetRunRun,
+}
+
+var (
+	presetRunParams      []string
+	presetRunConnection  string
+	presetRunMaxRows     int
+	presetRunOutputFile  string
+)
+
+func presetRunRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	name := strings.TrimSpace(args[0])
+	out := cmd.OutOrStdout()
+
+	// Initialize preset store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// VAL-CLI-015: Error PRESET_NOT_FOUND si preset no existe
+	targetPreset := presetFile.GetPreset(name)
+	if targetPreset == nil {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"PRESET_NOT_FOUND",
+			fmt.Sprintf("preset '%s' not found", name),
+			"Use 'mapj protheus preset list' to see available presets",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Parse --param flags into map
+	params := make(map[string]string)
+	for _, paramStr := range presetRunParams {
+		key, value, err := parseParamKeyValue(paramStr)
+		if err != nil {
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(),
+				"INVALID_PARAM_FORMAT",
+				fmt.Sprintf("invalid --param format: %s", err.Error()),
+				"Format: --param key=value (e.g., --param name=John)",
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+		params[key] = value
+	}
+
+	// Interpolate query with parameters
+	interpolatedQuery, err := preset.InterpolateQuery(targetPreset.Query, params, targetPreset.Parameters)
+	if err != nil {
+		// Handle different error types
+		if ierr := preset.GetInterpolationError(err); ierr != nil {
+			switch ierr.Type {
+			case "missing_param":
+				// VAL-CLI-016: Error MISSING_PARAMETER lista params faltantes
+				missingParams := getMissingRequiredParams(targetPreset.Parameters, params)
+				env := output.NewErrorEnvelopeWithHint(
+					cmd.CommandPath(),
+					"MISSING_PARAMETER",
+					fmt.Sprintf("missing required parameters: %s", strings.Join(missingParams, ", ")),
+					fmt.Sprintf("Provide values: --param %s=value", strings.Join(missingParams, " --param ")),
+					false,
+				)
+				fmt.Fprintln(out, formatter.Format(env))
+				return nil
+			case "type_mismatch":
+				env := output.NewErrorEnvelope(
+					cmd.CommandPath(),
+					"TYPE_MISMATCH",
+					ierr.Message,
+					false,
+				)
+				fmt.Fprintln(out, formatter.Format(env))
+				return nil
+			case "sql_injection":
+				env := output.NewErrorEnvelope(
+					cmd.CommandPath(),
+					"SQL_INJECTION_DETECTED",
+					fmt.Sprintf("potential SQL injection detected in parameter '%s': patterns %v", ierr.ParamName, ierr.Detected),
+					false,
+				)
+				fmt.Fprintln(out, formatter.Format(env))
+				return nil
+			}
+		}
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "INTERPOLATION_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Resolve connection
+	// VAL-CLI-012: --connection overridea conexión del preset
+	// VAL-CROSS-005: Connection profile integration
+	connectionName := resolveConnection(presetRunConnection, targetPreset.Connection)
+
+	// Get credentials
+	authStore, err := auth.NewStore()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	creds, err := authStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "AUTH_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Resolve the profile to use
+	var profile *auth.ProtheusProfile
+	if connectionName != "" {
+		// Use specific connection
+		if creds.ProtheusProfiles == nil || creds.ProtheusProfiles[connectionName] == nil {
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(),
+				"CONNECTION_NOT_FOUND",
+				fmt.Sprintf("connection profile '%s' not found", connectionName),
+				"Use 'mapj protheus connection list' to see available profiles",
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+		profile = creds.ProtheusProfiles[connectionName]
+	} else {
+		// Use active profile
+		profile = creds.ActiveProtheusProfile()
+	}
+
+	// VAL-CROSS-005: Sin conexión disponible: error con hint
+	if profile == nil {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"NO_CONNECTION",
+			"no Protheus connection available",
+			"Specify a connection with --connection or set an active profile with 'mapj protheus connection use <name>'",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Determine max rows
+	// VAL-CLI-013: --max-rows N limita resultados
+	maxRows := presetRunMaxRows
+	if maxRows == 0 {
+		// Use preset default
+		maxRows = targetPreset.MaxRows
+	}
+	if maxRows == 0 {
+		// Use global default
+		maxRows = 10000
+	}
+
+	// Execute query
+	ctx := context.Background()
+	client := protheus.NewClient(profile.Server, profile.Port, profile.Database, profile.User, profile.Password)
+
+	result, err := client.Query(ctx, interpolatedQuery, maxRows)
+	if err != nil {
+		// VAL-CLI-017: Error CONNECTION_FAILED si conexión falla
+		// VAL-CLI-018: Error QUERY_VALIDATION_FAILED si query inválida
+		if strings.Contains(err.Error(), "validation error") {
+			env := output.NewErrorEnvelope(
+				cmd.CommandPath(),
+				"QUERY_VALIDATION_FAILED",
+				err.Error(),
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+
+		// Connection error
+		msg := err.Error()
+		hint := protheusVPNHint(profile.Server)
+		env := output.NewErrorEnvelope(
+			cmd.CommandPath(),
+			"CONNECTION_FAILED",
+			msg+"\n"+hint,
+			true, // retryable
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Build response
+	// VAL-CLI-010: Output JSON con rows, columns, count
+	response := map[string]any{
+		"columns":        result.Columns,
+		"rows":           result.Rows,
+		"count":          result.Count,
+		"params_used":    params,
+		"connection_used": profile.Name,
+	}
+
+	// VAL-CLI-014: --output-file path escribe resultados a archivo
+	if presetRunOutputFile != "" {
+		// Write to file
+		env := output.NewEnvelope(cmd.CommandPath(), result)
+		content := formatter.Format(env)
+
+		if err := output.WriteToFile(presetRunOutputFile, content); err != nil {
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(),
+				"FILE_WRITE_ERROR",
+				err.Error(),
+				fmt.Sprintf("Check that the directory exists and you have write access: %s", presetRunOutputFile),
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+
+		// Print summary to stdout
+		summary := map[string]any{
+			"rows":         result.Count,
+			"columns":      len(result.Columns),
+			"output_file":  presetRunOutputFile,
+			"params_used":  params,
+			"connection_used": profile.Name,
+		}
+		summaryEnv := output.NewEnvelope(cmd.CommandPath(), summary)
+		fmt.Fprintln(out, formatter.Format(summaryEnv))
+		return nil
+	}
+
+	// Print full result to stdout
+	resultEnv := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(resultEnv))
+	return nil
+}
+
+// parseParamKeyValue parses a "key=value" string into key and value components.
+func parseParamKeyValue(s string) (string, string, error) {
+	idx := strings.Index(s, "=")
+	if idx == -1 {
+		return "", "", fmt.Errorf("missing '=' separator")
+	}
+	key := strings.TrimSpace(s[:idx])
+	value := strings.TrimSpace(s[idx+1:])
+	if key == "" {
+		return "", "", fmt.Errorf("empty key")
+	}
+	return key, value, nil
+}
+
+// resolveConnection determines which connection to use.
+// Priority: flag > preset.connection > empty (will use active)
+func resolveConnection(flagValue, presetConnection string) string {
+	if flagValue != "" {
+		return flagValue
+	}
+	return presetConnection
+}
+
+// getMissingRequiredParams returns the names of required parameters that are missing.
+func getMissingRequiredParams(paramDefs []preset.ParamDef, providedParams map[string]string) []string {
+	var missing []string
+	for _, def := range paramDefs {
+		if def.Required {
+			if _, provided := providedParams[def.Name]; !provided {
+				missing = append(missing, def.Name)
+			}
+		}
+	}
+	return missing
+}
+
 // ======================== INIT ========================
 
 func init() {
@@ -649,6 +992,7 @@ func init() {
 	protheusPresetCmd.AddCommand(presetAddCmd)
 	protheusPresetCmd.AddCommand(presetListCmd)
 	protheusPresetCmd.AddCommand(presetShowCmd)
+	protheusPresetCmd.AddCommand(presetRunCmd)
 
 	// Add flags for preset add command
 	presetAddCmd.Flags().StringVar(&presetAddQuery, "query", "", "SQL query with :parameter placeholders (required)")
@@ -665,4 +1009,10 @@ func init() {
 	// Add flags for preset list command
 	presetListCmd.Flags().StringVar(&presetListTag, "tag", "", "Filter presets by tag")
 	presetListCmd.Flags().StringVar(&presetListConnection, "connection", "", "Filter presets by connection profile")
+
+	// Add flags for preset run command
+	presetRunCmd.Flags().StringArrayVar(&presetRunParams, "param", nil, "Parameter value (repeatable): key=value")
+	presetRunCmd.Flags().StringVar(&presetRunConnection, "connection", "", "Override the preset's connection profile")
+	presetRunCmd.Flags().IntVar(&presetRunMaxRows, "max-rows", 0, "Limit number of rows returned (0 = use preset default or 10000)")
+	presetRunCmd.Flags().StringVar(&presetRunOutputFile, "output-file", "", "Write results to file instead of stdout")
 }
