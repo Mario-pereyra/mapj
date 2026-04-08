@@ -1,0 +1,39 @@
+{
+  "milestone": "application",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    {
+      "id": "VAL-APP-002",
+      "evidence": "skill-evaluation-mapj_cli.md",
+      "summary": "All 4 mapj_cli skills evaluated (mapj: 70/100, mapj-confluence-export: 71/100, mapj-protheus-query: 75/100, mapj-tdn-search: 70/100) with structured scoring across Discovery Layer (40pts), Execution Layer (50pts), and Anti-patrones (10pts). Gaps identified: missing Role (4/4), missing Success Criteria (4/4), tags vs keywords (4/4)."
+    },
+    {
+      "id": "VAL-APP-003",
+      "evidence": "skill-recommendations-mapj_cli.md",
+      "summary": "Specific recommendations provided for each skill with concrete actions: Role section (all 4), Examples few-shot (all 4), Success Criteria (all 4), keywords migration (all 4), Limitations (mapj-tdn-search only). Includes implementation examples with code snippets and diff showing before/after."
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "evidence": "skill-recommendations-mapj_cli.md section '6. Fuentes y Trazabilidad'",
+      "summary": "Each recommendation backed by specific sources: Role section → Anthropic Engineering 'Building Effective AI Agents' (2025), 2-5 Examples → arXiv:2407.12994, Success Criteria → Microsoft Learn, keywords → Agent Skills Standard (agentskills.io), Limitations → Claude docs."
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "evidence": "skill-recommendations-mapj_cli.md",
+      "summary": "Recommendations are specific to mapj_cli context: Go CLI with TOTVS skills, includes actual skill names (mapj, mapj-confluence-export, mapj-protheus-query, mapj-tdn-search), references actual file paths (skills/*/SKILL.md), includes TOTVS-specific content (Protheus, TDN, Confluence, ADVPL)."
+    }
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "validationMethod": "manual-review",
+  "notes": "Documentation mission - no services started. Validation performed by reading produced documents and verifying they meet validation contract requirements."
+}
