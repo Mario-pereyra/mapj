@@ -1,0 +1,145 @@
+{
+  "groupId": "flow-param-escape",
+  "testedAt": "2026-04-08T22:28:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g4-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "powershell"],
+  "assertions": [
+    {
+      "id": "VAL-PARAM-009",
+      "title": "List Type Conversion",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with list type parameter", "expected": "Preset created with list param", "observed": "Preset g4-list-test created successfully with ids:list parameter" },
+        { "action": "Run preset with CSV list value", "expected": "Query execution with IN clause generated", "observed": "Execution blocked - NO_CONNECTION error" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "NO_CONNECTION: no Protheus connection available",
+        "network": "N/A - CLI execution",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-009-list-output.txt", "preset-crud/flow-param-escape/VAL-PARAM-009-verbose-output.txt"]
+      },
+      "issues": "Cannot verify IN clause generation without database connection. Parameter validation passed (no SQL injection detected for value '1,2,3'), but query execution requires a database connection."
+    },
+    {
+      "id": "VAL-PARAM-010",
+      "title": "String Escaping - Quotes",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with string type parameter", "expected": "Preset created", "observed": "Preset g4-injection-test created successfully" },
+        { "action": "Run preset with quote-containing value (O'Brien)", "expected": "Single quotes escaped (' -> ''), query executes", "observed": "Parameter validation passed (no injection detected), but NO_CONNECTION error prevents execution" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "NO_CONNECTION: no Protheus connection available",
+        "network": "N/A - CLI execution",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-010-escape-output.txt"]
+      },
+      "issues": "Cannot verify quote escaping without database connection. Value 'O'Brien' passed validation (not flagged as injection), indicating escaping logic exists but execution blocked."
+    },
+    {
+      "id": "VAL-PARAM-011",
+      "title": "Data Preservation After Escaping",
+      "status": "blocked",
+      "steps": [
+        { "action": "Run preset with special characters", "expected": "Data integrity preserved after escaping", "observed": "Cannot verify - requires database execution and result retrieval" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "NO_CONNECTION",
+        "network": "N/A",
+        "outputFiles": []
+      },
+      "issues": "Data preservation verification requires executing query and examining results. Blocked by NO_CONNECTION."
+    },
+    {
+      "id": "VAL-PARAM-012",
+      "title": "SQL Injection Detection - Semicolon DROP",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g4-injection-test with string param", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run preset with value '1; DROP TABLE users'", "expected": "Injection detected and rejected with clear error", "observed": "SQL_INJECTION_DETECTED error with patterns [DROP]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "SQL_INJECTION_DETECTED: potential SQL injection detected in parameter 'name': patterns [DROP]",
+        "network": "N/A - CLI execution",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-012-drop-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-013",
+      "title": "SQL Injection Detection - OR 1=1",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with value \"admin' OR '1'='1\"", "expected": "Injection detected and rejected", "observed": "SQL_INJECTION_DETECTED error with patterns [OR_1=1]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "SQL_INJECTION_DETECTED: potential SQL injection detected in parameter 'name': patterns [OR_1=1]",
+        "network": "N/A",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-013-or-equals-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-014",
+      "title": "SQL Injection Detection - UNION SELECT",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with value \"admin' UNION SELECT * FROM passwords--\"", "expected": "Injection detected and rejected", "observed": "SQL_INJECTION_DETECTED error with patterns [UNION_SELECT, COMMENT_INJECTION]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "SQL_INJECTION_DETECTED: potential SQL injection detected in parameter 'name': patterns [UNION_SELECT COMMENT_INJECTION]",
+        "network": "N/A",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-014-union-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-015",
+      "title": "SQL Injection Detection - Comments",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with value \"admin'--\"", "expected": "Comment injection detected and rejected", "observed": "SQL_INJECTION_DETECTED error with patterns [COMMENT_INJECTION]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "SQL_INJECTION_DETECTED: potential SQL injection detected in parameter 'name': patterns [COMMENT_INJECTION]",
+        "network": "N/A",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-015-comment-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-016",
+      "title": "Combined SQL Injection Patterns",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with combined injection value \"1'; DROP TABLE users; SELECT * FROM passwords WHERE '1'='1\"", "expected": "Multiple injection patterns detected", "observed": "SQL_INJECTION_DETECTED error with patterns [DROP, SEMICOLON_SELECT]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "SQL_INJECTION_DETECTED: potential SQL injection detected in parameter 'name': patterns [DROP SEMICOLON_SELECT]",
+        "network": "N/A",
+        "outputFiles": ["preset-crud/flow-param-escape/VAL-PARAM-016-combined-output.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "description": "No Protheus database connection available for executing presets and verifying query transformation",
+      "affectedAssertions": ["VAL-PARAM-009", "VAL-PARAM-010", "VAL-PARAM-011"],
+      "quickFixAttempted": "Checked for existing connections with 'mapj protheus connection list' - returned NO_PROFILES error. Cannot create connection without server credentials."
+    }
+  ],
+  "summary": "Tested 8 assertions: 5 passed (VAL-PARAM-012 through VAL-PARAM-016 - all SQL injection detection), 3 blocked (VAL-PARAM-009, VAL-PARAM-010, VAL-PARAM-011 - require database connection to verify query transformation). All SQL injection patterns were correctly detected and rejected with clear error messages. The CLI properly validates parameters before attempting database connection."
+}

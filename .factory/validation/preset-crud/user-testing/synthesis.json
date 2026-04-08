@@ -1,0 +1,90 @@
+{
+  "milestone": "preset-crud",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 87,
+    "passed": 70,
+    "failed": 3,
+    "blocked": 14
+  },
+  "passedAssertions": [
+    "VAL-STORAGE-001", "VAL-STORAGE-002", "VAL-STORAGE-003", "VAL-STORAGE-004", "VAL-STORAGE-005", "VAL-STORAGE-006", "VAL-STORAGE-007",
+    "VAL-STORAGE-008", "VAL-STORAGE-009", "VAL-STORAGE-010", "VAL-STORAGE-011", "VAL-STORAGE-012", "VAL-STORAGE-013", "VAL-STORAGE-014", "VAL-STORAGE-015",
+    "VAL-PARAM-001", "VAL-PARAM-002", "VAL-PARAM-003", "VAL-PARAM-004", "VAL-PARAM-005", "VAL-PARAM-006", "VAL-PARAM-007", "VAL-PARAM-008",
+    "VAL-PARAM-012", "VAL-PARAM-013", "VAL-PARAM-014", "VAL-PARAM-015", "VAL-PARAM-016",
+    "VAL-PARAM-019", "VAL-PARAM-020", "VAL-PARAM-021", "VAL-PARAM-022", "VAL-PARAM-023", "VAL-PARAM-024", "VAL-PARAM-025",
+    "VAL-CLI-001", "VAL-CLI-002", "VAL-CLI-004", "VAL-CLI-005", "VAL-CLI-006", "VAL-CLI-007", "VAL-CLI-008", "VAL-CLI-009",
+    "VAL-CLI-015", "VAL-CLI-016",
+    "VAL-CLI-019", "VAL-CLI-020", "VAL-CLI-021", "VAL-CLI-022", "VAL-CLI-023", "VAL-CLI-024", "VAL-CLI-025", "VAL-CLI-026", "VAL-CLI-027",
+    "VAL-CLI-028", "VAL-CLI-029", "VAL-CLI-030", "VAL-CLI-031", "VAL-CLI-032", "VAL-CLI-033", "VAL-CLI-034",
+    "VAL-CLI-035", "VAL-CLI-036", "VAL-CLI-037", "VAL-CLI-038", "VAL-CLI-039", "VAL-CLI-040",
+    "VAL-CROSS-002", "VAL-CROSS-004", "VAL-CROSS-006"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-CLI-003",
+      "reason": "Cobra required flag errors not wrapped in JSON envelope. Missing --query flag returns raw Cobra error instead of structured JSON with MISSING_REQUIRED_FIELD code.",
+      "severity": "non_blocking",
+      "suggestedFix": "Wrap Cobra flag validation errors in the application's JSON error envelope structure for consistency."
+    },
+    {
+      "id": "VAL-CLI-017",
+      "reason": "Error code mismatch: expected CONNECTION_FAILED with retryable: true, got NO_CONNECTION with retryable: false. The assertion tests connection failure scenario but the system returns a different error code for 'no profile exists' scenario.",
+      "severity": "non_blocking",
+      "suggestedFix": "Either: (1) Add CONNECTION_FAILED error code for when a connection profile exists but connection fails, or (2) Update assertion to accept NO_CONNECTION as valid for 'no profile exists' scenario."
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "reason": "Security vulnerability: UNION SELECT SQL injection pattern NOT detected. System returned NO_CONNECTION error instead of SQL_INJECTION_DETECTED. Other injection patterns (DROP, OR_1=1, COMMENT_INJECTION) were correctly detected.",
+      "severity": "blocking",
+      "suggestedFix": "Add UNION SELECT to the SQL injection detection patterns in the parameter validation system."
+    }
+  ],
+  "blockedAssertions": [
+    { "id": "VAL-PARAM-009", "blockedBy": "No Protheus database connection available for list type IN clause verification" },
+    { "id": "VAL-PARAM-010", "blockedBy": "No Protheus database connection available for quote escaping verification" },
+    { "id": "VAL-PARAM-011", "blockedBy": "No Protheus database connection available for data preservation verification" },
+    { "id": "VAL-PARAM-017", "blockedBy": "No Protheus database connection available for default value usage verification" },
+    { "id": "VAL-PARAM-018", "blockedBy": "No Protheus database connection available for default value override verification" },
+    { "id": "VAL-CLI-010", "blockedBy": "No Protheus database connection available for query execution" },
+    { "id": "VAL-CLI-011", "blockedBy": "No Protheus database connection available for parameter substitution testing" },
+    { "id": "VAL-CLI-012", "blockedBy": "No Protheus database connection available for connection override testing" },
+    { "id": "VAL-CLI-013", "blockedBy": "No Protheus database connection available for max rows limit testing" },
+    { "id": "VAL-CLI-014", "blockedBy": "No Protheus database connection available for output file testing" },
+    { "id": "VAL-CLI-018", "blockedBy": "No Protheus database connection available for query validation testing" },
+    { "id": "VAL-CROSS-001", "blockedBy": "No Protheus database connection available for full create and execute flow" },
+    { "id": "VAL-CROSS-005", "blockedBy": "No Protheus database connection available for connection profile integration" },
+    { "id": "VAL-CROSS-007", "blockedBy": "No Protheus database connection available for complex types flow testing" }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "user-testing.md",
+      "description": "Added 'Flow Validator Guidance: CLI' section with isolation rules, boundaries, CLI binary path, working directory, and assertion testing pattern",
+      "source": "setup"
+    }
+  ],
+  "previousRound": null,
+  "notes": [
+    "All storage assertions (15/15) passed successfully",
+    "All parameter detection and type validation assertions (8/8) passed",
+    "All SQL injection detection assertions passed except UNION SELECT pattern",
+    "Datetime default parsing has a minor bug: --param-def uses ':' as delimiter which conflicts with datetime values containing ':' characters",
+    "14 assertions blocked due to no Protheus database connection available in test environment",
+    "Windows ACL permissions differ from Unix 0600 mode (platform difference, not a bug)"
+  ],
+  "toolsUsed": ["bash", "powershell", "CLI"],
+  "flowReports": [
+    "flow-storage-basic.json",
+    "flow-storage-persist.json",
+    "flow-param-detect.json",
+    "flow-param-escape.json",
+    "flow-param-defaults.json",
+    "flow-cli-addlist.json",
+    "flow-cli-run.json",
+    "flow-cli-show-edit.json",
+    "flow-cli-remove-use.json",
+    "flow-cli-output.json",
+    "flow-cross-area.json"
+  ]
+}

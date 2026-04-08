@@ -1,0 +1,202 @@
+{
+  "testedAt": "2026-04-08T18:33:07Z",
+  "groupId": "flow-cli-show-edit",
+  "blockers": [],
+  "summary": "Tested 9 assertions: all 9 passed",
+  "frictions": [],
+  "isolation": {
+    "presetNamePrefix": "g8-",
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli"
+  },
+  "toolsUsed": [
+    "bash"
+  ],
+  "assertions": [
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-019-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Create test preset g8-show-test with parameters",
+          "observed": "Preset created with ok:true",
+          "expected": "Preset created"
+        },
+        {
+          "action": "Run preset show g8-show-test",
+          "observed": "JSON returned with name, description, query, connection, parameters, tags, createdAt, updatedAt",
+          "expected": "JSON with all preset fields and parameters array"
+        }
+      ],
+      "title": "Preset Show - Success",
+      "id": "VAL-CLI-019",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-020-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset show on preset with 3 parameters",
+          "observed": "parameters array contains 3 items with name, type, required fields for each",
+          "expected": "parameters array with name, required, type for each"
+        }
+      ],
+      "title": "Preset Show - Parameter Detection",
+      "id": "VAL-CLI-020",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-021-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset show with nonexistent name g8-nonexistent-preset",
+          "observed": "Error returned with ok:false, code:PRESET_NOT_FOUND",
+          "expected": "Error with code PRESET_NOT_FOUND"
+        }
+      ],
+      "title": "Preset Show - Preset Not Found",
+      "id": "VAL-CLI-021",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-022-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset show without name argument",
+          "observed": "Shows active preset g6-complete-preset with active:true",
+          "expected": "Shows active preset or null with message"
+        }
+      ],
+      "title": "Preset Show - No Name Shows Active",
+      "id": "VAL-CLI-022",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-023-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset edit g8-show-test --description 'Updated description'",
+          "observed": "JSON returned with ok:true, fields_updated:['description']",
+          "expected": "JSON with updated preset, fields_updated array"
+        }
+      ],
+      "title": "Preset Edit - Success",
+      "id": "VAL-CLI-023",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-024-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset edit with --description, --query, --max-rows flags",
+          "observed": "fields_updated:['description','query','maxRows']",
+          "expected": "All specified fields in fields_updated array"
+        }
+      ],
+      "title": "Preset Edit - Multiple Fields",
+      "id": "VAL-CLI-024",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-025-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset edit without any flags",
+          "observed": "Error returned with ok:false, code:NO_FIELDS_TO_UPDATE",
+          "expected": "Error with code NO_FIELDS_TO_UPDATE"
+        }
+      ],
+      "title": "Preset Edit - No Fields Provided",
+      "id": "VAL-CLI-025",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-026-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset edit with nonexistent name",
+          "observed": "Error returned with ok:false, code:PRESET_NOT_FOUND",
+          "expected": "Error with code PRESET_NOT_FOUND"
+        }
+      ],
+      "title": "Preset Edit - Preset Not Found",
+      "id": "VAL-CLI-026",
+      "status": "pass"
+    },
+    {
+      "issues": null,
+      "evidence": {
+        "consoleErrors": "none",
+        "terminalSnapshots": [
+          "preset-crud/flow-cli-show-edit/VAL-CLI-027-output.txt"
+        ],
+        "screenshots": []
+      },
+      "steps": [
+        {
+          "action": "Run preset edit with invalid --param-def format",
+          "observed": "Error returned with ok:false, code:INVALID_PARAM_DEF, hint with correct format",
+          "expected": "Error with code INVALID_PARAM_DEF"
+        }
+      ],
+      "title": "Preset Edit - Invalid Param Definition",
+      "id": "VAL-CLI-027",
+      "status": "pass"
+    }
+  ]
+}

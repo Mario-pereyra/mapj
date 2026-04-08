@@ -1,0 +1,211 @@
+{
+  "groupId": "flow-cli-addlist",
+  "testedAt": "2026-04-08T22:32:30Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g6-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "powershell"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-001",
+      "title": "Preset Add - Success",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset add with name and query", "expected": "Exit code 0, JSON with preset details", "observed": "Exit code 0, JSON with name, query, createdAt, updatedAt, detectedParameters" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-001-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "name": "g6-basic-test",
+            "query": "SELECT 'hello world' as message",
+            "detectedParameters": [],
+            "parameters": []
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-002",
+      "title": "Preset Add - With Optional Fields",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset add with --param-def, --tags, --use flags", "expected": "JSON includes all fields, active: true when --use used", "observed": "All fields present: name, query, description, connection, maxRows, parameters, tags, createdAt, updatedAt. active: true" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-002-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "active": true,
+            "connection": "protheus_prod",
+            "description": "Complete preset test with all fields",
+            "maxRows": 100,
+            "name": "g6-complete-preset",
+            "parameters": [
+              { "name": "name", "type": "string", "required": true, "description": "User name" },
+              { "name": "age", "type": "int", "required": false, "default": "25", "description": "User age" },
+              { "name": "id", "type": "string", "required": false, "default": "1", "description": "User ID" }
+            ],
+            "tags": ["report", "test", "g6"],
+            "detectedParameters": ["name", "age", "id"]
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-003",
+      "title": "Preset Add - Missing Required Field",
+      "status": "fail",
+      "steps": [
+        { "action": "Run preset add without --query flag", "expected": "Exit code 1, error with code MISSING_REQUIRED_FIELD in JSON", "observed": "Exit code 1, but error is Cobra CLI framework error not in JSON format. Error message: 'required flag(s) \"query\" not set'" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-003-output.txt",
+        "exitCode": 1,
+        "errorFormat": "Cobra CLI framework error (not JSON)"
+      },
+      "issues": "Cobra required flag errors are not wrapped in the application's JSON error envelope. The error should include code MISSING_REQUIRED_FIELD but instead returns Cobra's default error format."
+    },
+    {
+      "id": "VAL-CLI-004",
+      "title": "Preset Add - Duplicate Name",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset add with existing name", "expected": "Error with code PRESET_EXISTS, hint about edit command", "observed": "ok: false, error.code: PRESET_EXISTS, error.hint suggests using 'preset edit'" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-004-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": false,
+          "error": {
+            "code": "PRESET_EXISTS",
+            "message": "preset 'g6-basic-test' already exists",
+            "hint": "Use 'mapj protheus preset edit g6-basic-test' to modify the existing preset",
+            "retryable": false
+          }
+        }
+      },
+      "issues": "Exit code is 0 instead of 1 for errors. This may be intentional for LLM-friendly output (always exit 0, check ok field)."
+    },
+    {
+      "id": "VAL-CLI-005",
+      "title": "Preset Add - Invalid Param Definition",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset add with invalid --param-def type", "expected": "Error with code INVALID_PARAM_DEF, correct format in hint", "observed": "ok: false, error.code: INVALID_PARAM_DEF, error.hint shows correct format, error.message lists valid types" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-005-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": false,
+          "error": {
+            "code": "INVALID_PARAM_DEF",
+            "message": "invalid --param-def format: invalid type 'invalidtype', valid types: string, int, date, datetime, bool, list",
+            "hint": "Format: name:type[:default][:description] (types: string, int, date, datetime, bool, list)",
+            "retryable": false
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-006",
+      "title": "Preset List - Success",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list", "expected": "Exit code 0, JSON with presets array and count", "observed": "ok: true, count: 14, presets array with all preset details" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-006-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "count": 14,
+            "presets": ["...14 presets from all validators..."]
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-007",
+      "title": "Preset List - Filter by Tag",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --tag 'g6'", "expected": "Only presets with matching tag in output", "observed": "count: 1, only g6-complete-preset returned (has 'g6' tag)" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-007-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "count": 1,
+            "presets": [
+              { "name": "g6-complete-preset", "tags": ["report", "test", "g6"] }
+            ]
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-008",
+      "title": "Preset List - Filter by Connection",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --connection 'protheus_prod'", "expected": "Only presets with matching connection in output", "observed": "count: 2, only presets with connection: 'protheus_prod' returned" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-008-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "count": 2,
+            "presets": [
+              { "name": "g1-complete-test", "connection": "protheus_prod" },
+              { "name": "g6-complete-preset", "connection": "protheus_prod" }
+            ]
+          }
+        }
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-009",
+      "title": "Preset List - Empty Result",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --tag 'nonexistent-tag-xyz'", "expected": "Exit code 0, presets: [], count: 0", "observed": "ok: true, count: 0, presets: []" }
+      ],
+      "evidence": {
+        "commandOutput": "preset-crud/flow-cli-addlist/VAL-CLI-009-output.txt",
+        "exitCode": 0,
+        "jsonOutput": {
+          "ok": true,
+          "result": {
+            "count": 0,
+            "presets": []
+          }
+        }
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 9 assertions: 8 passed, 1 failed (VAL-CLI-003: Cobra required flag errors not wrapped in JSON envelope). Note: Application errors return exit code 0 instead of 1, which may be intentional for LLM-friendly output. Cleanup completed: removed g6-basic-test and g6-complete-preset presets."
+}

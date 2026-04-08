@@ -1,0 +1,116 @@
+{
+  "groupId": "flow-cli-output",
+  "testedAt": "2026-04-08T22:32:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g10-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "PowerShell"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-035",
+      "title": "Error Response Structure",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset run with nonexistent preset", "expected": "JSON error with ok:false, error.code, error.message, error.hint, error.retryable", "observed": "JSON error with ok:false, code:PRESET_NOT_FOUND, message, hint, retryable:false" },
+        { "action": "Run preset add with duplicate name", "expected": "JSON error with PRESET_EXISTS code and actionable hint", "observed": "JSON error with code:PRESET_EXISTS, hint suggesting preset edit command" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-035-error-response.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-036",
+      "title": "Success Response Structure",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset add with valid parameters", "expected": "JSON success with ok:true, command, result", "observed": "JSON success with ok:true, command string, result object containing preset details" },
+        { "action": "Run preset show with existing preset", "expected": "JSON success with ok:true and preset details", "observed": "JSON success with ok:true, command, result containing preset fields" },
+        { "action": "Run preset list", "expected": "JSON success with ok:true and presets array", "observed": "JSON success with ok:true, command, result with count and presets array" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-036-success-response.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-037",
+      "title": "Help Information",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset --help", "expected": "Help output with usage, subcommands, flags", "observed": "Detailed help with subcommand list, usage, flags, global flags, and examples" },
+        { "action": "Run preset add --help", "expected": "Help output with usage, flags, examples", "observed": "Detailed help with usage syntax, all flags documented, output schema, and usage examples" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-037-help-information.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-038",
+      "title": "JSON Output Flag",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --json", "expected": "Pure JSON output without decorations", "observed": "Clean JSON output suitable for jq piping, no ANSI codes" },
+        { "action": "Run preset add --json", "expected": "Pure JSON output", "observed": "Clean JSON output with success response" },
+        { "action": "Run preset run with error --json", "expected": "Pure JSON error output", "observed": "Clean JSON error output without decorations" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-038-json-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-039",
+      "title": "Verbose Mode",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --verbose --json", "expected": "JSON with additional debug fields (schemaVersion, timestamp)", "observed": "JSON output includes schemaVersion:'1.0' and timestamp in ISO format" },
+        { "action": "Compare with output without --verbose", "expected": "Verbose output has extra fields non-verbose lacks", "observed": "Without --verbose: ok, command, result. With --verbose: adds schemaVersion and timestamp" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-039-verbose-mode.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-040",
+      "title": "Global Flags",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset list --no-color --json", "expected": "Output without color codes", "observed": "Valid JSON output without ANSI color codes" },
+        { "action": "Run preset list --config <path> --json", "expected": "Command accepts config flag", "observed": "Command runs successfully, config flag processed" },
+        { "action": "Run preset list --profile <name> --json", "expected": "Command accepts profile flag", "observed": "Command runs successfully, profile flag processed" },
+        { "action": "Check --help output for global flags", "expected": "Global flags documented (config, profile, no-color, json, output, verbose)", "observed": "All global flags documented in help output" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI testing",
+        "files": ["preset-crud/flow-cli-output/VAL-CLI-040-global-flags.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 6 assertions: 6 passed, 0 failed, 0 blocked. All CLI output format assertions validated successfully. Error responses follow consistent JSON structure with code, message, hint, and retryable fields. Success responses have ok:true with command and result. Help information is comprehensive. JSON output flag produces clean JSON. Verbose mode adds schemaVersion and timestamp. All global flags (config, profile, no-color) work correctly."
+}

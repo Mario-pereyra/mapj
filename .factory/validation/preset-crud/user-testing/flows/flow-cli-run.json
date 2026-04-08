@@ -1,0 +1,138 @@
+{
+  "groupId": "flow-cli-run",
+  "testedAt": "2026-04-08T22:32:45Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g7-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "powershell"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-010",
+      "title": "Preset Run - Success",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to run preset with query execution", "expected": "Query results returned", "observed": "Cannot test - requires database connection to Protheus" }
+      ],
+      "evidence": null,
+      "issues": "Requires database connection to Protheus for query execution"
+    },
+    {
+      "id": "VAL-CLI-011",
+      "title": "Preset Run - With Parameters",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to run preset with parameter substitution", "expected": "Correct substitution applied", "observed": "Cannot test - requires database connection to Protheus" }
+      ],
+      "evidence": null,
+      "issues": "Requires database connection to Protheus for query execution"
+    },
+    {
+      "id": "VAL-CLI-012",
+      "title": "Preset Run - Override Connection",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to run preset with connection override", "expected": "Override connection used", "observed": "Cannot test - requires database connection to Protheus" }
+      ],
+      "evidence": null,
+      "issues": "Requires database connection to Protheus for query execution"
+    },
+    {
+      "id": "VAL-CLI-013",
+      "title": "Preset Run - Max Rows Limit",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to run preset with max rows limit", "expected": "Row count <= limit", "observed": "Cannot test - requires database connection to Protheus" }
+      ],
+      "evidence": null,
+      "issues": "Requires database connection to Protheus for query execution"
+    },
+    {
+      "id": "VAL-CLI-014",
+      "title": "Preset Run - Output to File",
+      "status": "blocked",
+      "steps": [
+        { "action": "Attempt to run preset with --output-file flag", "expected": "File created with results", "observed": "Cannot test - requires database connection to Protheus" }
+      ],
+      "evidence": null,
+      "issues": "Requires database connection to Protheus for query execution"
+    },
+    {
+      "id": "VAL-CLI-015",
+      "title": "Preset Run - Preset Not Found",
+      "status": "pass",
+      "steps": [
+        { "action": "Run 'mapj protheus preset run g7-nonexistent-preset --json'", "expected": "Error with code PRESET_NOT_FOUND", "observed": "ok: false, error.code: PRESET_NOT_FOUND, error.hint: \"Use 'mapj protheus preset list' to see available presets\"" }
+      ],
+      "evidence": {
+        "screenshots": null,
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-cli-run/VAL-CLI-015-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-016",
+      "title": "Preset Run - Missing Required Parameter",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with required parameter", "expected": "Preset created", "observed": "Preset 'g7-required-param' created with required param 'name'" },
+        { "action": "Run preset without providing required parameter", "expected": "Error with code MISSING_PARAMETER", "observed": "ok: false, error.code: MISSING_PARAMETER, error.message: \"missing required parameters: name\", error.hint: \"Provide values: --param name=value\"" },
+        { "action": "Cleanup - remove test preset", "expected": "Preset removed", "observed": "Preset removed successfully" }
+      ],
+      "evidence": {
+        "screenshots": null,
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-cli-run/VAL-CLI-016-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-017",
+      "title": "Preset Run - Connection Failed",
+      "status": "fail",
+      "steps": [
+        { "action": "Run preset with required parameter but no connection available", "expected": "Error with code CONNECTION_FAILED, retryable: true", "observed": "ok: false, error.code: NO_CONNECTION, error.message: \"no Protheus connection available\", retryable: false" }
+      ],
+      "evidence": {
+        "screenshots": null,
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-cli-run/VAL-CLI-017-output.txt"]
+      },
+      "issues": "Error code mismatch: assertion expects CONNECTION_FAILED with retryable: true, but got NO_CONNECTION with retryable: false. The distinction matters: NO_CONNECTION means no connection profile exists at all, while CONNECTION_FAILED implies a profile exists but connection attempt failed."
+    },
+    {
+      "id": "VAL-CLI-018",
+      "title": "Preset Run - Query Validation Failed",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with non-SELECT query (DELETE)", "expected": "Preset created", "observed": "Preset 'g7-delete-query' created successfully with DELETE query" },
+        { "action": "Attempt to run preset to trigger query validation", "expected": "Error with code QUERY_VALIDATION_FAILED", "observed": "Cannot reach query validation - NO_CONNECTION error occurs first" },
+        { "action": "Cleanup - remove test preset", "expected": "Preset removed", "observed": "Preset removed successfully" }
+      ],
+      "evidence": null,
+      "issues": "Query validation (ValidateReadOnly) happens at runtime after connection is established. Without a database connection, cannot test query validation failure. The preset creation itself does not validate query type."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Parameter definition format in --param-def flag was not immediately clear from help. Format is 'name:type[:default][:description]' with no explicit 'required' field - a parameter without default is automatically required.",
+      "resolved": true,
+      "resolution": "Created preset without providing default value to make parameter required",
+      "affectedAssertions": ["VAL-CLI-016"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "No Protheus database connection available for query execution tests",
+      "affectedAssertions": ["VAL-CLI-010", "VAL-CLI-011", "VAL-CLI-012", "VAL-CLI-013", "VAL-CLI-014", "VAL-CLI-018"],
+      "quickFixAttempted": "Checked for existing connection profiles with 'connection list' - none found"
+    }
+  ],
+  "summary": "Tested 9 assertions: 2 passed (VAL-CLI-015, VAL-CLI-016), 1 failed (VAL-CLI-017 - error code mismatch), 6 blocked (VAL-CLI-010 to VAL-CLI-014, VAL-CLI-018 - require database connection)."
+}

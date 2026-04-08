@@ -1,0 +1,149 @@
+{
+  "groupId": "flow-storage-persist",
+  "testedAt": "2026-04-08T22:29:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g2-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["PowerShell", "CLI"],
+  "assertions": [
+    {
+      "id": "VAL-STORAGE-008",
+      "title": "Overwrite Existing Preset",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-overwrite-test with query 'SELECT original_query'", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Attempt preset add with same name", "expected": "Error PRESET_EXISTS with hint to use edit", "observed": "Error PRESET_EXISTS with correct hint" },
+        { "action": "Use preset edit to update query and description", "expected": "Fields updated, updatedAt refreshed", "observed": "fields_updated: description,query,parameters; updatedAt changed" },
+        { "action": "Verify preset show reflects changes", "expected": "New query and description present", "observed": "Query='SELECT replaced_query WHERE id = :id', description='Replaced preset'" }
+      ],
+      "evidence": {
+        "cliOutput": "preset edit returned fields_updated and new updatedAt timestamp",
+        "jsonVerification": "preset show confirmed query and description were replaced"
+      },
+      "issues": null,
+      "notes": "preset add does not allow overwriting (returns PRESET_EXISTS error) - this is good UX. preset edit successfully updates specified fields and refreshes updatedAt."
+    },
+    {
+      "id": "VAL-STORAGE-009",
+      "title": "Preserve Other Presets on Update",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-preserve-a with query 'SELECT preset_a'", "expected": "Preset A created", "observed": "Preset created successfully" },
+        { "action": "Create preset g2-preserve-b with query 'SELECT preset_b'", "expected": "Preset B created", "observed": "Preset created successfully" },
+        { "action": "Edit preset g2-preserve-a with new query and description", "expected": "Preset A updated", "observed": "fields_updated: description,query" },
+        { "action": "Verify preset g2-preserve-b unchanged", "expected": "Original values preserved", "observed": "query='SELECT preset_b', description='Preset B - should not change when A is edited', updatedAt unchanged" }
+      ],
+      "evidence": {
+        "cliOutput": "preset show g2-preserve-b confirmed unchanged values",
+        "storageVerification": "presets.json showed both presets with correct data"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STORAGE-010",
+      "title": "Active Preset Persistence",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-active-test", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Use preset use g2-active-test", "expected": "Preset marked as active", "observed": "active_preset: g2-active-test in response" },
+        { "action": "Check presets.json for activePreset field", "expected": "activePreset stored in file", "observed": "\"activePreset\": \"g2-active-test\" found in presets.json" },
+        { "action": "Run preset use (no args) in new CLI session", "expected": "Active preset retrieved", "observed": "active_preset: g2-active-test returned correctly" }
+      ],
+      "evidence": {
+        "cliOutput": "preset use returned active preset correctly after new session",
+        "storageVerification": "presets.json contains activePreset field"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STORAGE-011",
+      "title": "Active Preset Clear on Deletion",
+      "status": "pass",
+      "steps": [
+        { "action": "Preset g2-active-test was already active from previous test", "expected": "Active preset exists", "observed": "Confirmed active" },
+        { "action": "Remove g2-active-test with --force", "expected": "Preset removed, was_active: true in response", "observed": "removed: g2-active-test, was_active: true" },
+        { "action": "Check active preset status", "expected": "active_preset: null", "observed": "active_preset: null returned" }
+      ],
+      "evidence": {
+        "cliOutput": "preset remove returned was_active: true; preset use returned active_preset: null"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STORAGE-012",
+      "title": "Atomic File Write",
+      "status": "pass",
+      "steps": [
+        { "action": "Rapid sequential create+edit operations for 5 presets", "expected": "All operations succeed without corruption", "observed": "All 5 presets created and edited successfully" },
+        { "action": "Verify presets.json is valid JSON", "expected": "Valid JSON structure", "observed": "JSON parsed successfully, no errors" },
+        { "action": "Check for leftover temp files in config directory", "expected": "No temp files present", "observed": "Only presets.json exists, no temp files" }
+      ],
+      "evidence": {
+        "cliOutput": "All rapid write operations completed successfully",
+        "fileVerification": "JSON is valid, no temp files in config directory"
+      },
+      "issues": null,
+      "notes": "Cannot directly verify atomic write implementation through CLI, but evidence suggests it's working: no corrupted JSON after rapid operations, no temp files left behind."
+    },
+    {
+      "id": "VAL-STORAGE-013",
+      "title": "JSON Formatting and Readability",
+      "status": "pass",
+      "steps": [
+        { "action": "Read presets.json file", "expected": "Human-readable JSON with indentation", "observed": "Consistent 2-space indentation, properly formatted" },
+        { "action": "Verify not minified", "expected": "Multiple lines with structure", "observed": "Multi-line JSON with clear structure" }
+      ],
+      "evidence": {
+        "fileContent": "presets.json uses 2-space indentation throughout",
+        "evidenceFile": "evidence/preset-crud/flow-storage-persist/VAL-STORAGE-013-json-formatting.txt"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-STORAGE-014",
+      "title": "Empty Presets File Valid State",
+      "status": "pass",
+      "steps": [
+        { "action": "Backup and delete presets.json", "expected": "File removed", "observed": "File deleted successfully" },
+        { "action": "Run preset list without file existing", "expected": "Returns empty list without error", "observed": "count: 0, presets: [] - no error" },
+        { "action": "Add first preset to trigger file creation", "expected": "File created with valid structure", "observed": "File created with valid JSON containing the preset" },
+        { "action": "Restore backup", "expected": "Original state restored", "observed": "Backup restored successfully" }
+      ],
+      "evidence": {
+        "cliOutput": "preset list handles missing file gracefully (returns empty list)",
+        "fileVerification": "File created with valid JSON structure when first preset added"
+      },
+      "issues": null,
+      "notes": "Load operation handles missing file gracefully. File is created on-demand when first preset is added with valid JSON structure."
+    },
+    {
+      "id": "VAL-STORAGE-015",
+      "title": "Unicode and Special Characters Support",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with Unicode: Ñoño, 日本語, Greek, Hebrew, emoji 🎉, café, special SQL chars", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Show preset and verify Unicode preserved", "expected": "All characters preserved correctly", "observed": "Ñoño, 日本語, Ελληνικά, עברית, 🎉, café all preserved in output" },
+        { "action": "Verify special SQL characters (single quotes) escaped", "expected": "Single quotes escaped", "observed": "Single quotes doubled ('') for SQL safety" }
+      ],
+      "evidence": {
+        "cliOutput": "preset show --json confirmed Unicode preservation",
+        "evidenceFile": "evidence/preset-crud/flow-storage-persist/VAL-STORAGE-015-unicode-output.json (note: PowerShell encoding issues in file, but CLI output was correct)"
+      },
+      "issues": null,
+      "notes": "PowerShell file encoding caused garbled characters in evidence file, but CLI output confirmed Unicode is preserved correctly in storage."
+    }
+  ],
+  "frictions": [
+    {
+      "description": "PowerShell's Out-File has encoding issues with Unicode characters, causing evidence files to show garbled text even though CLI output is correct",
+      "resolved": true,
+      "resolution": "Noted that CLI output shows correct Unicode; evidence file encoding issue is a PowerShell limitation, not a CLI bug",
+      "affectedAssertions": ["VAL-STORAGE-015"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 8 assertions for storage persistence: all passed. Key findings: (1) preset add prevents accidental overwrites (good UX), preset edit updates specified fields; (2) active preset persists correctly and clears on deletion; (3) atomic writes appear working (no corruption, no temp files); (4) Unicode preserved correctly in storage."
+}

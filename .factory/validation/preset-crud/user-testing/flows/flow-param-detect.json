@@ -1,0 +1,167 @@
+{
+  "groupId": "flow-param-detect",
+  "testedAt": "2026-04-08T22:28:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g3-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "powershell"],
+  "assertions": [
+    {
+      "id": "VAL-PARAM-001",
+      "title": "Placeholder Detection",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with query containing 5 placeholders", "expected": "All placeholders detected", "observed": "detectedParameters: [\"name\",\"age\",\"department\",\"id\",\"employee_id\"]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-001-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-002",
+      "title": "Valid Parameter Names Only",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with hyphen in param name (:my-param)", "expected": "Rejected with error", "observed": "TYPE_MISMATCH error: parameter name contains invalid character '-'" },
+        { "action": "Create preset with valid param names (:user_name, :EmployeeId)", "expected": "Accepted", "observed": "Preset created successfully with detectedParameters: [\"user_name\",\"EmployeeId\"]" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-002-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-003",
+      "title": "String Type Validation",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with regular string value", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with empty string value", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with Unicode characters", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with string containing spaces", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-003-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-004",
+      "title": "Integer Type Validation",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with positive integer (42)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with negative integer (-10)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with zero (0)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with non-numeric string (abc)", "expected": "Rejected with TYPE_MISMATCH", "observed": "TYPE_MISMATCH: value is not a valid integer" },
+        { "action": "Run preset with alphanumeric (123abc)", "expected": "Rejected with TYPE_MISMATCH", "observed": "TYPE_MISMATCH: value is not a valid integer" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-004-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-005",
+      "title": "Integer Rejects Floats",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with float (3.14)", "expected": "Rejected with clear error", "observed": "TYPE_MISMATCH: value is a float, expected an integer (no decimal point allowed)" },
+        { "action": "Run preset with negative float (-2.5)", "expected": "Rejected with clear error", "observed": "TYPE_MISMATCH: value is a float, expected an integer" },
+        { "action": "Run preset with float trailing zeros (10.00)", "expected": "Rejected with clear error", "observed": "TYPE_MISMATCH: value is a float, expected an integer" },
+        { "action": "Run preset with scientific notation (1e10)", "expected": "Rejected with clear error", "observed": "TYPE_MISMATCH: value is not a valid integer" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-005-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-006",
+      "title": "Date Type Validation",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with valid date (2025-01-15)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with valid date (2024-12-31)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with invalid month (2025-13-01)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid month 13, must be between 1 and 12" },
+        { "action": "Run preset with invalid day (2025-02-30)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid day 30 for month 2 (max 28 days)" },
+        { "action": "Run preset with wrong format (15-01-2025)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid date format, expected YYYY-MM-DD" },
+        { "action": "Run preset with wrong separator (2025/01/15)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid date format, expected YYYY-MM-DD" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-006-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-007",
+      "title": "DateTime Type Validation",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with datetime and space separator (2025-01-15 10:30:00)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with datetime and T separator (2025-01-15T10:30:00)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with datetime with milliseconds (2025-01-15T10:30:00.123)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with datetime with timezone (2025-01-15T10:30:00Z)", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with only date (2025-01-15)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid datetime format, expected YYYY-MM-DD HH:MM:SS or YYYY-MM-DDTHH:MM:SS" },
+        { "action": "Run preset with invalid hour (2025-01-15T25:00:00)", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid datetime format" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-007-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-008",
+      "title": "Boolean Type Validation",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with 'true'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'false'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'TRUE'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'FALSE'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with '1'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with '0'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'yes'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'no'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'YES'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'NO'", "expected": "Accepted", "observed": "Reached NO_CONNECTION (parameter validation passed)" },
+        { "action": "Run preset with 'maybe'", "expected": "Rejected", "observed": "TYPE_MISMATCH: invalid boolean value, accepted: true/false, TRUE/FALSE, 1/0, yes/no" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": null,
+        "outputFiles": ["preset-crud/flow-param-detect/VAL-PARAM-008-output.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 8 assertions: 8 passed, 0 failed. All parameter detection and type validation assertions passed. No database connection required for parameter validation testing - all tests successfully validated parameter types before reaching the connection step."
+}

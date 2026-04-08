@@ -1,0 +1,183 @@
+{
+  "groupId": "flow-cross-area",
+  "testedAt": "2026-04-08T22:40:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g11-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash (PowerShell on Windows)"],
+  "assertions": [
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full Create and Execute Flow",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with typed params", "expected": "Preset created with parameters", "observed": "N/A - blocked" },
+        { "action": "Inspect preset with show", "expected": "Preset details displayed", "observed": "N/A - blocked" },
+        { "action": "Run with parameter values", "expected": "Results in stdout", "observed": "N/A - blocked" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": "Requires database connection to Protheus to test the run execution step"
+    },
+    {
+      "id": "VAL-CROSS-002",
+      "title": "Agent-Friendly Flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g11-agent-test with typed params", "expected": "Preset created with detected parameters", "observed": "Preset created successfully with parameters array in JSON" },
+        { "action": "Run preset show --json", "expected": "Parseable JSON output", "observed": "Valid JSON output with all preset fields" },
+        { "action": "Verify parameters are discoverable", "expected": "Parameters array with name, type, required", "observed": "Parameters array contains name='name' type='string' required=true, name='active' type='bool' required=true" },
+        { "action": "Run preset run with params (no DB)", "expected": "Non-interactive execution, error for no connection", "observed": "NO_CONNECTION error returned, no prompts required" },
+        { "action": "Parse JSON with PowerShell", "expected": "JSON successfully parsed", "observed": "PowerShell ConvertFrom-Json succeeded, all fields accessible" }
+      ],
+      "evidence": {
+        "outputFiles": [
+          "preset-crud/flow-cross-area/VAL-CROSS-002-01-add.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-002-02-show.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-002-03-run.txt"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A - CLI only"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-003",
+      "title": "Security Flow - SQL Injection",
+      "status": "fail",
+      "steps": [
+        { "action": "Create preset g11-security-test", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Test semicolon DROP injection: name=1; DROP TABLE users", "expected": "SQL_INJECTION_DETECTED error", "observed": "SQL_INJECTION_DETECTED with patterns [DROP]" },
+        { "action": "Test OR 1=1 injection: name=admin' OR '1'='1", "expected": "SQL_INJECTION_DETECTED error", "observed": "SQL_INJECTION_DETECTED with patterns [OR_1=1]" },
+        { "action": "Test UNION SELECT injection: name=1 UNION SELECT * FROM passwords", "expected": "SQL_INJECTION_DETECTED error", "observed": "NO_CONNECTION error - injection NOT detected!" },
+        { "action": "Test comment injection: name=admin'--", "expected": "SQL_INJECTION_DETECTED error", "observed": "SQL_INJECTION_DETECTED with patterns [COMMENT_INJECTION]" },
+        { "action": "Test combined injection: name=1; DROP TABLE users-- UNION SELECT", "expected": "SQL_INJECTION_DETECTED with all patterns", "observed": "SQL_INJECTION_DETECTED with patterns [DROP]" }
+      ],
+      "evidence": {
+        "outputFiles": [
+          "preset-crud/flow-cross-area/VAL-CROSS-003-01-setup.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-003-02-drop.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-003-03-or.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-003-04-union.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-003-05-comment.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-003-06-combined.txt"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": "UNION SELECT injection pattern NOT detected - system returned NO_CONNECTION error instead of SQL_INJECTION_DETECTED. This is a security gap."
+    },
+    {
+      "id": "VAL-CROSS-004",
+      "title": "Preset Management Flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g11-mgmt-a", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Create preset g11-mgmt-b with --tags test", "expected": "Preset created with tags", "observed": "Preset created with tags array ['test']" },
+        { "action": "Create preset g11-mgmt-c with --tags test,report", "expected": "Preset created with multiple tags", "observed": "Preset created with tags ['test','report']" },
+        { "action": "List all presets", "expected": "All presets listed in JSON", "observed": "List returned count and presets array with all created presets" },
+        { "action": "Edit g11-mgmt-a --description --query", "expected": "Fields updated, updatedAt refreshed", "observed": "fields_updated=['description','query'], updatedAt refreshed" },
+        { "action": "Show g11-mgmt-a to verify edit", "expected": "Updated values reflected", "observed": "description='Updated description', query='SELECT 1 as updated'" },
+        { "action": "Remove all g11-mgmt-* presets", "expected": "All removed with was_active status", "observed": "All removed successfully with was_active=false" },
+        { "action": "Verify cleanup with list", "expected": "No g11-mgmt-* presets in list", "observed": "PowerShell filter confirmed 0 remaining g11-mgmt-* presets" },
+        { "action": "Show removed preset", "expected": "PRESET_NOT_FOUND error", "observed": "PRESET_NOT_FOUND with hint to use list" }
+      ],
+      "evidence": {
+        "outputFiles": [
+          "preset-crud/flow-cross-area/VAL-CROSS-004-01-create.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-004-02-list.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-004-03-edit.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-004-04-remove.txt"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Connection Profile Integration",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with connection", "expected": "Preset with connection field", "observed": "N/A - blocked" },
+        { "action": "Run with preset connection", "expected": "Uses preset connection", "observed": "N/A - blocked" },
+        { "action": "Run with --connection override", "expected": "Uses override connection", "observed": "N/A - blocked" },
+        { "action": "Run with no connection available", "expected": "NO_CONNECTION error", "observed": "N/A - blocked" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": "Requires database connection to Protheus to test connection resolution and execution"
+    },
+    {
+      "id": "VAL-CROSS-006",
+      "title": "Error Recovery Flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g11-error-test with required params", "expected": "Preset created", "observed": "Preset created with name:string required, age:int required" },
+        { "action": "Run without required params", "expected": "MISSING_PARAMETER with hint", "observed": "MISSING_PARAMETER: 'missing required parameters: name, age', hint: 'Provide values: --param name --param age=value'" },
+        { "action": "Run with type mismatch (age=not-a-number)", "expected": "TYPE_MISMATCH with expected/received", "observed": "TYPE_MISMATCH: 'parameter \"age\": value is not a valid integer (expected type: int, received: \"not-a-number\")'" },
+        { "action": "Show nonexistent preset", "expected": "PRESET_NOT_FOUND with hint", "observed": "PRESET_NOT_FOUND with hint to use list" },
+        { "action": "Add duplicate preset name", "expected": "PRESET_EXISTS with hint to edit", "observed": "PRESET_EXISTS with hint: 'Use mapj protheus preset edit g11-error-test' to modify" },
+        { "action": "Add without --query flag", "expected": "Error about missing required flag", "observed": "CLI usage error: 'required flag(s) \"query\" not set'" },
+        { "action": "Edit without fields to update", "expected": "NO_FIELDS_TO_UPDATE with hint", "observed": "NO_FIELDS_TO_UPDATE with hint listing available fields" },
+        { "action": "Add with invalid --param-def format", "expected": "INVALID_PARAM_DEF with format hint", "observed": "INVALID_PARAM_DEF with format hint: 'name:type[:default][:description]'" }
+      ],
+      "evidence": {
+        "outputFiles": [
+          "preset-crud/flow-cross-area/VAL-CROSS-006-01-missing-param.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-02-type-mismatch.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-03-not-found.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-04-duplicate.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-05-missing-query.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-06-no-fields.txt",
+          "preset-crud/flow-cross-area/VAL-CROSS-006-07-invalid-param-def.txt"
+        ],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": "Missing --query flag returns CLI usage error instead of structured JSON error. This is expected behavior for flag-level errors before command handler is invoked."
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Complex Types Flow",
+      "status": "blocked",
+      "steps": [
+        { "action": "Create preset with list type param", "expected": "Preset with list param", "observed": "N/A - blocked" },
+        { "action": "Run with list value (CSV)", "expected": "IN clause generated correctly", "observed": "N/A - blocked" },
+        { "action": "Create preset with datetime param", "expected": "Preset with datetime param", "observed": "N/A - blocked" },
+        { "action": "Run with datetime value", "expected": "Datetime validated and escaped", "observed": "N/A - blocked" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A"
+      },
+      "issues": "Requires database connection to Protheus to test list IN clause generation and datetime validation during query execution"
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Flag --tag (singular) does not exist; must use --tags (plural) for comma-separated tags",
+      "resolved": true,
+      "resolution": "Corrected to use --tags with comma-separated values",
+      "affectedAssertions": ["VAL-CROSS-004"]
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Assertions VAL-CROSS-001, VAL-CROSS-005, VAL-CROSS-007 require database connection to Protheus for execution testing",
+      "affectedAssertions": ["VAL-CROSS-001", "VAL-CROSS-005", "VAL-CROSS-007"],
+      "quickFixAttempted": "N/A - blocked by design"
+    }
+  ],
+  "summary": "Tested 7 assertions: 3 passed, 1 failed (VAL-CROSS-003: UNION SELECT injection not detected), 3 blocked (require DB connection). Security vulnerability found: UNION SELECT SQL injection pattern is not detected by the validation system."
+}

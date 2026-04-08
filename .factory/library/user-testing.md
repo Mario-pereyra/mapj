@@ -124,3 +124,49 @@ rm ~/.config/mapj/presets.json
 # Or use CLI
 mapj protheus preset list --json | jq -r '.presets[].name' | xargs -I{} mapj protheus preset remove {} --force
 ```
+
+---
+
+## Flow Validator Guidance: CLI
+
+### Isolation Rules
+
+- **Unique Preset Names**: Each flow validator must use preset names prefixed with their group ID (e.g., `group1-test1`, `group2-preset-a`)
+- **No Shared Mutable State**: All preset operations use atomic file writes, so concurrent validators won't corrupt data
+- **Independent Testing**: Each validator tests its assigned assertions independently
+
+### Boundaries
+
+| Boundary | Rule |
+|----------|------|
+| Preset Names | Use format: `<group-id>-<test-name>` (e.g., `g1-basic`, `g2-security`) |
+| Config Directory | Use default `~/.config/mapj/` - no need to override |
+| Clean State | Start by checking/removing conflicting preset names |
+| Cleanup | Remove created presets after testing (use `--force` flag) |
+
+### CLI Binary Path
+
+```
+D:\Proyectos_Personales\CLI\mapj_cli\mapj_cli\mapj.exe
+```
+
+### Working Directory
+
+```
+D:\Proyectos_Personales\CLI\mapj_cli\mapj_cli
+```
+
+### Evidence Collection
+
+- Save command outputs to: `<missionDir>/evidence/<milestone>/<group-id>/`
+- Use descriptive file names: `<assertion-id>-output.txt`
+- Include both success and failure outputs
+
+### Assertion Testing Pattern
+
+1. Clean preset with same name if exists
+2. Run the CLI command under test
+3. Capture exit code and output
+4. Verify output against assertion specification
+5. Record result (pass/fail) with evidence
+6. Cleanup created preset

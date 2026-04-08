@@ -1,0 +1,125 @@
+{
+  "groupId": "flow-cli-remove-use",
+  "testedAt": "2026-04-08T22:34:30Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "presetNamePrefix": "g9-",
+    "configDirectory": "~/.config/mapj/"
+  },
+  "toolsUsed": ["bash", "powershell"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-028",
+      "title": "Preset Remove - Success",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g9-remove-test", "expected": "Preset created successfully", "observed": "Preset created with ok:true" },
+        { "action": "Remove preset with --force flag", "expected": "Exit code 0, preset removed", "observed": "Exit code 0, removed:'g9-remove-test' in response" },
+        { "action": "Verify preset gone from list", "expected": "Preset not in list", "observed": "No match found when searching for g9-remove-test" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-028-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-029",
+      "title": "Preset Remove - Active Preset",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g9-active-remove", "expected": "Preset created successfully", "observed": "Preset created with ok:true" },
+        { "action": "Set preset as active with 'preset use'", "expected": "Preset set as active", "observed": "active_preset:'g9-active-remove' in response" },
+        { "action": "Remove the active preset", "expected": "was_active:true in response", "observed": "was_active:true in response, preset removed" },
+        { "action": "Verify no active preset after removal", "expected": "active_preset:null", "observed": "active_preset:null in response" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-029-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-030",
+      "title": "Preset Remove - Preset Not Found",
+      "status": "pass",
+      "steps": [
+        { "action": "Attempt to remove nonexistent preset g9-nonexistent-preset", "expected": "Error with code PRESET_NOT_FOUND", "observed": "Error with code PRESET_NOT_FOUND, message and hint provided" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-030-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-031",
+      "title": "Preset Remove - Force Flag",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g9-force-test", "expected": "Preset created successfully", "observed": "Preset created with ok:true" },
+        { "action": "Remove preset with --force flag", "expected": "Immediate execution without prompt", "observed": "Executed in 49ms, no prompt wait" },
+        { "action": "Check help documentation for --force flag", "expected": "Documentation shows --force skips confirmation", "observed": "Help shows: --force   Skip confirmation prompt (useful for scripts)" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-031-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-032",
+      "title": "Preset Use - Success",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g9-use-test", "expected": "Preset created successfully", "observed": "Preset created with ok:true" },
+        { "action": "Set preset as active with 'preset use g9-use-test'", "expected": "active_preset in response", "observed": "active_preset:'g9-use-test', preset object returned" },
+        { "action": "Verify active preset is set", "expected": "Shows active preset", "observed": "preset use --json shows active_preset:'g9-use-test'" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-032-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-033",
+      "title": "Preset Use - Preset Not Found",
+      "status": "pass",
+      "steps": [
+        { "action": "Attempt to use nonexistent preset g9-nonexistent-use", "expected": "Error with code PRESET_NOT_FOUND", "observed": "Error with code PRESET_NOT_FOUND, message and hint provided" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-033-output.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-034",
+      "title": "Preset Use - Show Current",
+      "status": "pass",
+      "steps": [
+        { "action": "Run 'preset use' without name (with active preset)", "expected": "Shows active preset", "observed": "Shows active_preset:'g9-use-test' with preset object" },
+        { "action": "Remove active preset", "expected": "Preset removed, was_active:true", "observed": "Preset removed with was_active:true" },
+        { "action": "Run 'preset use' without name (no active preset)", "expected": "Shows active_preset:null", "observed": "Shows active_preset:null" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "outputFiles": ["preset-crud/flow-cli-remove-use/VAL-CLI-034-output.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 7 passed, 0 failed. All CLI Remove and Use commands work as specified."
+}
