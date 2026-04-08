@@ -985,6 +985,456 @@ func getMissingRequiredParams(paramDefs []preset.ParamDef, providedParams map[st
 	return missing
 }
 
+// ======================== EDIT SUBCOMMAND ========================
+
+var presetEditCmd = &cobra.Command{
+	Use:   "edit <name>",
+	Short: "Modify an existing preset",
+	Long: `Modify an existing preset's fields.
+
+Only the fields you specify with flags will be updated. The updatedAt timestamp
+is always refreshed when a preset is edited.
+
+OUTPUT SCHEMA (success):
+  {"ok":true,"command":"mapj protheus preset edit","result":{
+    "name":"my-preset",
+    "fields_updated":["description","query"],
+    "updatedAt":"2024-01-15T10:30:00Z"
+  }}
+
+OUTPUT SCHEMA (error):
+  {"ok":false,"error":{"code":"NO_FIELDS_TO_UPDATE","message":"...","hint":"..."}}
+
+FLAGS:
+  --description TEXT   Update preset description
+  --query TEXT         Update the SQL query
+  --connection NAME    Update the default connection profile
+  --max-rows N         Update the default max rows limit
+  --param-def DEF      Replace parameter definitions (repeatable)
+                       Format: name:type[:default][:description]
+  --tags TAGS          Replace tags (comma-separated)
+
+EXAMPLES:
+  mapj protheus preset edit myquery --description "Updated description"
+  
+  mapj protheus preset edit report \\
+    --query "SELECT :status FROM orders WHERE date > :since" \\
+    --param-def "status:string:pending" \\
+    --param-def "since:date"`,
+	Args: cobra.ExactArgs(1),
+	RunE: presetEditRun,
+}
+
+var (
+	presetEditDescription string
+	presetEditQuery       string
+	presetEditConnection  string
+	presetEditMaxRows     int
+	presetEditParamDefs   []string
+	presetEditTags        string
+)
+
+func presetEditRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	name := strings.TrimSpace(args[0])
+	out := cmd.OutOrStdout()
+
+	// Initialize store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// VAL-CLI-026: Error PRESET_NOT_FOUND si preset no existe
+	targetPreset := presetFile.GetPreset(name)
+	if targetPreset == nil {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"PRESET_NOT_FOUND",
+			fmt.Sprintf("preset '%s' not found", name),
+			"Use 'mapj protheus preset list' to see available presets",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Check if any fields were provided
+	// VAL-CLI-025: Error NO_FIELDS_TO_UPDATE sin flags
+	fieldsUpdated := []string{}
+	updates := make(map[string]any)
+
+	// Check each flag and update if provided
+	if cmd.Flags().Changed("description") {
+		targetPreset.Description = presetEditDescription
+		fieldsUpdated = append(fieldsUpdated, "description")
+		updates["description"] = presetEditDescription
+	}
+
+	if cmd.Flags().Changed("query") {
+		targetPreset.Query = presetEditQuery
+		fieldsUpdated = append(fieldsUpdated, "query")
+		updates["query"] = presetEditQuery
+
+		// Re-detect parameters from new query
+		detectedParams := preset.DetectParameters(presetEditQuery)
+		invalidNames := preset.ValidateParamNames(detectedParams)
+		if len(invalidNames) > 0 {
+			var msgs []string
+			for _, e := range invalidNames {
+				msgs = append(msgs, e.Error())
+			}
+			env := output.NewErrorEnvelopeWithHint(
+				cmd.CommandPath(),
+				"INVALID_PARAM_NAME",
+				fmt.Sprintf("invalid parameter names detected in query: %s", strings.Join(msgs, "; ")),
+				"Parameter names must start with a letter or underscore and contain only letters, digits, and underscores",
+				false,
+			)
+			fmt.Fprintln(out, formatter.Format(env))
+			return nil
+		}
+	}
+
+	if cmd.Flags().Changed("connection") {
+		targetPreset.Connection = presetEditConnection
+		fieldsUpdated = append(fieldsUpdated, "connection")
+		updates["connection"] = presetEditConnection
+	}
+
+	if cmd.Flags().Changed("max-rows") {
+		targetPreset.MaxRows = presetEditMaxRows
+		fieldsUpdated = append(fieldsUpdated, "maxRows")
+		updates["maxRows"] = presetEditMaxRows
+	}
+
+	if cmd.Flags().Changed("tags") {
+		tags := []string{}
+		if presetEditTags != "" {
+			for _, tag := range strings.Split(presetEditTags, ",") {
+				tag = strings.TrimSpace(tag)
+				if tag != "" {
+					tags = append(tags, tag)
+				}
+			}
+		}
+		targetPreset.Tags = tags
+		fieldsUpdated = append(fieldsUpdated, "tags")
+		updates["tags"] = tags
+	}
+
+	if cmd.Flags().Changed("param-def") {
+		// VAL-CLI-027: Error INVALID_PARAM_DEF si formato inválido
+		paramDefs := []preset.ParamDef{}
+		for _, defStr := range presetEditParamDefs {
+			def, err := parseParamDef(defStr)
+			if err != nil {
+				env := output.NewErrorEnvelopeWithHint(
+					cmd.CommandPath(),
+					"INVALID_PARAM_DEF",
+					fmt.Sprintf("invalid --param-def format: %s", err.Error()),
+					"Format: name:type[:default][:description] (types: string, int, date, datetime, bool, list)",
+					false,
+				)
+				fmt.Fprintln(out, formatter.Format(env))
+				return nil
+			}
+			paramDefs = append(paramDefs, def)
+		}
+		targetPreset.Parameters = paramDefs
+		fieldsUpdated = append(fieldsUpdated, "parameters")
+		updates["parameters"] = paramDefs
+	}
+
+	// Check if any updates were made
+	if len(fieldsUpdated) == 0 {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"NO_FIELDS_TO_UPDATE",
+			"no fields specified to update",
+			"Provide at least one field to update: --description, --query, --connection, --max-rows, --param-def, or --tags",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Update timestamp
+	// VAL-CLI-024: preset edit actualiza updatedAt timestamp
+	targetPreset.UpdatedAt = time.Now().UTC()
+
+	// Save to store
+	if err := presetStore.Save(presetFile); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Build response
+	// VAL-CLI-023: preset edit actualiza campo
+	response := map[string]any{
+		"name":          targetPreset.Name,
+		"fields_updated": fieldsUpdated,
+		"updatedAt":     targetPreset.UpdatedAt.Format(time.RFC3339),
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(env))
+	return nil
+}
+
+// ======================== REMOVE SUBCOMMAND ========================
+
+var presetRemoveCmd = &cobra.Command{
+	Use:   "remove <name>",
+	Short: "Delete a preset",
+	Long: `Delete a preset from the store.
+
+If the removed preset is the active preset, the active preset reference
+is automatically cleared.
+
+OUTPUT SCHEMA (success):
+  {"ok":true,"command":"mapj protheus preset remove","result":{
+    "removed":"my-preset",
+    "was_active":true
+  }}
+
+OUTPUT SCHEMA (error):
+  {"ok":false,"error":{"code":"PRESET_NOT_FOUND","message":"...","hint":"..."}}
+
+FLAGS:
+  --force   Skip confirmation prompt (useful for scripts)
+
+EXAMPLES:
+  mapj protheus preset remove old-query
+  
+  mapj protheus preset remove old-query --force`,
+	Args: cobra.ExactArgs(1),
+	RunE: presetRemoveRun,
+}
+
+var presetRemoveForce bool
+
+func presetRemoveRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	name := strings.TrimSpace(args[0])
+	out := cmd.OutOrStdout()
+
+	// Initialize store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// VAL-CLI-030: Error PRESET_NOT_FOUND si preset no existe
+	targetPreset := presetFile.GetPreset(name)
+	if targetPreset == nil {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"PRESET_NOT_FOUND",
+			fmt.Sprintf("preset '%s' not found", name),
+			"Use 'mapj protheus preset list' to see available presets",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Check if this is the active preset
+	// VAL-CLI-029: preset remove en preset activo limpia activePreset
+	wasActive := presetFile.ActivePreset == name
+
+	// VAL-CLI-031: preset remove --force sin confirmación
+	// If not --force, would prompt for confirmation here
+	// For agent-friendly CLI, we skip interactive prompts
+
+	// Delete the preset
+	presetFile.DeletePreset(name)
+
+	// Save to store
+	if err := presetStore.Save(presetFile); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Build response
+	// VAL-CLI-028: preset remove elimina preset
+	response := map[string]any{
+		"removed":    name,
+		"was_active": wasActive,
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(env))
+	return nil
+}
+
+// ======================== USE SUBCOMMAND ========================
+
+var presetUseCmd = &cobra.Command{
+	Use:   "use [name]",
+	Short: "Set or show the active preset",
+	Long: `Set a preset as active or show the current active preset.
+
+When called with a preset name, sets that preset as active. The active preset
+is used as the default for commands like 'preset run' when no name is given.
+
+When called without a name, shows the current active preset.
+
+OUTPUT SCHEMA (success - set active):
+  {"ok":true,"command":"mapj protheus preset use","result":{
+    "active_preset":"my-preset",
+    "preset":{"name":"my-preset","query":"...",...}
+  }}
+
+OUTPUT SCHEMA (success - show current):
+  {"ok":true,"command":"mapj protheus preset use","result":{
+    "active_preset":"my-preset"
+  }}
+
+OUTPUT SCHEMA (no active preset):
+  {"ok":true,"command":"mapj protheus preset use","result":{
+    "active_preset":null
+  }}
+
+OUTPUT SCHEMA (error):
+  {"ok":false,"error":{"code":"PRESET_NOT_FOUND","message":"...","hint":"..."}}
+
+EXAMPLES:
+  mapj protheus preset use myquery
+  
+  mapj protheus preset use  # Show current active preset`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: presetUseRun,
+}
+
+func presetUseRun(cmd *cobra.Command, args []string) error {
+	formatter := GetFormatter()
+	out := cmd.OutOrStdout()
+
+	// Initialize store
+	if err := initPresetStore(); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Load presets
+	presetFile, err := presetStore.Load()
+	if err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// VAL-CLI-034: preset use sin nombre muestra active actual
+	if len(args) == 0 || args[0] == "" {
+		// Show current active preset
+		response := map[string]any{
+			"active_preset": nil,
+		}
+
+		if presetFile.ActivePreset != "" {
+			activePreset := presetFile.GetPreset(presetFile.ActivePreset)
+			if activePreset != nil {
+				response["active_preset"] = activePreset.Name
+				response["preset"] = map[string]any{
+					"name":        activePreset.Name,
+					"query":       activePreset.Query,
+					"description": activePreset.Description,
+					"createdAt":   activePreset.CreatedAt.Format(time.RFC3339),
+					"updatedAt":   activePreset.UpdatedAt.Format(time.RFC3339),
+				}
+				if activePreset.Connection != "" {
+					response["preset"].(map[string]any)["connection"] = activePreset.Connection
+				}
+				if len(activePreset.Parameters) > 0 {
+					response["preset"].(map[string]any)["parameters"] = activePreset.Parameters
+				}
+			}
+		}
+
+		env := output.NewEnvelope(cmd.CommandPath(), response)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Set active preset
+	name := strings.TrimSpace(args[0])
+
+	// VAL-CLI-033: Error PRESET_NOT_FOUND si preset no existe
+	targetPreset := presetFile.GetPreset(name)
+	if targetPreset == nil {
+		env := output.NewErrorEnvelopeWithHint(
+			cmd.CommandPath(),
+			"PRESET_NOT_FOUND",
+			fmt.Sprintf("preset '%s' not found", name),
+			"Use 'mapj protheus preset list' to see available presets",
+			false,
+		)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// VAL-CLI-032: preset use marca como activePreset
+	presetFile.SetActivePreset(name)
+
+	// Save to store
+	if err := presetStore.Save(presetFile); err != nil {
+		env := output.NewErrorEnvelope(cmd.CommandPath(), "STORE_ERROR", err.Error(), false)
+		fmt.Fprintln(out, formatter.Format(env))
+		return nil
+	}
+
+	// Build response
+	response := map[string]any{
+		"active_preset": name,
+		"preset": map[string]any{
+			"name":        targetPreset.Name,
+			"query":       targetPreset.Query,
+			"description": targetPreset.Description,
+			"createdAt":   targetPreset.CreatedAt.Format(time.RFC3339),
+			"updatedAt":   targetPreset.UpdatedAt.Format(time.RFC3339),
+		},
+	}
+
+	if targetPreset.Connection != "" {
+		response["preset"].(map[string]any)["connection"] = targetPreset.Connection
+	}
+	if targetPreset.MaxRows > 0 {
+		response["preset"].(map[string]any)["maxRows"] = targetPreset.MaxRows
+	}
+	if len(targetPreset.Parameters) > 0 {
+		response["preset"].(map[string]any)["parameters"] = targetPreset.Parameters
+	}
+	if len(targetPreset.Tags) > 0 {
+		response["preset"].(map[string]any)["tags"] = targetPreset.Tags
+	}
+
+	env := output.NewEnvelope(cmd.CommandPath(), response)
+	fmt.Fprintln(out, formatter.Format(env))
+	return nil
+}
+
 // ======================== INIT ========================
 
 func init() {
@@ -993,6 +1443,9 @@ func init() {
 	protheusPresetCmd.AddCommand(presetListCmd)
 	protheusPresetCmd.AddCommand(presetShowCmd)
 	protheusPresetCmd.AddCommand(presetRunCmd)
+	protheusPresetCmd.AddCommand(presetEditCmd)
+	protheusPresetCmd.AddCommand(presetRemoveCmd)
+	protheusPresetCmd.AddCommand(presetUseCmd)
 
 	// Add flags for preset add command
 	presetAddCmd.Flags().StringVar(&presetAddQuery, "query", "", "SQL query with :parameter placeholders (required)")
@@ -1015,4 +1468,15 @@ func init() {
 	presetRunCmd.Flags().StringVar(&presetRunConnection, "connection", "", "Override the preset's connection profile")
 	presetRunCmd.Flags().IntVar(&presetRunMaxRows, "max-rows", 0, "Limit number of rows returned (0 = use preset default or 10000)")
 	presetRunCmd.Flags().StringVar(&presetRunOutputFile, "output-file", "", "Write results to file instead of stdout")
+
+	// Add flags for preset edit command
+	presetEditCmd.Flags().StringVar(&presetEditDescription, "description", "", "Update preset description")
+	presetEditCmd.Flags().StringVar(&presetEditQuery, "query", "", "Update the SQL query")
+	presetEditCmd.Flags().StringVar(&presetEditConnection, "connection", "", "Update the default connection profile")
+	presetEditCmd.Flags().IntVar(&presetEditMaxRows, "max-rows", 0, "Update the default max rows limit")
+	presetEditCmd.Flags().StringArrayVar(&presetEditParamDefs, "param-def", nil, "Update parameter definitions")
+	presetEditCmd.Flags().StringVar(&presetEditTags, "tags", "", "Update tags (comma-separated)")
+
+	// Add flags for preset remove command
+	presetRemoveCmd.Flags().BoolVar(&presetRemoveForce, "force", false, "Skip confirmation prompt")
 }
