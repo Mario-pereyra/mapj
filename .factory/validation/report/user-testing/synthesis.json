@@ -1,0 +1,44 @@
+{
+  "milestone": "report",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-REC-001",
+    "VAL-REC-002",
+    "VAL-CROSS-001",
+    "VAL-CROSS-002"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "validationDetails": {
+    "VAL-REC-001": {
+      "description": "Ganador declarado",
+      "tool": "manual-review",
+      "evidence": "Section 6 declares '🏆 Ganador: gem (con fixes previos)' with quantitative (8.2/10 vs 7.8/10) and qualitative justification (TOON, Auto-retry, Auto-paginación features)"
+    },
+    "VAL-REC-002": {
+      "description": "Plan de acción propuesto",
+      "tool": "manual-review",
+      "evidence": "Section 7 provides 'Fix-and-Merge' strategy with 6 numbered steps, time estimates, and priority timeline table"
+    },
+    "VAL-CROSS-001": {
+      "description": "Coherencia de análisis",
+      "tool": "manual-review",
+      "evidence": "Consistent weighting: Code (main wins 8.1 vs 7.8 due to bugs), Tests (gem wins 8.5 vs 6.0), Docs (gem wins 9.0 vs 7.5), Functionality (gem wins 8.5 vs 6.0). Final recommendation 'gem (con fixes previos)' properly accounts for code bugs by recommending fixes first."
+    },
+    "VAL-CROSS-002": {
+      "description": "Trazabilidad",
+      "tool": "manual-review",
+      "evidence": "'Evidencia de Trazabilidad' section with file:line references: pkg/confluence/export.go:205 (mutex bug), pkg/protheus/query.go:44-58 (SQL validation), internal/output/toon_formatter_test.go (452 lines, 32 tests), README.md:gem (Agentic Features)"
+    }
+  },
+  "testedDocument": ".factory/library/final-report.md"
+}
