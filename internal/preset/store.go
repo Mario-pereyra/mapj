@@ -47,6 +47,16 @@ type PresetStore struct {
 	path string
 }
 
+// SetPath sets a custom path for the preset store (used for testing).
+func (s *PresetStore) SetPath(path string) {
+	s.path = path
+}
+
+// GetPath returns the current path of the preset store.
+func (s *PresetStore) GetPath() string {
+	return s.path
+}
+
 // NewPresetStore creates a new preset store with the default path.
 // The path is ~/.config/mapj/presets.json
 func NewPresetStore() (*PresetStore, error) {
