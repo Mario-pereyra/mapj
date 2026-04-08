@@ -236,6 +236,8 @@ func TestDetectSQLInjection_OR1Equals1(t *testing.T) {
 
 // TestDetectSQLInjection_UnionSelect tests VAL-PARAM-014
 // System must detect and reject UNION SELECT patterns
+// This includes cases both WITH and WITHOUT a preceding quote.
+// The pattern UNION SELECT in a parameter value is always a potential SQL injection vector.
 func TestDetectSQLInjection_UnionSelect(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -250,7 +252,17 @@ func TestDetectSQLInjection_UnionSelect(t *testing.T) {
 		{"UNION SELECT with columns", "' UNION SELECT username, password", true},
 		{"UNION SELECT FROM", "' UNION SELECT * FROM users", true},
 
-		// Safe values (no quote before UNION, or natural language)
+		// UNION SELECT patterns WITHOUT preceding quote (VAL-PARAM-014 fix)
+		// These are common injection patterns where the attacker tries to append
+		// a UNION SELECT to an existing query condition
+		{"UNION SELECT no quote", "1 UNION SELECT * FROM passwords", true},
+		{"UNION SELECT at start", "UNION SELECT password FROM users", true},
+		{"UNION ALL SELECT no quote", "1 UNION ALL SELECT username, password FROM users", true},
+		{"id=1 UNION SELECT", "id=1 UNION SELECT * FROM passwords", true},
+		{"UNION SELECT with extra spaces", "1 UNION  SELECT * FROM users", true},
+		{"UNION SELECT numeric prefix", "123 UNION SELECT * FROM table", true},
+
+		// Safe values (natural language, not SQL injection)
 		{"word UNION in text", "labor union select", false},
 		{"SELECT without UNION", "select option", false},
 		{"text containing select", "I select this", false},

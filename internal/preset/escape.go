@@ -85,11 +85,14 @@ var sqlInjectionPatterns = []struct {
 	},
 
 	// Pattern 4: UNION SELECT (data exfiltration)
-	// Catches: ' UNION SELECT, ' UNION ALL SELECT
-	// Requires quote before UNION to avoid false positives in natural language
+	// Catches: ' UNION SELECT, ' UNION ALL SELECT, 1 UNION SELECT, UNION SELECT at start
+	// VAL-PARAM-014: Must detect UNION SELECT pattern (case-insensitive) in parameter values.
+	// Pattern: UNION must be preceded by quote, digit, or start of string.
+	// This avoids false positives for natural language like "labor union" where
+	// "union" is preceded by a word character, not a SQL context marker.
 	{
 		name:    "UNION_SELECT",
-		pattern: regexp.MustCompile(`(?i)'\s*UNION\s+(ALL\s+)?SELECT\b`),
+		pattern: regexp.MustCompile(`(?i)(?:^|['")]|\d)\s*UNION\s+(ALL\s+)?SELECT\b`),
 	},
 
 	// Pattern 5: SQL comment injection
