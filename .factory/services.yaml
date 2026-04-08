@@ -1,0 +1,5 @@
+commands:
+  test: go test ./... -cover
+  build: go build -o mapj.exe ./cmd/mapj
+
+services: {}
