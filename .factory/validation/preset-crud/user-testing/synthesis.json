@@ -1,7 +1,7 @@
 {
   "milestone": "preset-crud",
-  "round": 2,
-  "status": "pass",
+  "round": 3,
+  "status": "fail",
   "assertionsSummary": {
     "total": 87,
     "passed": 72,
@@ -23,50 +23,44 @@
   ],
   "failedAssertions": [],
   "blockedAssertions": [
-    { "id": "VAL-PARAM-009", "blockedBy": "No Protheus database connection available for list type IN clause verification" },
-    { "id": "VAL-PARAM-010", "blockedBy": "No Protheus database connection available for quote escaping verification" },
-    { "id": "VAL-PARAM-011", "blockedBy": "No Protheus database connection available for data preservation verification" },
-    { "id": "VAL-PARAM-017", "blockedBy": "No Protheus database connection available for default value usage verification" },
-    { "id": "VAL-PARAM-018", "blockedBy": "No Protheus database connection available for default value override verification" },
-    { "id": "VAL-CLI-010", "blockedBy": "No Protheus database connection available for query execution" },
-    { "id": "VAL-CLI-011", "blockedBy": "No Protheus database connection available for parameter substitution testing" },
-    { "id": "VAL-CLI-012", "blockedBy": "No Protheus database connection available for connection override testing" },
-    { "id": "VAL-CLI-013", "blockedBy": "No Protheus database connection available for max rows limit testing" },
-    { "id": "VAL-CLI-014", "blockedBy": "No Protheus database connection available for output file testing" },
-    { "id": "VAL-CLI-017", "blockedBy": "CONNECTION_FAILED scenario requires real database connection. NO_CONNECTION fix verified (retryable: true)" },
-    { "id": "VAL-CLI-018", "blockedBy": "No Protheus database connection available for query validation testing" },
-    { "id": "VAL-CROSS-001", "blockedBy": "No Protheus database connection available for full create and execute flow" },
-    { "id": "VAL-CROSS-005", "blockedBy": "No Protheus database connection available for connection profile integration" },
-    { "id": "VAL-CROSS-007", "blockedBy": "No Protheus database connection available for complex types flow testing" }
+    { "id": "VAL-PARAM-009", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-PARAM-010", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-PARAM-011", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-PARAM-017", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-PARAM-018", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-010", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-011", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-012", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-013", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-014", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-017", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CLI-018", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CROSS-001", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CROSS-005", "blockedBy": "No Protheus database connection available - precondition not met" },
+    { "id": "VAL-CROSS-007", "blockedBy": "No Protheus database connection available - precondition not met" }
   ],
   "appliedUpdates": [],
-  "previousRound": ".factory/validation/preset-crud/user-testing/synthesis.json",
-  "fixesVerified": [
-    {
-      "feature": "fix-cobra-error-envelope",
-      "assertion": "VAL-CLI-003",
-      "result": "passed",
-      "evidence": "Running 'mapj protheus preset add test' without --query returns JSON error with code MISSING_REQUIRED_FIELD"
+  "previousRound": null,
+  "setupBlocker": {
+    "precondition": "User has VPN connection to Protheus network active and database connection configured",
+    "actualState": {
+      "protheusAuthenticated": false,
+      "profilesRegistered": 0,
+      "vpnConnection": "unknown - cannot verify from CLI"
     },
-    {
-      "feature": "fix-sql-injection-union-select",
-      "assertion": "VAL-CROSS-003",
-      "result": "passed",
-      "evidence": "UNION SELECT injection attempt returns SQL_INJECTION_DETECTED error with pattern [UNION_SELECT]"
-    },
-    {
-      "feature": "fix-connection-error-code",
-      "assertion": "VAL-CLI-017",
-      "result": "partial",
-      "evidence": "NO_CONNECTION error now has retryable: true. CONNECTION_FAILED scenario requires real DB to test."
-    }
-  ],
+    "verificationCommands": [
+      { "command": ".\\mapj.exe auth status --json", "exitCode": 0, "observation": "protheus.authenticated: false" },
+      { "command": ".\\mapj.exe protheus connection list --json", "exitCode": 0, "observation": "NO_PROFILES error - no Protheus profiles registered" }
+    ],
+    "requiredAction": "User must: 1) Connect to VPN, 2) Register Protheus connection profile using 'mapj protheus connection add <name> --server ... --database ... --user ... --password ...'"
+  },
   "notes": [
-    "Round 2: Re-tested 3 previously failed assertions after fix features were completed",
-    "VAL-CLI-003: Cobra flag errors now properly wrapped in JSON envelope",
-    "VAL-CROSS-003: UNION SELECT SQL injection pattern now detected",
-    "VAL-CLI-017: Partial fix - NO_CONNECTION now has retryable: true, but CONNECTION_FAILED requires real DB",
-    "All 15 blocked assertions require Protheus database connection for full testing"
+    "Round 3: Attempted to test 15 DB-dependent assertions for user-testing-validator-db-connection feature",
+    "PRECONDITIONS NOT MET: Feature stated user has VPN and DB connection active, but verification shows no connection configured",
+    "mapj auth status shows protheus.authenticated: false",
+    "No Protheus connection profiles registered (NO_PROFILES error)",
+    "Cannot proceed with testing without real database connection",
+    "15 assertions remain blocked pending user action to configure database connection"
   ],
   "toolsUsed": ["powershell", "CLI"]
 }
