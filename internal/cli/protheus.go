@@ -15,8 +15,8 @@ import (
 )
 
 var protheusCmd = &cobra.Command{
-	Use:   "protheus",
-	Short: "Execute SELECT queries and manage connections to Protheus ERP SQL Server",
+	Use:            "protheus",
+	Short:          "Execute SELECT queries and manage connections to Protheus ERP SQL Server",
 	Long: `Query Protheus ERP SQL Server databases and manage named connection profiles.
 
 TWO-STEP MODEL:
@@ -36,6 +36,8 @@ SUBCOMMANDS:
   mapj protheus connection remove <name>    Delete a profile
 
 Run 'mapj protheus <command> --help' for full output schema.`,
+	SilenceUsage:   true, // Prevent Cobra from printing usage after we output JSON error
+	SilenceErrors:  true, // Prevent Cobra from printing error after we output JSON
 }
 
 var protheusQueryCmd = &cobra.Command{

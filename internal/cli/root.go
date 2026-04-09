@@ -1,9 +1,6 @@
 package cli
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/Mario-pereyra/mapj/internal/errors"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
@@ -81,8 +78,13 @@ func Execute() int {
 	// Display flags
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 
+	// Silence errors for all commands that output structured JSON errors
+	// Each command that returns an ExitCoder error has already output its JSON envelope
+	rootCmd.SilenceErrors = true
+
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		// Don't print raw error - the command has already output a structured JSON envelope
+		// Just return the appropriate exit code
 		if exitCoder, ok := err.(errors.ExitCoder); ok {
 			return exitCoder.ExitCode()
 		}

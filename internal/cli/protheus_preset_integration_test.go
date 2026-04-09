@@ -68,7 +68,9 @@ func cleanupIntegrationTest(t *testing.T, env *integrationTestEnv) {
 }
 
 // executeCommand executes a cobra command and returns the parsed JSON output
-func executeCommand(t *testing.T, cmd *cobra.Command, args []string) map[string]any {
+// For success cases, use executeCommandSuccess.
+// For error cases, use executeCommandError.
+func executeCommand(t *testing.T, cmd *cobra.Command, args []string) (map[string]any, error) {
 	t.Helper()
 
 	var buf bytes.Buffer
@@ -76,17 +78,34 @@ func executeCommand(t *testing.T, cmd *cobra.Command, args []string) map[string]
 	cmd.SetArgs(args)
 
 	err := cmd.Execute()
-	require.NoError(t, err, "Command execution should not return Go errors")
 
 	output := strings.TrimSpace(buf.String())
 	if output == "" {
-		return nil
+		return nil, err
 	}
 
 	var result map[string]any
-	err = json.Unmarshal([]byte(output), &result)
-	require.NoError(t, err, "Output should be valid JSON: %s", output)
+	jsonErr := json.Unmarshal([]byte(output), &result)
+	require.NoError(t, jsonErr, "Output should be valid JSON: %s", output)
 
+	return result, err
+}
+
+// executeCommandSuccess is a helper for success cases - expects no error.
+func executeCommandSuccess(t *testing.T, cmd *cobra.Command, args []string) map[string]any {
+	t.Helper()
+	result, err := executeCommand(t, cmd, args)
+	require.NoError(t, err, "Expected success but got error")
+	return result
+}
+
+// executeCommandError is a helper for error cases - expects an error in JSON output (ok: false).
+// Note: Commands may return nil Go error after outputting JSON error envelope.
+func executeCommandError(t *testing.T, cmd *cobra.Command, args []string) map[string]any {
+	t.Helper()
+	result, _ := executeCommand(t, cmd, args)
+	require.NotNil(t, result, "Expected JSON result")
+	require.False(t, result["ok"].(bool), "Expected ok:false in JSON output")
 	return result
 }
 
@@ -110,7 +129,7 @@ func TestIntegration_FullCreateAndExecuteFlow(t *testing.T) {
 	addCmd.Flags().Set("tags", "users,search")
 	addCmd.Flags().Set("use", "true")
 
-	result := executeCommand(t, addCmd, []string{"user-search"})
+	result := executeCommandSuccess(t, addCmd, []string{"user-search"})
 
 	// Verify add success
 	require.True(t, result["ok"].(bool), "Add command should succeed")
@@ -124,7 +143,7 @@ func TestIntegration_FullCreateAndExecuteFlow(t *testing.T) {
 
 	// Step 2: Show the preset to verify it was saved correctly
 	showCmd := createPresetShowCmdForTest()
-	result = executeCommand(t, showCmd, []string{"user-search"})
+	result = executeCommandSuccess(t, showCmd, []string{"user-search"})
 
 	require.True(t, result["ok"].(bool), "Show command should succeed")
 	presetData = result["result"].(map[string]any)
@@ -153,7 +172,7 @@ func TestIntegration_FullCreateAndExecuteFlow(t *testing.T) {
 	runCmd.Flags().Set("param", "name=John")
 	runCmd.Flags().Set("param", "minAge=25")
 
-	result = executeCommand(t, runCmd, []string{"user-search"})
+	result = executeCommandError(t, runCmd, []string{"user-search"})
 
 	// Should fail at connection (expected), not at parameter validation
 	assert.False(t, result["ok"].(bool))
@@ -207,7 +226,7 @@ func TestIntegration_AgentFriendlyFlow(t *testing.T) {
 
 	// Step 1: Agent discovers parameters via show command
 	showCmd := createPresetShowCmdForTest()
-	result := executeCommand(t, showCmd, []string{"agent-test"})
+	result := executeCommandSuccess(t, showCmd, []string{"agent-test"})
 
 	require.True(t, result["ok"].(bool))
 	presetData := result["result"].(map[string]any)
@@ -230,7 +249,7 @@ func TestIntegration_AgentFriendlyFlow(t *testing.T) {
 	runCmd := createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "id=123")
 
-	result = executeCommand(t, runCmd, []string{"agent-test"})
+	result = executeCommandError(t, runCmd, []string{"agent-test"})
 
 	// Should fail at connection, but parameters should be processed
 	assert.False(t, result["ok"].(bool))
@@ -241,7 +260,7 @@ func TestIntegration_AgentFriendlyFlow(t *testing.T) {
 
 	// Step 3: Verify show without name shows active preset (or null)
 	showCmdNoArgs := createPresetShowCmdForTest()
-	result = executeCommand(t, showCmdNoArgs, []string{})
+	result = executeCommandSuccess(t, showCmdNoArgs, []string{})
 
 	require.True(t, result["ok"].(bool))
 	// No active preset set, so should show null
@@ -250,7 +269,7 @@ func TestIntegration_AgentFriendlyFlow(t *testing.T) {
 
 	// Step 4: Verify JSON output is valid and parseable for jq
 	listCmd := createPresetListCmdForTest()
-	result = executeCommand(t, listCmd, []string{})
+	result = executeCommandSuccess(t, listCmd, []string{})
 
 	require.True(t, result["ok"].(bool))
 	// Verify structure is jq-friendly
@@ -313,7 +332,7 @@ func TestIntegration_SQLInjectionSecurity(t *testing.T) {
 			runCmd := createPresetRunCmdForTest()
 			runCmd.Flags().Set("param", "name="+tt.value)
 
-			result := executeCommand(t, runCmd, []string{"security-test"})
+			result := executeCommandError(t, runCmd, []string{"security-test"})
 
 			// Must reject the injection
 			assert.False(t, result["ok"].(bool), "Should reject SQL injection")
@@ -360,7 +379,7 @@ func TestIntegration_SafeValuesWithQuotes(t *testing.T) {
 			runCmd := createPresetRunCmdForTest()
 			runCmd.Flags().Set("param", "name="+value)
 
-			result := executeCommand(t, runCmd, []string{"quote-test"})
+			result := executeCommandError(t, runCmd, []string{"quote-test"})
 
 			// Should fail at connection (expected), NOT SQL injection
 			assert.False(t, result["ok"].(bool))
@@ -414,7 +433,7 @@ func TestIntegration_PresetManagementFlow(t *testing.T) {
 
 	// Step 2: List all presets
 	listCmd := createPresetListCmdForTest()
-	result := executeCommand(t, listCmd, []string{})
+	result := executeCommandSuccess(t, listCmd, []string{})
 
 	require.True(t, result["ok"].(bool))
 	resultData := result["result"].(map[string]any)
@@ -427,7 +446,7 @@ func TestIntegration_PresetManagementFlow(t *testing.T) {
 	editCmd.Flags().Set("description", "Updated description")
 	editCmd.Flags().Set("query", "SELECT 1, 2, 3")
 
-	result = executeCommand(t, editCmd, []string{"mgmt-test-1"})
+	result = executeCommandSuccess(t, editCmd, []string{"mgmt-test-1"})
 
 	require.True(t, result["ok"].(bool))
 	editData := result["result"].(map[string]any)
@@ -441,7 +460,7 @@ func TestIntegration_PresetManagementFlow(t *testing.T) {
 
 	// Step 4: Set active preset
 	useCmd := createUseCommand()
-	result = executeCommand(t, useCmd, []string{"mgmt-test-2"})
+	result = executeCommandSuccess(t, useCmd, []string{"mgmt-test-2"})
 
 	require.True(t, result["ok"].(bool))
 	loaded, _ = env.store.Load()
@@ -450,7 +469,7 @@ func TestIntegration_PresetManagementFlow(t *testing.T) {
 	// Step 5: Remove active preset
 	removeCmd := createRemoveCommand()
 	removeCmd.Flags().Set("force", "true")
-	result = executeCommand(t, removeCmd, []string{"mgmt-test-2"})
+	result = executeCommandSuccess(t, removeCmd, []string{"mgmt-test-2"})
 
 	require.True(t, result["ok"].(bool))
 	removeData := result["result"].(map[string]any)
@@ -466,7 +485,7 @@ func TestIntegration_PresetManagementFlow(t *testing.T) {
 
 	// Step 7: List again to verify
 	listCmd = createPresetListCmdForTest()
-	result = executeCommand(t, listCmd, []string{})
+	result = executeCommandSuccess(t, listCmd, []string{})
 
 	require.True(t, result["ok"].(bool))
 	resultData = result["result"].(map[string]any)
@@ -505,7 +524,7 @@ func TestIntegration_ConnectionProfileFlow(t *testing.T) {
 
 	// Scenario 1: Preset has saved connection, but it doesn't exist
 	runCmd := createPresetRunCmdForTest()
-	result := executeCommand(t, runCmd, []string{"conn-test-with-default"})
+	result, _ := executeCommand(t, runCmd, []string{"conn-test-with-default"})
 
 	assert.False(t, result["ok"].(bool), "Should fail when connection profile doesn't exist")
 	errorData, ok := result["error"].(map[string]any)
@@ -516,7 +535,7 @@ func TestIntegration_ConnectionProfileFlow(t *testing.T) {
 	// Scenario 2: Override connection with --connection flag
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("connection", "override-connection")
-	result = executeCommand(t, runCmd, []string{"conn-test-with-default"})
+	result, _ = executeCommand(t, runCmd, []string{"conn-test-with-default"})
 
 	assert.False(t, result["ok"].(bool), "Should fail when override connection doesn't exist")
 	errorData, ok = result["error"].(map[string]any)
@@ -529,7 +548,7 @@ func TestIntegration_ConnectionProfileFlow(t *testing.T) {
 	// by using an --connection value that doesn't exist (proving the flag was used)
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("connection", "nonexistent-flag-connection")
-	result = executeCommand(t, runCmd, []string{"conn-test-with-default"})
+	result, _ = executeCommand(t, runCmd, []string{"conn-test-with-default"})
 
 	assert.False(t, result["ok"].(bool), "Should fail when flag connection doesn't exist")
 	errorData, ok = result["error"].(map[string]any)
@@ -551,7 +570,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 
 	// Scenario 1: Preset not found
 	showCmd := createPresetShowCmdForTest()
-	result := executeCommand(t, showCmd, []string{"nonexistent-preset"})
+	result, _ := executeCommand(t, showCmd, []string{"nonexistent-preset"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData := result["error"].(map[string]any)
@@ -576,7 +595,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 
 	runCmd := createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "id=123") // missing name
-	result = executeCommand(t, runCmd, []string{"error-test-required"})
+	result, _ = executeCommand(t, runCmd, []string{"error-test-required"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -588,7 +607,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "id=not-a-number")
 	runCmd.Flags().Set("param", "name=test")
-	result = executeCommand(t, runCmd, []string{"error-test-required"})
+	result, _ = executeCommand(t, runCmd, []string{"error-test-required"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -598,7 +617,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 	// Scenario 4: Invalid parameter format
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "invalidformat") // no '=' separator
-	result = executeCommand(t, runCmd, []string{"error-test-required"})
+	result, _ = executeCommand(t, runCmd, []string{"error-test-required"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -608,7 +627,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 	// Scenario 5: Duplicate preset name
 	addCmd := createPresetAddCmdForTest()
 	addCmd.Flags().Set("query", "SELECT 1")
-	result = executeCommand(t, addCmd, []string{"error-test-required"})
+	result, _ = executeCommand(t, addCmd, []string{"error-test-required"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -617,7 +636,7 @@ func TestIntegration_ErrorRecoveryFlow(t *testing.T) {
 
 	// Scenario 6: No fields to update in edit
 	editCmd := createEditCommand()
-	result = executeCommand(t, editCmd, []string{"error-test-required"})
+	result, _ = executeCommand(t, editCmd, []string{"error-test-required"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -656,7 +675,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd.Flags().Set("param", "startDate=2024-01-15 10:30:00")
 	runCmd.Flags().Set("param", "status=completed")
 
-	result := executeCommand(t, runCmd, []string{"complex-types-test"})
+	result, _ := executeCommand(t, runCmd, []string{"complex-types-test"})
 
 	// Should fail at connection (expected), not at parameter processing
 	assert.False(t, result["ok"].(bool))
@@ -669,7 +688,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd.Flags().Set("param", "ids=100")
 	runCmd.Flags().Set("param", "startDate=2024-01-15T10:30:00")
 
-	result = executeCommand(t, runCmd, []string{"complex-types-test"})
+	result, _ = executeCommand(t, runCmd, []string{"complex-types-test"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -680,7 +699,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd.Flags().Set("param", "ids=O'Brien,Jane's,Test")
 	runCmd.Flags().Set("param", "startDate=2024-01-15 00:00:00")
 
-	result = executeCommand(t, runCmd, []string{"complex-types-test"})
+	result, _ = executeCommand(t, runCmd, []string{"complex-types-test"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -692,7 +711,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd.Flags().Set("param", "ids=1")
 	runCmd.Flags().Set("param", "startDate=invalid-datetime")
 
-	result = executeCommand(t, runCmd, []string{"complex-types-test"})
+	result, _ = executeCommand(t, runCmd, []string{"complex-types-test"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -713,7 +732,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "orderDate=2024-01-15")
 
-	result = executeCommand(t, runCmd, []string{"date-only-test"})
+	result, _ = executeCommand(t, runCmd, []string{"date-only-test"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -723,7 +742,7 @@ func TestIntegration_ComplexTypesFlow(t *testing.T) {
 	runCmd = createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "orderDate=2024/01/15") // Wrong separator
 
-	result = executeCommand(t, runCmd, []string{"date-only-test"})
+	result, _ = executeCommand(t, runCmd, []string{"date-only-test"})
 
 	assert.False(t, result["ok"].(bool))
 	errorData = result["error"].(map[string]any)
@@ -745,7 +764,7 @@ func TestIntegration_UnicodeAndSpecialCharacters(t *testing.T) {
 	addCmd.Flags().Set("query", "SELECT * FROM users WHERE name LIKE '%O''Brien%' AND comment LIKE '%--comment%'")
 	addCmd.Flags().Set("description", "Descripción en español - 中文 - 日本語 - 한글")
 
-	result := executeCommand(t, addCmd, []string{"unicode-test"})
+	result, _ := executeCommand(t, addCmd, []string{"unicode-test"})
 
 	require.True(t, result["ok"].(bool))
 	presetData := result["result"].(map[string]any)
@@ -753,7 +772,7 @@ func TestIntegration_UnicodeAndSpecialCharacters(t *testing.T) {
 
 	// Verify retrieval preserves all characters
 	showCmd := createPresetShowCmdForTest()
-	result = executeCommand(t, showCmd, []string{"unicode-test"})
+	result, _ = executeCommand(t, showCmd, []string{"unicode-test"})
 
 	require.True(t, result["ok"].(bool))
 	presetData = result["result"].(map[string]any)
@@ -807,7 +826,7 @@ func TestIntegration_UnicodeAndSpecialCharacters(t *testing.T) {
 			runCmd.Flags().Set("param", "name="+tt.value)
 			runCmd.Flags().Set("param", "city=Tokyo")
 
-			result := executeCommand(t, runCmd, []string{"unicode-param-test"})
+			result, _ := executeCommand(t, runCmd, []string{"unicode-param-test"})
 
 			// Should fail at connection, not at parameter processing
 			assert.False(t, result["ok"].(bool))
@@ -844,7 +863,7 @@ func TestIntegration_DefaultValues(t *testing.T) {
 
 	// Run without providing any params - defaults should be used
 	runCmd := createPresetRunCmdForTest()
-	result := executeCommand(t, runCmd, []string{"defaults-test"})
+	result, _ := executeCommand(t, runCmd, []string{"defaults-test"})
 
 	// Should fail at connection (params processed with defaults)
 	assert.False(t, result["ok"].(bool))
@@ -857,7 +876,7 @@ func TestIntegration_DefaultValues(t *testing.T) {
 	runCmd.Flags().Set("param", "limit=50")
 	runCmd.Flags().Set("param", "active=false")
 
-	result = executeCommand(t, runCmd, []string{"defaults-test"})
+	result, _ = executeCommand(t, runCmd, []string{"defaults-test"})
 
 	// Should fail at connection
 	assert.False(t, result["ok"].(bool))
@@ -891,7 +910,7 @@ func TestIntegration_BooleanTypeVariations(t *testing.T) {
 			runCmd := createPresetRunCmdForTest()
 			runCmd.Flags().Set("param", "active="+val)
 
-			result := executeCommand(t, runCmd, []string{"bool-test"})
+			result, _ := executeCommand(t, runCmd, []string{"bool-test"})
 
 			// Should fail at connection, not at parameter validation
 			assert.False(t, result["ok"].(bool))
@@ -909,7 +928,7 @@ func TestIntegration_BooleanTypeVariations(t *testing.T) {
 			runCmd := createPresetRunCmdForTest()
 			runCmd.Flags().Set("param", "active="+val)
 
-			result := executeCommand(t, runCmd, []string{"bool-test"})
+			result, _ := executeCommand(t, runCmd, []string{"bool-test"})
 
 			// Should fail at type validation
 			assert.False(t, result["ok"].(bool))
@@ -941,7 +960,7 @@ func TestIntegration_MultipleParameterUsage(t *testing.T) {
 	runCmd := createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "name=John")
 
-	result := executeCommand(t, runCmd, []string{"multi-usage-test"})
+	result, _ := executeCommand(t, runCmd, []string{"multi-usage-test"})
 
 	// Should fail at connection (params processed successfully)
 	assert.False(t, result["ok"].(bool))
@@ -971,7 +990,7 @@ func TestIntegration_EmptyStringParameter(t *testing.T) {
 	runCmd := createPresetRunCmdForTest()
 	runCmd.Flags().Set("param", "middleName=") // Empty value
 
-	result := executeCommand(t, runCmd, []string{"empty-string-test"})
+	result, _ := executeCommand(t, runCmd, []string{"empty-string-test"})
 
 	// Should fail at connection, not at parameter validation
 	assert.False(t, result["ok"].(bool))

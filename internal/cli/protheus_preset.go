@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Mario-pereyra/mapj/internal/auth"
+	"github.com/Mario-pereyra/mapj/internal/errors"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/Mario-pereyra/mapj/internal/preset"
 	"github.com/Mario-pereyra/mapj/pkg/protheus"
@@ -44,8 +45,8 @@ func initPresetStore() error {
 // ======================== PRESET SUBCOMMAND ========================
 
 var protheusPresetCmd = &cobra.Command{
-	Use:   "preset",
-	Short: "Manage saved query presets with parameters",
+	Use:            "preset",
+	Short:          "Manage saved query presets with parameters",
 	Long: `Manage saved query presets with parameters.
 
 Presets allow you to save frequently used queries with parameter definitions.
@@ -63,6 +64,8 @@ SUBCOMMANDS:
   preset use <name>       Set a preset as active
 
 Run 'mapj protheus preset <command> --help' for full output schema.`,
+	SilenceUsage:   true, // Prevent Cobra from printing usage after we output JSON error
+	SilenceErrors:  true, // Prevent Cobra from printing error after we output JSON
 }
 
 // ======================== ADD SUBCOMMAND ========================
@@ -110,8 +113,10 @@ EXAMPLES:
     --description "Query users by name or ID" \\
     --tags "report,users" \\
     --use`,
-	Args: cobra.ExactArgs(1),
-	RunE: presetAddRun,
+	Args:            cobra.ExactArgs(1),
+	SilenceUsage:    true, // Prevent Cobra from printing usage after we output JSON error
+	SilenceErrors:   true, // Prevent Cobra from printing error after we output JSON
+	RunE:            presetAddRun,
 }
 
 var (
@@ -140,7 +145,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 			false,
 		)
 		fmt.Fprintln(out, formatter.Format(env))
-		return nil
+		return &errors.UsageError{Msg: "missing required flag: --query"}
 	}
 
 	// Validate name is not empty
@@ -153,7 +158,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 			false,
 		)
 		fmt.Fprintln(out, formatter.Format(env))
-		return nil
+		return &errors.UsageError{Msg: "preset name cannot be empty"}
 	}
 
 	// Initialize store
@@ -181,7 +186,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 			false,
 		)
 		fmt.Fprintln(out, formatter.Format(env))
-		return nil
+		return &errors.UsageError{Msg: fmt.Sprintf("preset '%s' already exists", name)}
 	}
 
 	// Detect parameters from query
@@ -203,7 +208,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 			false,
 		)
 		fmt.Fprintln(out, formatter.Format(env))
-		return nil
+		return &errors.UsageError{Msg: "invalid parameter names detected"}
 	}
 
 	// Parse param-def flags
@@ -220,7 +225,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 				false,
 			)
 			fmt.Fprintln(out, formatter.Format(env))
-			return nil
+			return &errors.UsageError{Msg: "invalid --param-def format"}
 		}
 		paramDefs = append(paramDefs, def)
 	}
@@ -1456,8 +1461,9 @@ func init() {
 	presetAddCmd.Flags().StringVar(&presetAddTags, "tags", "", "Comma-separated tags")
 	presetAddCmd.Flags().BoolVar(&presetAddUse, "use", false, "Set this preset as active immediately")
 
-	// Mark query as required (for help text, actual validation done in RunE for better error messages)
-	presetAddCmd.MarkFlagRequired("query")
+	// NOTE: We do NOT use MarkFlagRequired("query") here because Cobra would intercept
+	// the error and output raw text instead of our JSON error envelope.
+	// The validation is done in presetAddRun which outputs a proper JSON error.
 
 	// Add flags for preset list command
 	presetListCmd.Flags().StringVar(&presetListTag, "tag", "", "Filter presets by tag")

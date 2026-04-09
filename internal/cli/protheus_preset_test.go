@@ -41,7 +41,9 @@ func createTestStore(t *testing.T) *preset.PresetStore {
 }
 
 // executePresetAdd executes the preset add command with given args and returns the JSON output.
-func executePresetAdd(t *testing.T, store *preset.PresetStore, args []string, flags testFlags) map[string]any {
+// For success cases, use executePresetAddSuccess.
+// For error cases, use executePresetAddError.
+func executePresetAdd(t *testing.T, store *preset.PresetStore, args []string, flags testFlags) (map[string]any, error) {
 	// Set output format to LLM (JSON) for testing
 	originalFormat := outputFormat
 	outputFormat = "llm"
@@ -84,19 +86,31 @@ func executePresetAdd(t *testing.T, store *preset.PresetStore, args []string, fl
 
 	// Execute
 	err := cmd.Execute()
-	// Commands return nil even for "expected errors" (they output JSON errors instead)
-	require.NoError(t, err, "Command execution should not return Go errors")
 
 	// Parse JSON output
 	output := strings.TrimSpace(buf.String())
 	if output == "" {
-		return nil
+		return nil, err
 	}
 
 	var result map[string]any
-	err = json.Unmarshal([]byte(output), &result)
-	require.NoError(t, err, "Output should be valid JSON: %s", output)
+	jsonErr := json.Unmarshal([]byte(output), &result)
+	require.NoError(t, jsonErr, "Output should be valid JSON: %s", output)
 
+	return result, err
+}
+
+// executePresetAddSuccess is a helper for success cases - expects no error.
+func executePresetAddSuccess(t *testing.T, store *preset.PresetStore, args []string, flags testFlags) map[string]any {
+	result, err := executePresetAdd(t, store, args, flags)
+	require.NoError(t, err, "Expected success but got error")
+	return result
+}
+
+// executePresetAddError is a helper for error cases - expects an error.
+func executePresetAddError(t *testing.T, store *preset.PresetStore, args []string, flags testFlags) map[string]any {
+	result, err := executePresetAdd(t, store, args, flags)
+	require.Error(t, err, "Expected error but got success")
 	return result
 }
 
@@ -113,9 +127,11 @@ func createPresetAddCmdForTest() *cobra.Command {
 	var use bool
 
 	cmd := &cobra.Command{
-		Use:   "add <name>",
-		Short: "Create a new query preset",
-		Args:  cobra.ExactArgs(1),
+		Use:            "add <name>",
+		Short:          "Create a new query preset",
+		Args:           cobra.ExactArgs(1),
+		SilenceUsage:   true, // Match production behavior
+		SilenceErrors:  true, // Match production behavior
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Copy local values to global for presetAddRun to use
 			presetAddQuery = query
@@ -148,7 +164,7 @@ func createPresetAddCmdForTest() *cobra.Command {
 func TestPresetAddSuccess(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"test-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"test-preset"}, testFlags{
 		query: "SELECT 1",
 	})
 
@@ -181,7 +197,7 @@ func TestPresetAddSuccess(t *testing.T) {
 func TestPresetAddWithOptionalFields(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"full-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"full-preset"}, testFlags{
 		query:       "SELECT :name FROM users WHERE id = :id",
 		description: "Test preset with params",
 		connection:  "protheus_prod",
@@ -222,8 +238,8 @@ func TestPresetAddWithOptionalFields(t *testing.T) {
 func TestPresetAddMissingQuery(t *testing.T) {
 	store := createTestStore(t)
 
-	// Not providing query flag
-	result := executePresetAdd(t, store, []string{"missing-query-preset"}, testFlags{})
+	// Not providing query flag - expects error with non-zero exit code
+	result := executePresetAddError(t, store, []string{"missing-query-preset"}, testFlags{})
 
 	require.NotNil(t, result)
 	assert.False(t, result["ok"].(bool))
@@ -254,7 +270,7 @@ func TestPresetAddDuplicateName(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to add duplicate
-	result := executePresetAdd(t, store, []string{"existing-preset"}, testFlags{
+	result := executePresetAddError(t, store, []string{"existing-preset"}, testFlags{
 		query: "SELECT duplicate",
 	})
 
@@ -276,7 +292,7 @@ func TestPresetAddDuplicateName(t *testing.T) {
 func TestPresetAddInvalidParamDef(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"invalid-param-preset"}, testFlags{
+	result := executePresetAddError(t, store, []string{"invalid-param-preset"}, testFlags{
 		query:     "SELECT :param",
 		paramDefs: []string{"invalid-format"}, // Missing type
 	})
@@ -295,7 +311,7 @@ func TestPresetAddInvalidParamDef(t *testing.T) {
 func TestPresetAddInvalidParamType(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"invalid-type-preset"}, testFlags{
+	result := executePresetAddError(t, store, []string{"invalid-type-preset"}, testFlags{
 		query:     "SELECT :param",
 		paramDefs: []string{"param:invalidtype"}, // Invalid type
 	})
@@ -313,7 +329,7 @@ func TestPresetAddInvalidParamType(t *testing.T) {
 func TestPresetAddDetectsParameters(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"auto-detect-params"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"auto-detect-params"}, testFlags{
 		query: "SELECT :name, :age FROM users WHERE :active = 1",
 	})
 
@@ -331,7 +347,7 @@ func TestPresetAddDetectsParameters(t *testing.T) {
 func TestPresetAddParameterDetectionWithInvalidNames(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"invalid-param-names"}, testFlags{
+	result := executePresetAddError(t, store, []string{"invalid-param-names"}, testFlags{
 		query: "SELECT :valid_param, :invalid-param FROM table",
 	})
 
@@ -344,7 +360,7 @@ func TestPresetAddParameterDetectionWithInvalidNames(t *testing.T) {
 func TestPresetAddTagsParsing(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"tags-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"tags-preset"}, testFlags{
 		query: "SELECT 1",
 		tags:  "tag1,tag2,tag3",
 	})
@@ -363,7 +379,7 @@ func TestPresetAddTagsParsing(t *testing.T) {
 func TestPresetAddUseFlag(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"active-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"active-preset"}, testFlags{
 		query: "SELECT 1",
 		use:   true,
 	})
@@ -377,7 +393,7 @@ func TestPresetAddUseFlag(t *testing.T) {
 func TestPresetAddEmptyName(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{""}, testFlags{
+	result := executePresetAddError(t, store, []string{""}, testFlags{
 		query: "SELECT 1",
 	})
 
@@ -392,7 +408,7 @@ func TestPresetAddTimestamps(t *testing.T) {
 	store := createTestStore(t)
 	startTime := time.Now()
 
-	result := executePresetAdd(t, store, []string{"timestamp-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"timestamp-preset"}, testFlags{
 		query: "SELECT 1",
 	})
 
@@ -418,7 +434,7 @@ func TestPresetAddTimestamps(t *testing.T) {
 func TestPresetAddMaxRowsFlag(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"maxrows-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"maxrows-preset"}, testFlags{
 		query:   "SELECT 1",
 		maxRows: 1000,
 	})
@@ -521,7 +537,7 @@ func TestParseParamDefInvalid(t *testing.T) {
 func TestPresetAddOutputFormat(t *testing.T) {
 	store := createTestStore(t)
 
-	result := executePresetAdd(t, store, []string{"format-preset"}, testFlags{
+	result := executePresetAddSuccess(t, store, []string{"format-preset"}, testFlags{
 		query: "SELECT 1",
 	})
 
@@ -535,8 +551,8 @@ func TestPresetAddOutputFormat(t *testing.T) {
 func TestPresetAddErrorFormat(t *testing.T) {
 	store := createTestStore(t)
 
-	// Missing --query
-	result := executePresetAdd(t, store, []string{"error-preset"}, testFlags{})
+	// Missing --query - expects error with non-zero exit code
+	result := executePresetAddError(t, store, []string{"error-preset"}, testFlags{})
 
 	require.NotNil(t, result)
 	// Verify error envelope structure
