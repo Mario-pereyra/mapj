@@ -1,0 +1,89 @@
+{
+  "groupId": "group1",
+  "testedAt": "2026-04-09T01:07:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "connectionProfile": "TOTALPEC_DES",
+    "presetPrefix": "g1-"
+  },
+  "toolsUsed": ["bash", "cli"],
+  "assertions": [
+    {
+      "id": "VAL-PARAM-009",
+      "title": "List Type Conversion",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with list parameter for IN clause", "expected": "Preset created with list type parameter", "observed": "Preset created successfully with filials parameter" },
+        { "action": "Run preset with CSV value '01,02,03'", "expected": "IN clause generated correctly", "observed": "params_used shows filials: '01,02,03', query executed successfully" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group1/VAL-PARAM-009-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-010",
+      "title": "String Escaping - Quotes",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with string parameter", "expected": "Preset created", "observed": "Preset created with name parameter" },
+        { "action": "Run preset with quote-containing value 'O'Brien'", "expected": "Quotes escaped correctly in output", "observed": "Query executed successfully, value shows escaping handled correctly" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group1/VAL-PARAM-010-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-011",
+      "title": "Data Preservation After Escaping",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with special characters 'O'Brien'", "expected": "Original data preserved in results", "observed": "rows returned [['O'Brien']] - original value preserved after escaping" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group1/VAL-PARAM-011-quote.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-017",
+      "title": "Default Values Usage",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with default value 'DEFAULT_VALUE'", "expected": "Preset created with default", "observed": "Preset created with val parameter having default 'DEFAULT_VALUE'" },
+        { "action": "Run preset without providing parameter", "expected": "Default value used", "observed": "rows returned [['DEFAULT_VALUE']] - default was used" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group1/VAL-PARAM-017-default.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-PARAM-018",
+      "title": "Default Values Override",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset with explicit value 'OVERRIDE_VALUE'", "expected": "Explicit value overrides default", "observed": "rows returned [['OVERRIDE_VALUE']] - override value used instead of default" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group1/VAL-PARAM-018-override.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed, 0 failed, 0 blocked, 0 skipped. All parameter execution tests passed with real Protheus database connection."
+}

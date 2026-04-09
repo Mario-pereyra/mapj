@@ -1,66 +1,44 @@
 {
   "milestone": "preset-crud",
-  "round": 3,
+  "round": 4,
   "status": "fail",
   "assertionsSummary": {
-    "total": 87,
-    "passed": 72,
-    "failed": 0,
-    "blocked": 15
+    "total": 15,
+    "passed": 14,
+    "failed": 1,
+    "blocked": 0
   },
   "passedAssertions": [
-    "VAL-STORAGE-001", "VAL-STORAGE-002", "VAL-STORAGE-003", "VAL-STORAGE-004", "VAL-STORAGE-005", "VAL-STORAGE-006", "VAL-STORAGE-007",
-    "VAL-STORAGE-008", "VAL-STORAGE-009", "VAL-STORAGE-010", "VAL-STORAGE-011", "VAL-STORAGE-012", "VAL-STORAGE-013", "VAL-STORAGE-014", "VAL-STORAGE-015",
-    "VAL-PARAM-001", "VAL-PARAM-002", "VAL-PARAM-003", "VAL-PARAM-004", "VAL-PARAM-005", "VAL-PARAM-006", "VAL-PARAM-007", "VAL-PARAM-008",
-    "VAL-PARAM-012", "VAL-PARAM-013", "VAL-PARAM-014", "VAL-PARAM-015", "VAL-PARAM-016",
-    "VAL-PARAM-019", "VAL-PARAM-020", "VAL-PARAM-021", "VAL-PARAM-022", "VAL-PARAM-023", "VAL-PARAM-024", "VAL-PARAM-025",
-    "VAL-CLI-001", "VAL-CLI-002", "VAL-CLI-003", "VAL-CLI-004", "VAL-CLI-005", "VAL-CLI-006", "VAL-CLI-007", "VAL-CLI-008", "VAL-CLI-009",
-    "VAL-CLI-015", "VAL-CLI-016",
-    "VAL-CLI-019", "VAL-CLI-020", "VAL-CLI-021", "VAL-CLI-022", "VAL-CLI-023", "VAL-CLI-024", "VAL-CLI-025", "VAL-CLI-026", "VAL-CLI-027",
-    "VAL-CLI-028", "VAL-CLI-029", "VAL-CLI-030", "VAL-CLI-031", "VAL-CLI-032", "VAL-CLI-033", "VAL-CLI-034",
-    "VAL-CLI-035", "VAL-CLI-036", "VAL-CLI-037", "VAL-CLI-038", "VAL-CLI-039", "VAL-CLI-040",
-    "VAL-CROSS-002", "VAL-CROSS-003", "VAL-CROSS-004", "VAL-CROSS-006"
+    "VAL-PARAM-009",
+    "VAL-PARAM-010",
+    "VAL-PARAM-011",
+    "VAL-PARAM-017",
+    "VAL-PARAM-018",
+    "VAL-CLI-010",
+    "VAL-CLI-011",
+    "VAL-CLI-012",
+    "VAL-CLI-013",
+    "VAL-CLI-014",
+    "VAL-CLI-018",
+    "VAL-CROSS-001",
+    "VAL-CROSS-005",
+    "VAL-CROSS-007"
   ],
-  "failedAssertions": [],
-  "blockedAssertions": [
-    { "id": "VAL-PARAM-009", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-PARAM-010", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-PARAM-011", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-PARAM-017", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-PARAM-018", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-010", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-011", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-012", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-013", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-014", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-017", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CLI-018", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CROSS-001", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CROSS-005", "blockedBy": "No Protheus database connection available - precondition not met" },
-    { "id": "VAL-CROSS-007", "blockedBy": "No Protheus database connection available - precondition not met" }
+  "failedAssertions": [
+    {
+      "id": "VAL-CLI-017",
+      "reason": "Error code mismatch: assertion expects CONNECTION_FAILED with retryable:true for connection failures, but test with non-existent profile produces CONNECTION_NOT_FOUND with retryable:false. The distinction is semantically correct (CONNECTION_NOT_FOUND for non-existent profiles, CONNECTION_FAILED for actual connection failures), but the assertion's test method doesn't match the expected behavior."
+    }
   ],
+  "blockedAssertions": [],
   "appliedUpdates": [],
-  "previousRound": null,
-  "setupBlocker": {
-    "precondition": "User has VPN connection to Protheus network active and database connection configured",
-    "actualState": {
-      "protheusAuthenticated": false,
-      "profilesRegistered": 0,
-      "vpnConnection": "unknown - cannot verify from CLI"
-    },
-    "verificationCommands": [
-      { "command": ".\\mapj.exe auth status --json", "exitCode": 0, "observation": "protheus.authenticated: false" },
-      { "command": ".\\mapj.exe protheus connection list --json", "exitCode": 0, "observation": "NO_PROFILES error - no Protheus profiles registered" }
-    ],
-    "requiredAction": "User must: 1) Connect to VPN, 2) Register Protheus connection profile using 'mapj protheus connection add <name> --server ... --database ... --user ... --password ...'"
-  },
+  "previousRound": ".factory/validation/preset-crud/user-testing/synthesis.json (round 3)",
   "notes": [
-    "Round 3: Attempted to test 15 DB-dependent assertions for user-testing-validator-db-connection feature",
-    "PRECONDITIONS NOT MET: Feature stated user has VPN and DB connection active, but verification shows no connection configured",
-    "mapj auth status shows protheus.authenticated: false",
-    "No Protheus connection profiles registered (NO_PROFILES error)",
-    "Cannot proceed with testing without real database connection",
-    "15 assertions remain blocked pending user action to configure database connection"
+    "Round 4: Preconditions now met - Protheus connection configured and authenticated",
+    "Group 1 (VAL-PARAM-009,010,011,017,018): All 5 passed - parameter execution tests verified with real DB",
+    "Group 2 (VAL-CLI-010,011,012,013,014): All 5 passed - CLI preset run commands verified with real DB",
+    "Group 3 (VAL-CLI-017,018, VAL-CROSS-001,005,007): 4 passed, 1 failed",
+    "VAL-CLI-017 failure analysis: The implementation correctly differentiates between CONNECTION_NOT_FOUND (profile doesn't exist) and CONNECTION_FAILED (profile exists but connection fails). The assertion's expected behavior and test method need alignment."
   ],
-  "toolsUsed": ["powershell", "CLI"]
+  "toolsUsed": ["powershell", "mapj.exe CLI", "Task tool for flow validators"]
 }

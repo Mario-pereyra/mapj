@@ -1,0 +1,105 @@
+{
+  "groupId": "group3-cross",
+  "testedAt": "2026-04-09T01:05:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "connectionProfile": "TOTALPEC_DES",
+    "presetPrefix": "g3-"
+  },
+  "toolsUsed": ["bash", "mapj.exe CLI"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-017",
+      "title": "Preset Run - Connection Failed",
+      "status": "fail",
+      "steps": [
+        { "action": "Create preset with fake connection FAKE_PROFILE", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run preset with non-existent connection", "expected": "Error with code CONNECTION_FAILED, retryable: true", "observed": "Error with code CONNECTION_NOT_FOUND, retryable: false" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI local execution",
+        "files": ["evidence/preset-crud/group3/VAL-CLI-017-nonexistent-profile.txt", "evidence/preset-crud/group3/VAL-CLI-017-bad-connection.txt"]
+      },
+      "issues": "Error code mismatch: assertion expects CONNECTION_FAILED with retryable: true, but CONNECTION_NOT_FOUND with retryable: false was returned. The distinction matters: CONNECTION_NOT_FOUND is for non-existent profile, CONNECTION_FAILED is for when profile exists but connection attempt fails. The test method in the assertion (using non-existent profile) produces the wrong error code for the expected behavior."
+    },
+    {
+      "id": "VAL-CLI-018",
+      "title": "Preset Run - Query Validation Failed",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with INSERT query", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run INSERT preset", "expected": "Error with code QUERY_VALIDATION_FAILED", "observed": "Error code QUERY_VALIDATION_FAILED, message: 'query must start with SELECT, WITH, or EXEC'" },
+        { "action": "Create preset with UPDATE query", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run UPDATE preset", "expected": "Error with code QUERY_VALIDATION_FAILED", "observed": "Error code QUERY_VALIDATION_FAILED, same validation message" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "N/A - CLI local execution",
+        "files": ["evidence/preset-crud/group3/VAL-CLI-018-insert-validation.txt", "evidence/preset-crud/group3/VAL-CLI-018-update-validation.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-001",
+      "title": "Full Create and Execute Flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with typed params (name:string, age:int)", "expected": "Preset created with parameters", "observed": "Preset created with detectedParameters: [name, age] and parameter definitions" },
+        { "action": "Inspect preset with show command", "expected": "Display preset details including parameters", "observed": "JSON output with all fields including parameters array" },
+        { "action": "Run preset with param values", "expected": "Query executes, parameters substituted, results in stdout", "observed": "Query executed successfully, params_used shows substitution, rows returned with correct values" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "SQL query to Protheus database via TOTALPEC_DES connection",
+        "files": ["evidence/preset-crud/group3/VAL-CROSS-001-full-flow.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-005",
+      "title": "Connection Profile Integration",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with saved connection", "expected": "Preset uses saved connection", "observed": "connection_used: TOTALPEC_DES from preset" },
+        { "action": "Create preset without connection (fallback)", "expected": "Uses active profile", "observed": "connection_used: TOTALPEC_DES from active profile" },
+        { "action": "Run with --connection override", "expected": "Uses override connection", "observed": "connection_used: TOTALPEC_DES from --connection flag" },
+        { "action": "Run with non-existent --connection", "expected": "Error for non-existent profile", "observed": "Error code CONNECTION_NOT_FOUND with clear message" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "SQL queries to Protheus database",
+        "files": ["evidence/preset-crud/group3/VAL-CROSS-005-connection-integration.txt"]
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CROSS-007",
+      "title": "Complex Types Flow",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset with list parameter", "expected": "Preset created with list type", "observed": "Parameter type: list, required: true" },
+        { "action": "Run list preset with CSV value", "expected": "List processed correctly", "observed": "CSV '1,2,3' returned as separate values in result" },
+        { "action": "Run IN clause with list parameter", "expected": "IN clause generated correctly", "observed": "Query 'WHERE 1 IN (:ids)' with ids='1,2,3' returned row with id=1" },
+        { "action": "Create preset with datetime parameter", "expected": "Preset created with datetime type", "observed": "Parameter type: datetime, required: true" },
+        { "action": "Run datetime preset with valid value", "expected": "Datetime accepted", "observed": "Datetime '2026-04-09 10:30:00' processed and returned correctly" },
+        { "action": "Run datetime preset with invalid value", "expected": "Validation error", "observed": "Error code TYPE_MISMATCH with clear format hint" }
+      ],
+      "evidence": {
+        "screenshots": [],
+        "consoleErrors": "none",
+        "network": "SQL queries to Protheus database",
+        "files": ["evidence/preset-crud/group3/VAL-CROSS-007-complex-types.txt"]
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 4 passed, 1 failed (VAL-CLI-017: error code mismatch - expected CONNECTION_FAILED but got CONNECTION_NOT_FOUND when testing with non-existent profile)"
+}

@@ -1,0 +1,99 @@
+{
+  "groupId": "group2",
+  "testedAt": "2026-04-09T01:05:00Z",
+  "isolation": {
+    "cliBinary": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli\\mapj.exe",
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "connectionProfile": "TOTALPEC_DES",
+    "presetPrefix": "g2-"
+  },
+  "toolsUsed": ["bash", "cli"],
+  "assertions": [
+    {
+      "id": "VAL-CLI-010",
+      "title": "Preset Run - Success",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-basic-run with simple query", "expected": "Preset created successfully", "observed": "Preset created with exit code 0" },
+        { "action": "Run preset g2-basic-run", "expected": "Exit code 0, JSON with rows and metadata", "observed": "Exit code 0, JSON with columns, connection_used, count, params_used, rows" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group2/VAL-CLI-010-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-011",
+      "title": "Preset Run - With Parameters",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-params-run with two parameters (name:string, age:int)", "expected": "Preset created with detected parameters", "observed": "Preset created with parameters marked as required" },
+        { "action": "Run preset with --param name='John Doe' --param age=30", "expected": "JSON includes params_used, correct substitution applied", "observed": "params_used: {name:'John Doe', age:'30'}, rows contain substituted values ['John Doe', 30]" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group2/VAL-CLI-011-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-012",
+      "title": "Preset Run - Override Connection",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-conn-test without connection", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run preset with --connection TOTALPEC_DES", "expected": "JSON shows connection_used as override value", "observed": "connection_used: 'TOTALPEC_DES' in output" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group2/VAL-CLI-012-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-013",
+      "title": "Preset Run - Max Rows Limit",
+      "status": "pass",
+      "steps": [
+        { "action": "Create preset g2-maxrows-test querying SA1010 table", "expected": "Preset created", "observed": "Preset created successfully" },
+        { "action": "Run preset with --max-rows 100", "expected": "row_count <= 100, truncated flag if applicable", "observed": "count: 100 (exactly at limit), rows array contains 100 items" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group2/VAL-CLI-013-output.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-CLI-014",
+      "title": "Preset Run - Output to File",
+      "status": "pass",
+      "steps": [
+        { "action": "Run preset g2-basic-run with --output-file g2-output-test.json", "expected": "File exists with valid content, stdout shows summary", "observed": "File created at specified path, stdout shows summary (columns, rows count, output_file path)" },
+        { "action": "Verify output file content", "expected": "Valid JSON with full query results", "observed": "File contains valid JSON with columns, rows, and count" }
+      ],
+      "evidence": {
+        "stdoutOutput": "preset-crud/group2/VAL-CLI-014-stdout.txt",
+        "outputFileContent": "preset-crud/group2/VAL-CLI-014-output-file.txt",
+        "exitCode": 0,
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "Initial query with reserved keyword 'current_time' failed - SQL Server doesn't support this syntax",
+      "resolved": true,
+      "resolution": "Changed query to use simpler column expressions without reserved keywords",
+      "affectedAssertions": ["VAL-CLI-010"]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 5 assertions: 5 passed, 0 failed, 0 blocked, 0 skipped. All CLI preset run operations work as specified."
+}
