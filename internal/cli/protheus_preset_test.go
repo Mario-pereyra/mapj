@@ -150,7 +150,7 @@ func createPresetAddCmdForTest() *cobra.Command {
 	cmd.Flags().StringVar(&description, "description", "", "Description of the preset")
 	cmd.Flags().StringVar(&connection, "connection", "", "Default connection profile to use")
 	cmd.Flags().IntVar(&maxRows, "max-rows", 0, "Default max rows limit (0 = no limit)")
-	cmd.Flags().StringArrayVar(&paramDefs, "param-def", nil, "Parameter definition (repeatable): name:type[:default][:description]")
+	cmd.Flags().StringArrayVar(&paramDefs, "param-def", nil, "Parameter definition (repeatable): name|type|default|description")
 	cmd.Flags().StringVar(&tags, "tags", "", "Comma-separated tags")
 	cmd.Flags().BoolVar(&use, "use", false, "Set this preset as active immediately")
 
@@ -201,7 +201,7 @@ func TestPresetAddWithOptionalFields(t *testing.T) {
 		query:       "SELECT :name FROM users WHERE id = :id",
 		description: "Test preset with params",
 		connection:  "protheus_prod",
-		paramDefs:   []string{"name:string::User name", "id:int:0:User ID"},
+		paramDefs:   []string{"name|string||User name", "id|int|0|User ID"},
 		tags:        "report,daily",
 		use:         true,
 	})
@@ -305,7 +305,7 @@ func TestPresetAddInvalidParamDef(t *testing.T) {
 
 	// Verify hint shows correct format
 	hint := errorData["hint"].(string)
-	assert.Contains(t, hint, "name:type")
+	assert.Contains(t, hint, "name|type")
 }
 
 func TestPresetAddInvalidParamType(t *testing.T) {
@@ -455,7 +455,7 @@ func TestParseParamDefValid(t *testing.T) {
 		expected preset.ParamDef
 	}{
 		{
-			input: "name:string",
+			input: "name|string",
 			expected: preset.ParamDef{
 				Name:     "name",
 				Type:     "string",
@@ -463,7 +463,7 @@ func TestParseParamDefValid(t *testing.T) {
 			},
 		},
 		{
-			input: "id:int:0",
+			input: "id|int|0",
 			expected: preset.ParamDef{
 				Name:     "id",
 				Type:     "int",
@@ -472,7 +472,7 @@ func TestParseParamDefValid(t *testing.T) {
 			},
 		},
 		{
-			input: "date:date::",
+			input: "date|date|",
 			expected: preset.ParamDef{
 				Name:     "date",
 				Type:     "date",
@@ -480,7 +480,7 @@ func TestParseParamDefValid(t *testing.T) {
 			},
 		},
 		{
-			input: "name:string::User name",
+			input: "name|string||User name",
 			expected: preset.ParamDef{
 				Name:        "name",
 				Type:        "string",
@@ -489,13 +489,53 @@ func TestParseParamDefValid(t *testing.T) {
 			},
 		},
 		{
-			input: "status:bool:true:Is active",
+			input: "status|bool|true|Is active",
 			expected: preset.ParamDef{
 				Name:        "status",
 				Type:        "bool",
 				Required:    false,
 				Default:     "true",
 				Description: "Is active",
+			},
+		},
+		// VAL-PARAM-019: Datetime defaults with colons
+		{
+			input: "ts|datetime|2024-01-01T10:00:00",
+			expected: preset.ParamDef{
+				Name:     "ts",
+				Type:     "datetime",
+				Required: false,
+				Default:  "2024-01-01T10:00:00",
+			},
+		},
+		{
+			input: "ts|datetime|2024-01-01T10:00:00|Created at timestamp",
+			expected: preset.ParamDef{
+				Name:        "ts",
+				Type:        "datetime",
+				Required:    false,
+				Default:     "2024-01-01T10:00:00",
+				Description: "Created at timestamp",
+			},
+		},
+		// URL defaults with colons and slashes
+		{
+			input: "url|string|http://example.com",
+			expected: preset.ParamDef{
+				Name:     "url",
+				Type:     "string",
+				Required: false,
+				Default:  "http://example.com",
+			},
+		},
+		{
+			input: "endpoint|string|https://api.example.com:8080/v1|API endpoint URL",
+			expected: preset.ParamDef{
+				Name:        "endpoint",
+				Type:        "string",
+				Required:    false,
+				Default:     "https://api.example.com:8080/v1",
+				Description: "API endpoint URL",
 			},
 		},
 	}

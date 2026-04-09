@@ -98,7 +98,7 @@ FLAGS:
   --connection NAME    Optional default connection profile to use
   --max-rows N         Optional default max rows limit
   --param-def DEF      Parameter definition (repeatable)
-                       Format: name:type[:default][:description]
+                       Format: name|type|default|description
                        Types: string, int, date, datetime, bool, list
   --tags TAGS          Comma-separated tags (e.g., "report,daily")
   --use                Set this preset as active immediately
@@ -221,7 +221,7 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 				cmd.CommandPath(),
 				"INVALID_PARAM_DEF",
 				fmt.Sprintf("invalid --param-def format: %s", err.Error()),
-				"Format: name:type[:default][:description] (types: string, int, date, datetime, bool, list)",
+				"Format: name|type|default|description (types: string, int, date, datetime, bool, list)",
 				false,
 			)
 			fmt.Fprintln(out, formatter.Format(env))
@@ -339,10 +339,11 @@ func presetAddRun(cmd *cobra.Command, args []string) error {
 }
 
 // parseParamDef parses a parameter definition string.
-// Format: name:type[:default][:description]
+// Format: name|type[|default][|description]
 // VAL-CLI-005: Invalid param definition returns error
+// VAL-PARAM-019: Uses | as delimiter to support datetime/URL defaults with colons
 func parseParamDef(s string) (preset.ParamDef, error) {
-	parts := strings.Split(s, ":")
+	parts := strings.Split(s, "|")
 
 	// Must have at least name and type
 	if len(parts) < 2 {
@@ -1017,7 +1018,7 @@ FLAGS:
   --connection NAME    Update the default connection profile
   --max-rows N         Update the default max rows limit
   --param-def DEF      Replace parameter definitions (repeatable)
-                       Format: name:type[:default][:description]
+                       Format: name|type|default|description
   --tags TAGS          Replace tags (comma-separated)
 
 EXAMPLES:
@@ -1148,7 +1149,7 @@ func presetEditRun(cmd *cobra.Command, args []string) error {
 					cmd.CommandPath(),
 					"INVALID_PARAM_DEF",
 					fmt.Sprintf("invalid --param-def format: %s", err.Error()),
-					"Format: name:type[:default][:description] (types: string, int, date, datetime, bool, list)",
+					"Format: name|type|default|description (types: string, int, date, datetime, bool, list)",
 					false,
 				)
 				fmt.Fprintln(out, formatter.Format(env))
@@ -1458,7 +1459,7 @@ func init() {
 	presetAddCmd.Flags().StringVar(&presetAddDescription, "description", "", "Description of the preset")
 	presetAddCmd.Flags().StringVar(&presetAddConnection, "connection", "", "Default connection profile to use")
 	presetAddCmd.Flags().IntVar(&presetAddMaxRows, "max-rows", 0, "Default max rows limit (0 = no limit)")
-	presetAddCmd.Flags().StringArrayVar(&presetAddParamDefs, "param-def", nil, "Parameter definition (repeatable): name:type[:default][:description]")
+	presetAddCmd.Flags().StringArrayVar(&presetAddParamDefs, "param-def", nil, "Parameter definition (repeatable): name|type|default|description")
 	presetAddCmd.Flags().StringVar(&presetAddTags, "tags", "", "Comma-separated tags")
 	presetAddCmd.Flags().BoolVar(&presetAddUse, "use", false, "Set this preset as active immediately")
 

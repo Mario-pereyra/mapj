@@ -124,8 +124,8 @@ func TestIntegration_FullCreateAndExecuteFlow(t *testing.T) {
 	addCmd := createPresetAddCmdForTest()
 	addCmd.Flags().Set("query", "SELECT * FROM users WHERE name = :name AND age > :minAge")
 	addCmd.Flags().Set("description", "Query users by name and minimum age")
-	addCmd.Flags().Set("param-def", "name:string::User name to search")
-	addCmd.Flags().Set("param-def", "minAge:int:0:Minimum age filter")
+	addCmd.Flags().Set("param-def", "name|string||User name to search")
+	addCmd.Flags().Set("param-def", "minAge|int|0|Minimum age filter")
 	addCmd.Flags().Set("tags", "users,search")
 	addCmd.Flags().Set("use", "true")
 
