@@ -1,166 +1,151 @@
-# Architecture
+# mapj CLI Architecture
 
-How the preset system works - components, relationships, data flows.
+## Overview
 
----
+mapj is a CLI tool for the TOTVS ecosystem that provides:
+1. TDN (TOTVS Developer Network) documentation search
+2. Confluence page export to Markdown
+3. Protheus ERP SQL Server query execution
+4. Query presets with parameter interpolation
 
-## System Overview
+## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        CLI Layer                                │
-│  protheus_preset.go - Cobra commands (add/list/run/show/etc)   │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │
-┌───────────────────────────────▼─────────────────────────────────┐
-│                     Business Layer                              │
-│  preset/store.go - Persistence (Load/Save)                      │
-│  preset/params.go - Detection & Validation                      │
-│  preset/escape.go - SQL Security                                │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │
-┌───────────────────────────────▼─────────────────────────────────┐
-│                     Data Layer                                  │
-│  ~/.config/mapj/presets.json - JSON file storage               │
-│  QueryPreset, ParamDef, PresetFile structures                   │
-└─────────────────────────────────────────────────────────────────┘
+mapj (CLI entry point)
+├── cli/           # Command definitions (clap)
+├── auth/          # Credential encryption/storage
+├── output/        # Response formatters
+├── tdn/           # TDN/Confluence API client
+├── confluence/    # HTML-to-Markdown conversion
+├── protheus/     # SQL Server client
+└── preset/        # Query preset storage
 ```
 
----
+## Data Flow
 
-## Data Structures
+### Authentication Flow
+1. User runs `mapj auth login <service> --token X`
+2. Credentials encrypted with AES-256-GCM
+3. Stored in `~/.config/mapj/credentials.enc`
+4. On subsequent commands, credentials decrypted and used
 
-### QueryPreset
-```go
-type QueryPreset struct {
-    Name        string      `json:"name"`
-    Description string      `json:"description,omitempty"`
-    Query       string      `json:"query"`
-    Connection  string      `json:"connection,omitempty"`
-    MaxRows     int         `json:"maxRows,omitempty"`
-    Parameters  []ParamDef  `json:"parameters,omitempty"` // slice preserves order
-    Tags        []string    `json:"tags,omitempty"`
-    CreatedAt   string      `json:"createdAt,omitempty"`
-    UpdatedAt   string      `json:"updatedAt,omitempty"`
+### TDN Search Flow
+1. User runs `mapj tdn search "query"`
+2. CLI builds CQL from flags
+3. HTTP request to Confluence API
+4. Results formatted (LLM/TOON/Auto) and returned
+
+### Confluence Export Flow
+1. User runs `mapj confluence export <url-or-id>`
+2. URL parsed to extract page ID
+3. Page fetched via Confluence REST API
+4. HTML converted to Markdown with YAML front matter
+5. Written to disk or stdout
+
+### Protheus Query Flow
+1. User runs `mapj protheus query "SELECT ..."`
+2. SQL validated (prefix, forbidden keywords, injection)
+3. Connection established via SQL Server driver
+4. Query executed with --max-rows limit
+5. Results formatted and returned
+
+### Preset System Flow
+1. User creates preset with `preset add --query "SELECT :param ..."`
+2. Parameters detected from `:placeholder` syntax
+3. Preset stored in `~/.config/mapj/presets.json`
+4. On `preset run`, parameters interpolated with escaping
+5. Final query executed against Protheus
+
+## Output Formats
+
+### Envelope Structure
+All commands return a JSON envelope:
+```json
+{
+  "ok": true,
+  "command": "mapj tdn search",
+  "result": {...}
 }
 ```
 
-### ParamDef
-```go
-type ParamDef struct {
-    Name        string `json:"name"`                  // parameter name (e.g., "user_id")
-    Type        string `json:"type"`                  // string, int, date, datetime, bool, list
-    Required    bool   `json:"required"`              // default: true
-    Default     string `json:"default,omitempty"`     // fallback value
-    Description string `json:"description,omitempty"` // human-readable
-    Pattern     string `json:"pattern,omitempty"`     // regex validation
+Error:
+```json
+{
+  "ok": false,
+  "command": "mapj tdn search",
+  "error": {
+    "code": "SEARCH_ERROR",
+    "message": "...",
+    "hint": "...",
+    "retryable": false
+  }
 }
 ```
 
-Note: Parameters uses a slice (not map) to preserve parameter order and ensure consistent JSON serialization.
+### TOON Format (Tabular Object Notation)
+Designed for ~40% token savings vs JSON:
 
-### PresetFile
-```go
-type PresetFile struct {
-    Presets       map[string]*QueryPreset `json:"presets"`
-    ActivePreset  string                  `json:"activePreset,omitempty"`
-}
+**Uniform object arrays** (same keys in all elements):
+```
+result[3]{id,name,status}:
+001,John,active
+002,Jane,inactive
+003,Bob,active
 ```
 
----
-
-## Data Flows
-
-### Add Preset Flow
+**Primitive arrays**:
 ```
-CLI add command
-    │
-    ├── Parse flags (--query, --param-def, --tags, etc.)
-    │
-    ├── DetectParameters(query) → ["param1", "param2"]
-    │
-    ├── Build QueryPreset with timestamps
-    │
-    └── PresetStore.Save()
-            │
-            ├── Create ~/.config/mapj/ if needed
-            ├── Write to temp file
-            ├── Rename to presets.json (atomic)
-            └── Set permissions 0600
+result[3]: 1,2,3
 ```
 
-### Run Preset Flow
+**Objects**:
 ```
-CLI run command
-    │
-    ├── PresetStore.Load() → QueryPreset
-    │
-    ├── Parse --param flags
-    │
-    ├── Validate all required params present
-    │
-    ├── For each param:
-    │       ├── ValidateParamType(value, type)
-    │       └── DetectSQLInjection(value)
-    │
-    ├── InterpolateQuery(query, params, paramDefs)
-    │       ├── EscapeStringValue() for strings
-    │       ├── EscapeListValue() for lists
-    │       └── Replace :placeholders with escaped values
-    │
-    ├── ValidateReadOnly(interpolatedQuery) ← existing check
-    │
-    └── protheus.Query() → QueryResult
+result:
+  id: "001"
+  name: "John"
+  status: "active"
 ```
 
----
-
-## Invariants
-
-1. **Atomic Writes**: presets.json is never in partial state
-2. **Type Safety**: All parameter values validated before interpolation
-3. **SQL Injection Defense**: Multiple detection layers before execution
-4. **Connection Priority**: CLI flag > preset saved > active profile > error
-5. **Timestamp Integrity**: createdAt set once, updatedAt refreshed on edits
-6. **Active Preset Cleanup**: Deleting active preset clears reference
-
----
-
-## Integration Points
-
-### With Existing Code
-- `pkg/protheus/query.go`: `ValidateReadOnly()` called post-interpolation
-- `pkg/protheus/query.go`: `Query()` used for execution
-- `internal/auth/store.go`: Connection profiles referenced by name
-- `internal/output/envelope.go`: All outputs use envelope format
-
-### Storage Location
-- Path: `~/.config/mapj/presets.json`
-- Permissions: `0600` (owner read/write only)
-- Format: JSON with indentation (human-readable)
-
----
+**Strings with special chars** are quoted and escaped.
 
 ## Security Model
 
-### SQL Injection Prevention (Defense in Depth)
+### SQL Injection Prevention
+1. Query must start with SELECT/WITH/EXEC only
+2. Forbidden keywords detected anywhere in query
+3. Semicolons (multiple statements) rejected
+4. Parameter values checked for injection patterns:
+   - Semicolons followed by dangerous keywords
+   - OR with always-true conditions
+   - UNION SELECT patterns
+   - Comment injection
 
-1. **Detection Layer**: Regex patterns detect:
-   - `; DROP`, `; DELETE`, etc.
-   - `OR 1=1`, `OR '1'='1'`
-   - `UNION SELECT`
-   - `--` comment injection
+### Credential Storage
+- AES-256-GCM encryption with 12-byte nonce
+- Key derived from machine (hostname + username) or MAPJ_ENCRYPTION_KEY env var
+- Never stored in plaintext
 
-2. **Escaping Layer**: Values escaped for SQL Server:
-   - `'` → `''` (quote doubling)
-   - List values individually escaped
+## File Locations
 
-3. **Validation Layer**: Post-interpolation:
-   - `ValidateReadOnly()` ensures SELECT/WITH/EXEC prefix
-   - Forbidden keywords checked anywhere in query
+| Purpose | Path |
+|---------|------|
+| Credentials (encrypted) | `~/.config/mapj/credentials.enc` |
+| Presets | `~/.config/mapj/presets.json` |
+| Config | `~/.config/mapj/config.toml` (optional) |
 
-### Error Handling
-- All errors have structured JSON format
-- Error codes are UPPER_SNAKE_CASE
-- Hints are actionable for agents and humans
-- `retryable` flag indicates recovery possible
+## Concurrency
+
+- Confluence exports use 10 concurrent workers
+- HTTP requests use connection pooling
+- SQL Server connections are pooled
+
+## Error Handling
+
+Exit codes:
+- 0: Success
+- 1: General error
+- 2: Usage error (invalid args, SQL validation)
+- 3: Auth error
+- 4: Retryable (network timeout, rate limit)
+
+All errors return structured JSON envelope with actionable hints.

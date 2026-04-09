@@ -1,172 +1,114 @@
-# User Testing
-
-Testing surface, required skills, and resource classification for preset system.
-
----
+# User Testing Guide for mapj CLI
 
 ## Validation Surface
 
-**Primary Surface:** CLI (Terminal)
+The mapj CLI is tested through its **CLI interface** only. There is no web UI or GUI.
 
-**Tools:** bash (command execution), jq (JSON validation)
+### Testing Tools Required
+- **Shell/CLI test runner**: Execute commands and capture output
+- **JSON parser**: Validate envelope structure
+- **File system inspection**: Verify exported files
 
-**No browser required** - Pure CLI testing
+### No External Services Required for Unit Tests
+Most tests can run without real Confluence/SQL Server connections:
+- Output formatters: Use mock data
+- SQL validation: Use mock queries
+- Parameter interpolation: Use mock databases
+- Preset CRUD: Use temp files
 
----
+### Integration Tests with Real Services
+Some tests require real connections:
+- TDN search: Requires network to tdn.totvs.com
+- Confluence export: Requires valid Confluence instance
+- Protheus query: Requires SQL Server connection
 
-## Required Testing Skills/Tools
+**When real services unavailable**: Use mock servers or skip with `--ignored` flag.
 
-| Tool | Purpose |
-|------|---------|
-| `bash` | Execute CLI commands |
-| `jq` | Parse and validate JSON output |
-| `diff` | Compare expected vs actual output |
+## Validation Concurrency
 
----
+**Max concurrent validators: 1**
+
+This is a CLI tool. Testing is sequential:
+1. Run `cargo test` to verify all unit tests pass
+2. Run integration tests manually if network available
+3. Verify binary builds successfully
+
+Each validation run is lightweight - just compiles and runs test suite.
+
+## Testing Checklist
+
+### Foundation
+- [ ] `mapj --version` returns "0.2.0-agentic"
+- [ ] `mapj --help` shows all commands
+- [ ] `mapj auth --help` shows auth subcommands
+- [ ] `mapj tdn --help` shows TDN subcommands
+- [ ] `mapj confluence --help` shows Confluence subcommands
+- [ ] `mapj protheus --help` shows Protheus subcommands
+
+### Output Formats
+- [ ] `--output json` produces compact JSON
+- [ ] `--output toon` produces tabular format
+- [ ] `--output auto` auto-detects format
+- [ ] `--json` takes precedence over `--output`
+- [ ] `--verbose` adds schemaVersion and timestamp
+- [ ] Error responses always JSON regardless of --output
+
+### Auth Commands
+- [ ] `mapj auth status` shows all services
+- [ ] Credentials stored encrypted (verify file not plaintext)
+- [ ] `mapj auth logout` removes credentials
+
+### TDN Search
+- [ ] `mapj tdn search "test"` returns results
+- [ ] `mapj tdn spaces list` returns spaces
+- [ ] `--max-results` limits results
+- [ ] `--check-children` adds childCount
+
+### Confluence Export
+- [ ] Numeric page ID exports correctly
+- [ ] URL parsing works for Cloud/Server formats
+- [ ] Markdown has YAML front matter
+- [ ] `--with-descendants` exports tree
+- [ ] Progress logged to stderr
+
+### Protheus Query
+- [ ] SELECT query executes
+- [ ] Invalid prefix rejected
+- [ ] `--max-rows` limits results
+- [ ] Safety Tripwire for >500 rows
+- [ ] `--output-file` writes to file
+
+### Preset System
+- [ ] `preset add` creates preset with params
+- [ ] `preset list` shows all presets
+- [ ] `preset show` displays details
+- [ ] `preset run` interpolates and executes
+- [ ] SQL injection in params rejected
+- [ ] `preset edit` updates fields
+- [ ] `preset remove` deletes preset
+- [ ] `preset use` sets active preset
+
+## Running Tests
+
+```bash
+# Unit tests (no network required)
+cargo test
+
+# Integration tests (may need network)
+cargo test --test integration
+
+# Specific test
+cargo test toon_formatter
+
+# Run with output
+cargo test -- --nocapture
+```
 
 ## Resource Cost Classification
 
-### Per Validator Instance
+This is a **CLI tool** - testing is CPU and memory lightweight:
+- Compilation: ~1-2 GB RAM
+- Test execution: ~100-200 MB RAM
+- No GPU required
 
-| Resource | Usage | Notes |
-|----------|-------|-------|
-| Memory | ~50 MB | CLI process only |
-| CPU | Minimal | No heavy computation |
-| Processes | 1 | Single CLI invocation |
-
-### Max Concurrent Validators: 5
-
-CLI testing is lightweight. Each validator only runs CLI commands and parses JSON output. No database connections required for preset management tests.
-
----
-
-## Test Prerequisites
-
-1. **CLI Built**: `go build -o mapj.exe ./cmd/mapj`
-2. **Config Directory**: Will be auto-created at `~/.config/mapj/`
-3. **Clean State**: Delete `presets.json` between test runs for isolation
-
----
-
-## Test Isolation Strategy
-
-### Per-Assertion Isolation
-
-- Each test run uses unique preset names (timestamp-prefixed)
-- Tests clean up created presets after execution
-- File operations use temp directories where possible
-
-### Parallel Execution
-
-- Safe to run multiple CLI tests in parallel
-- Each test uses different preset names
-- No shared mutable state (file is written atomically)
-
----
-
-## Key Test Flows
-
-### Flow 1: Basic CRUD
-```
-preset add → preset list → preset show → preset remove
-```
-
-### Flow 2: Parameter Execution
-```
-preset add (with params) → preset show → preset run (with values) → verify output
-```
-
-### Flow 3: Security Validation
-```
-preset run (with injection attempt) → verify error → verify no execution
-```
-
-### Flow 4: Connection Integration
-```
-preset add (with connection) → preset run → preset run --connection override
-```
-
----
-
-## Expected Output Format
-
-### Success Response
-```json
-{
-  "ok": true,
-  "command": "mapj protheus preset <cmd>",
-  "result": { ... }
-}
-```
-
-### Error Response
-```json
-{
-  "ok": false,
-  "command": "mapj protheus preset <cmd>",
-  "error": {
-    "code": "ERROR_CODE_HERE",
-    "message": "Human readable message",
-    "hint": "Actionable suggestion",
-    "retryable": true
-  }
-}
-```
-
----
-
-## Cleanup Commands
-
-```bash
-# Remove all presets
-rm ~/.config/mapj/presets.json
-
-# Or use CLI
-mapj protheus preset list --json | jq -r '.presets[].name' | xargs -I{} mapj protheus preset remove {} --force
-```
-
----
-
-## Flow Validator Guidance: CLI
-
-### Isolation Rules
-
-- **Unique Preset Names**: Each flow validator must use preset names prefixed with their group ID (e.g., `group1-test1`, `group2-preset-a`)
-- **No Shared Mutable State**: All preset operations use atomic file writes, so concurrent validators won't corrupt data
-- **Independent Testing**: Each validator tests its assigned assertions independently
-
-### Boundaries
-
-| Boundary | Rule |
-|----------|------|
-| Preset Names | Use format: `<group-id>-<test-name>` (e.g., `g1-basic`, `g2-security`) |
-| Config Directory | Use default `~/.config/mapj/` - no need to override |
-| Clean State | Start by checking/removing conflicting preset names |
-| Cleanup | Remove created presets after testing (use `--force` flag) |
-
-### CLI Binary Path
-
-```
-D:\Proyectos_Personales\CLI\mapj_cli\mapj_cli\mapj.exe
-```
-
-### Working Directory
-
-```
-D:\Proyectos_Personales\CLI\mapj_cli\mapj_cli
-```
-
-### Evidence Collection
-
-- Save command outputs to: `<missionDir>/evidence/<milestone>/<group-id>/`
-- Use descriptive file names: `<assertion-id>-output.txt`
-- Include both success and failure outputs
-
-### Assertion Testing Pattern
-
-1. Clean preset with same name if exists
-2. Run the CLI command under test
-3. Capture exit code and output
-4. Verify output against assertion specification
-5. Record result (pass/fail) with evidence
-6. Cleanup created preset
+Max concurrent test runs: 1 (sequential testing is standard for CLI)
