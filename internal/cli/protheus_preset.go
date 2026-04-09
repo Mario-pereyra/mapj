@@ -851,13 +851,14 @@ func presetRunRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// VAL-CROSS-005: Sin conexión disponible: error con hint
+	// NO_CONNECTION: when no connection profile is configured (retryable: true - user can configure one)
 	if profile == nil {
 		env := output.NewErrorEnvelopeWithHint(
 			cmd.CommandPath(),
 			"NO_CONNECTION",
 			"no Protheus connection available",
 			"Specify a connection with --connection or set an active profile with 'mapj protheus connection use <name>'",
-			false,
+			true, // retryable - user can configure a connection
 		)
 		fmt.Fprintln(out, formatter.Format(env))
 		return nil

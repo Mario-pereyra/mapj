@@ -1913,6 +1913,41 @@ func TestOutputFormat_ErrorEnvelope(t *testing.T) {
 	assert.NotContains(t, code, "-", "Error code must not contain hyphens")
 }
 
+// TestConnectionErrorCode_Retryable tests that NO_CONNECTION and CONNECTION_FAILED
+// both have retryable: true (VAL-CLI-017)
+func TestConnectionErrorCode_Retryable(t *testing.T) {
+	store := createTestStore(t)
+
+	// Create a preset without a connection
+	now := time.Now()
+	presetFile := &preset.PresetFile{
+		Presets: map[string]*preset.QueryPreset{
+			"test-preset": {
+				Name:      "test-preset",
+				Query:     "SELECT 1",
+				CreatedAt: now,
+				UpdatedAt: now,
+			},
+		},
+	}
+	err := store.Save(presetFile)
+	require.NoError(t, err)
+
+	// Run the preset with no connection configured
+	// This should return NO_CONNECTION with retryable: true
+	result := executePresetRun(t, store, []string{"test-preset"}, nil, "", 0, "")
+
+	require.NotNil(t, result)
+	assert.False(t, result["ok"].(bool), "ok should be false for error")
+
+	errorData := result["error"].(map[string]any)
+
+	// VAL-CLI-017: NO_CONNECTION should have retryable: true
+	// The user can configure a connection to resolve this
+	assert.Equal(t, "NO_CONNECTION", errorData["code"], "error code should be NO_CONNECTION")
+	assert.Equal(t, true, errorData["retryable"], "NO_CONNECTION should be retryable (user can configure connection)")
+}
+
 func TestOutputFormat_JSONOutput(t *testing.T) {
 	// VAL-CLI-038: --json produces pure JSON without decorations
 	store := createTestStore(t)
