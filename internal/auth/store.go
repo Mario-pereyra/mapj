@@ -23,6 +23,8 @@ type ServiceCreds struct {
 	Confluence *ConfluenceCreds `json:"confluence,omitempty"`
 	ProtheusProfiles map[string]*ProtheusProfile `json:"protheusProfiles,omitempty"`
 	ProtheusActive   string                      `json:"protheusActive,omitempty"`
+	TDSProfiles map[string]*TDSProfile `json:"tdsProfiles,omitempty"`
+	TDSActive   string                 `json:"tdsActive,omitempty"`
 }
 
 type TDNCreds struct {
@@ -85,6 +87,53 @@ func (c *ServiceCreds) ProtheusProfileNames() []string {
 // HasProtheusProfiles returns true if there is at least one profile.
 func (c *ServiceCreds) HasProtheusProfiles() bool {
 	return len(c.ProtheusProfiles) > 0
+}
+
+// TDSProfile is a named, persisted TOTVS Application Server connection profile.
+type TDSProfile struct {
+	Name        string `json:"name"`
+	Server      string `json:"server"`
+	Port        int    `json:"port"`
+	Environment string `json:"environment"`
+	User        string `json:"user"`
+	Password    string `json:"password"`
+	Secure      bool   `json:"secure"`
+}
+
+// ActiveTDSProfile returns the current active TDS profile.
+func (c *ServiceCreds) ActiveTDSProfile() *TDSProfile {
+	if c.TDSActive != "" && c.TDSProfiles != nil {
+		if p, ok := c.TDSProfiles[c.TDSActive]; ok {
+			return p
+		}
+	}
+	return nil
+}
+
+// SetTDSProfile adds or updates a named TDS profile.
+func (c *ServiceCreds) SetTDSProfile(p *TDSProfile, setActive bool) {
+	if c.TDSProfiles == nil {
+		c.TDSProfiles = make(map[string]*TDSProfile)
+	}
+	c.TDSProfiles[p.Name] = p
+	if setActive || c.TDSActive == "" {
+		c.TDSActive = p.Name
+	}
+}
+
+// TDSProfileNames returns sorted TDS profile names.
+func (c *ServiceCreds) TDSProfileNames() []string {
+	names := make([]string, 0, len(c.TDSProfiles))
+	for name := range c.TDSProfiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// HasTDSProfiles returns true if there is at least one TDS profile.
+func (c *ServiceCreds) HasTDSProfiles() bool {
+	return len(c.TDSProfiles) > 0
 }
 
 func GetEncryptionKey() ([]byte, error) {
@@ -227,6 +276,8 @@ func (s *CredentialStore) HasService(name string) bool {
 		return creds.Confluence != nil && creds.Confluence.Token != ""
 	case "protheus":
 		return creds.HasProtheusProfiles()
+	case "tds":
+		return creds.HasTDSProfiles()
 	}
 	return false
 }
