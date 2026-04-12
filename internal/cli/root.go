@@ -2,8 +2,10 @@ package cli
 
 import (
 	"github.com/Mario-pereyra/mapj/internal/errors"
+	"github.com/Mario-pereyra/mapj/internal/logging"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
 var (
@@ -13,6 +15,7 @@ var (
 	configPath   string
 	profileName  string
 	noColor      bool
+	logLevel     string
 )
 
 var rootCmd = &cobra.Command{
@@ -57,6 +60,13 @@ AVAILABLE COMMANDS (run --help on each for full schema):
   mapj auth status         Show auth state for all services
   mapj auth logout         Remove stored credentials`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Initialize logging with trace ID
+		traceID := logging.GenerateTraceID()
+		logging.Init(logging.Config{
+			Level:   logLevel,
+			TraceID: traceID,
+		})
+		logging.Info("command started", zap.String("command", cmd.Name()))
 		return nil
 	},
 }
@@ -66,6 +76,9 @@ func init() {
 }
 
 func Execute() int {
+	// Logging flags
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Log level: debug, info, warn, error")
+
 	// Output format flags
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "", "Output format: auto (default), llm, toon, json")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in pure JSON format (alias for --output llm)")
