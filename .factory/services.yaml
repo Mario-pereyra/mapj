@@ -1,9 +1,8 @@
 commands:
-  install: cargo fetch && cargo build
-  typecheck: cargo check
-  build: cargo build --release
-  test: cargo test -- --test-threads=4
-  lint: cargo clippy -- -D warnings
-  clean: cargo clean
+  install: go mod tidy
+  build: go build -o mapj.exe ./cmd/mapj
+  test: go test ./...
+  vet: go vet ./...
+  lint: golangci-lint run
 
 services: {}
