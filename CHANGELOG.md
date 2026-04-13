@@ -5,6 +5,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). Versio
 
 ---
 
+## [0.3.0] — 2026-04-12
+
+### Added
+
+- **Health Check (`mapj health`)**: Verify connectivity to all configured services (TDN, Confluence, Protheus SQL Server, TDS AppServer) with latency metrics and structured JSON output.
+- **Observability Metrics (`mapj observability metrics`)**: Prometheus exposition format for command execution metrics including duration histograms and command counters.
+- **ObservableCommand Interface**: Extensible observability for commands via `ObservableCommand` interface with custom `Observe()` methods.
+- **Zap Structured Logging**: High-performance structured logging using `go.uber.org/zap` with configurable log levels (debug, info, warn, error).
+- **Global `--observe` Flag**: Enable observability middleware via flag or `MAPJ_OBSERVE=1` environment variable.
+- **Global `--log-level` Flag**: Configure log verbosity (debug, info, warn, error).
+
+---
+
 ## [0.2.0-agentic] — 2026-04-07
 
 ### Breaking Changes
