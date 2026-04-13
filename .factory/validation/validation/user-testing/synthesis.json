@@ -3,14 +3,19 @@
   "round": 1,
   "status": "pass",
   "assertionsSummary": {
-    "total": 1,
-    "passed": 1,
+    "total": 3,
+    "passed": 3,
     "failed": 0,
     "blocked": 0
   },
-  "passedAssertions": ["VAL-CROSS-001"],
+  "passedAssertions": [
+    "VAL-COMPLETE-001",
+    "VAL-COMPLETE-002",
+    "VAL-COMPLETE-003"
+  ],
   "failedAssertions": [],
   "blockedAssertions": [],
   "appliedUpdates": [],
+  "notes": "All assertions (VAL-COMPLETE-001, VAL-COMPLETE-002, VAL-COMPLETE-003) were already validated at milestone 'skills'. No pending assertions require testing for milestone 'validation'. Validation-docs feature completed all completeness checks at skills milestone.",
   "previousRound": null
 }
