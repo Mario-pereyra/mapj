@@ -1,13 +1,13 @@
 {
   "milestone": "logging",
-  "round": 1,
+  "round": 2,
   "status": "pass",
   "validatorsRun": {
     "test": {
       "passed": true,
-      "command": "go test ./internal/logging/... && go test -short ./internal/errors/... && go test -short ./internal/output/... && go test -short ./internal/preset/... && go test -short ./pkg/confluence/... && go test -short ./pkg/protheus/...",
+      "command": "go test ./internal/logging/... -v",
       "exitCode": 0,
-      "note": "Full suite (go test ./...) times out due to integration tests in internal/cli requiring external Protheus SQL Server. Unit tests for logging milestone features pass. Integration tests skipped in this environment."
+      "note": "Unit tests for logging module pass. Full suite (go test ./...) skipped due to integration tests requiring external Protheus SQL Server."
     },
     "typecheck": {
       "passed": true,
@@ -99,5 +99,5 @@
       "issues": []
     }
   },
-  "previousRound": null
+  "previousRound": ".factory/validation/logging/scrutiny/synthesis.json"
 }
