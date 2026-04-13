@@ -1,11 +1,12 @@
 package cli
 
 import (
+	"time"
+
 	"github.com/Mario-pereyra/mapj/internal/errors"
 	"github.com/Mario-pereyra/mapj/internal/logging"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/spf13/cobra"
-	"go.uber.org/zap"
 )
 
 var (
@@ -16,6 +17,10 @@ var (
 	profileName  string
 	noColor      bool
 	logLevel     string
+	// commandStartTime tracks when the current command started executing
+	commandStartTime time.Time
+	// currentCommand tracks the current executing command for post-run logging
+	currentCommand *cobra.Command
 )
 
 var rootCmd = &cobra.Command{
@@ -60,14 +65,24 @@ AVAILABLE COMMANDS (run --help on each for full schema):
   mapj auth status         Show auth state for all services
   mapj auth logout         Remove stored credentials`,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Capture start time and command for post-run logging
+		commandStartTime = time.Now()
+		currentCommand = cmd
+
 		// Initialize logging with trace ID
 		traceID := logging.GenerateTraceID()
 		logging.Init(logging.Config{
 			Level:   logLevel,
 			TraceID: traceID,
 		})
-		logging.Info("command started", zap.String("command", cmd.Name()))
+
+		// Log command start with full command path
+		logging.LogCommandStart(cmd)
 		return nil
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		// Note: We can't access the run error here directly
+		// The error is logged separately in Execute()
 	},
 }
 
@@ -95,13 +110,26 @@ func Execute() int {
 	// Each command that returns an ExitCoder error has already output its JSON envelope
 	rootCmd.SilenceErrors = true
 
-	if err := rootCmd.Execute(); err != nil {
+	var runErr error
+	if runErr = rootCmd.Execute(); runErr != nil {
+		// Log error completion with latency and status
+		if currentCommand != nil {
+			duration := time.Since(commandStartTime)
+			logging.LogCommandComplete(currentCommand, duration, false)
+		}
+
 		// Don't print raw error - the command has already output a structured JSON envelope
 		// Just return the appropriate exit code
-		if exitCoder, ok := err.(errors.ExitCoder); ok {
+		if exitCoder, ok := runErr.(errors.ExitCoder); ok {
 			return exitCoder.ExitCode()
 		}
 		return errors.ExitError
+	}
+
+	// Log success completion with latency and status
+	if currentCommand != nil {
+		duration := time.Since(commandStartTime)
+		logging.LogCommandComplete(currentCommand, duration, true)
 	}
 	return errors.ExitSuccess
 }

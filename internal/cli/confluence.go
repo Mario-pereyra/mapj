@@ -201,7 +201,8 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 	// Parse input to get page ID
 	parseResult, err := confluence.ParseConfluenceInput(input)
 	if err != nil {
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "INVALID_URL", err.Error(), false)
+		hint := "Provide a valid Confluence page ID (numeric) or full URL (https://tdn.totvs.com/display/PROT/PageName)"
+		env := output.NewErrorEnvelopeWithHint(cmd.CommandPath(), "INVALID_URL", err.Error(), hint, false)
 		fmt.Println(formatter.Format(env))
 		return err
 	}
@@ -217,7 +218,8 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 	// Resolve page ID (may need API call for title-based URLs)
 	pageID, err := client.ResolvePageID(ctx, parseResult)
 	if err != nil {
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "PAGE_NOT_FOUND", err.Error(), false)
+		hint := "Verify the page ID or URL is correct and that you have access to it"
+		env := output.NewErrorEnvelopeWithHint(cmd.CommandPath(), "PAGE_NOT_FOUND", err.Error(), hint, false)
 		fmt.Println(formatter.Format(env))
 		return err
 	}
@@ -234,7 +236,8 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 	if !confluenceDescendants && confluenceOutputPath == "" {
 		result, err := client.Export(ctx, pageID, opts)
 		if err != nil {
-			env := output.NewErrorEnvelope(cmd.CommandPath(), "EXPORT_ERROR", err.Error(), true)
+			hint := "Check your network connection and Confluence permissions"
+			env := output.NewErrorEnvelopeWithHint(cmd.CommandPath(), "EXPORT_ERROR", err.Error(), hint, true)
 			fmt.Println(formatter.Format(env))
 			return err
 		}
@@ -250,7 +253,8 @@ func confluenceExportRun(cmd *cobra.Command, args []string) error {
 
 	logger, err := confluence.NewExportLogger(confluenceOutputPath, getLogLevel())
 	if err != nil {
-		env := output.NewErrorEnvelope(cmd.CommandPath(), "FILE_WRITE_ERROR", err.Error(), false)
+		hint := "Check that the output directory exists and you have write permissions"
+		env := output.NewErrorEnvelopeWithHint(cmd.CommandPath(), "FILE_WRITE_ERROR", err.Error(), hint, false)
 		fmt.Println(formatter.Format(env))
 		return err
 	}

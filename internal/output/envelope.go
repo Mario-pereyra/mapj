@@ -1,6 +1,10 @@
 package output
 
-import "time"
+import (
+	"time"
+
+	"github.com/Mario-pereyra/mapj/internal/logging"
+)
 
 // Envelope is the standard response wrapper for all mapj commands.
 // Fields are designed for LLM consumption: minimal noise, actionable structure.
@@ -21,8 +25,10 @@ type ErrDetail struct {
 	Code         string `json:"code"`
 	Message      string `json:"message"`
 	Hint         string `json:"hint,omitempty"`    // actionable recovery suggestion for LLM
-	Retryable    bool   `json:"retryable"`          // always included per VAL-CLI-035
+	Retryable    bool   `json:"retryable"`         // always included per VAL-CLI-035
 	RetryAfterMs int    `json:"retryAfterMs,omitempty"`
+	TraceId      string `json:"traceId,omitempty"` // correlation ID for error tracing
+	Phase        string `json:"phase,omitempty"`   // error phase: validate, auth, execute, cleanup
 }
 
 // envelopeMode controls which fields are included in the serialized output.
@@ -49,20 +55,41 @@ func NewEnvelope(cmd string, result any) *Envelope {
 
 // NewErrorEnvelope creates an error envelope.
 // hint should be an actionable suggestion the LLM can act on (e.g. "run mapj auth login first").
+// Automatically includes traceId from the logging context for error correlation.
 func NewErrorEnvelope(cmd string, code, message string, retryable bool) *Envelope {
 	return &Envelope{
 		OK:      false,
 		Command: cmd,
-		Error:   &ErrDetail{Code: code, Message: message, Retryable: retryable},
+		Error:   &ErrDetail{Code: code, Message: message, Retryable: retryable, TraceId: logging.GetTraceID()},
 	}
 }
 
 // NewErrorEnvelopeWithHint creates an error envelope with a recovery hint for the LLM.
+// Automatically includes traceId from the logging context for error correlation.
 func NewErrorEnvelopeWithHint(cmd, code, message, hint string, retryable bool) *Envelope {
 	return &Envelope{
 		OK:      false,
 		Command: cmd,
-		Error:   &ErrDetail{Code: code, Message: message, Hint: hint, Retryable: retryable},
+		Error:   &ErrDetail{Code: code, Message: message, Hint: hint, Retryable: retryable, TraceId: logging.GetTraceID()},
+	}
+}
+
+// NewErrorEnvelopeWithPhase creates an error envelope with phase information.
+// Automatically includes traceId from the logging context for error correlation.
+func NewErrorEnvelopeWithPhase(cmd, code, message, phase string, retryable bool) *Envelope {
+	return &Envelope{
+		OK:      false,
+		Command: cmd,
+		Error:   &ErrDetail{Code: code, Message: message, Retryable: retryable, TraceId: logging.GetTraceID(), Phase: phase},
+	}
+}
+
+// NewErrorEnvelopeFull creates a fully populated error envelope with all fields.
+func NewErrorEnvelopeFull(cmd, code, message, hint string, retryable bool, traceId, phase string) *Envelope {
+	return &Envelope{
+		OK:      false,
+		Command: cmd,
+		Error:   &ErrDetail{Code: code, Message: message, Hint: hint, Retryable: retryable, TraceId: traceId, Phase: phase},
 	}
 }
 
