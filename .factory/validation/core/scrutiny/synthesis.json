@@ -1,0 +1,35 @@
+{
+  "milestone": "core",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test-unit": { "passed": true, "command": "go test ./internal/logging/... ./internal/output/... ./internal/errors/... ./internal/preset/... ./internal/auth/... -v", "exitCode": 0 },
+    "vet": { "passed": true, "command": "go vet ./...", "exitCode": 0 },
+    "build": { "passed": true, "command": "go build -o mapj.exe ./cmd/mapj", "exitCode": 0 },
+    "lint": { "passed": true, "command": "echo 'golangci-lint not installed - skipping'", "exitCode": 0 }
+  },
+  "reviewsSummary": {
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "failedFeatures": ["update-contributing"]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "update-contributing",
+      "severity": "blocking",
+      "description": "MAPJ_LOG_LEVEL is incorrectly documented as an environment variable in CONTRIBUTING.md section 2.5 (line 164), but this environment variable is NOT implemented in the codebase. Only --log-level CLI flag exists. The environment variables that ARE implemented are MAPJ_TRACE_ID and MAPJ_OBSERVE. Remove MAPJ_LOG_LEVEL from the environment variables table or change to document it as a CLI flag only."
+    }
+  ],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Investigate skills indexing timing. Multiple workers (update-readme, update-contributing, update-changelog) reported that 'docs-worker' skill was not found during execution, yet the skill exists at .factory/skills/docs-worker/SKILL.md. Consider whether skill discovery is synchronous with git operations or if there's a delay.",
+      "evidence": "Features update-readme, update-contributing, and update-changelog all reported docs-worker skill not found. The skill was created in commit 3a5cbfd but workers couldn't invoke it.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

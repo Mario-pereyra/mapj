@@ -1,0 +1,21 @@
+{
+  "featureId": "update-readme",
+  "reviewedAt": "2026-04-13T03:25:00Z",
+  "commitId": "375b791",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "README.md was correctly updated with observability commands. All three validation assertions (VAL-README-001, VAL-README-002, VAL-README-003) are satisfied. The documentation includes: (1) Quick reference table entries for 'mapj health' and 'mapj observability metrics', (2) Detailed 'Observability Commands (CLI v0.3.0)' section explaining health check with examples and exit codes, (3) Prometheus-format metrics documentation, (4) Global Flags section documenting --log-level and --observe flags with defaults and environment variable fallback (MAPJ_OBSERVE). Formatting is consistent with existing README style.",
+    "issues": []
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The worker reported that 'docs-worker' skill was not found when invoked, yet the skill now exists in .factory/skills/docs-worker/SKILL.md. This appears to be a timing issue - the skill was added to the repository after commit 3a5cbfd ('feat(.factory): add docs-worker skill for documentation missions') but may not have been indexed when the worker session ran. The worker completed the feature directly without using the skill.",
+      "evidence": "Handoff discoveredIssues: 'docs-worker skill does not exist in available skills list'. Transcript shows Skill tool invocation for 'docs-worker' returned error 'Skill not found'. However, ls .factory/skills/ shows docs-worker/ directory with SKILL.md exists now."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature update-readme passes scrutiny. README.md correctly documents 'mapj health' and 'mapj observability metrics' commands in both quick reference table and detailed sections. Global flags --log-level and --observe are documented in the Global Flags table with proper defaults and MAPJ_OBSERVE environment variable fallback. All VAL-README-* assertions are satisfied. The only observation is that the docs-worker skill was reported unavailable during execution but exists now - likely a transient indexing issue."
+}

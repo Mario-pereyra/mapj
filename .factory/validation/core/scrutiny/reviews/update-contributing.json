@@ -1,0 +1,48 @@
+{
+  "featureId": "update-contributing",
+  "reviewedAt": "2026-04-13T03:25:00Z",
+  "commitId": "05bfc47",
+  "transcriptSkeletonReviewed": false,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "CONTRIBUTING.md was updated with observability architecture documentation as specified. However, a blocking documentation error exists: MAPJ_LOG_LEVEL is documented as an environment variable in section 2.5, but this environment variable is NOT implemented in the codebase. Only the --log-level CLI flag exists. This inconsistency could mislead developers.",
+    "issues": [
+      {
+        "file": "CONTRIBUTING.md",
+        "line": 164,
+        "severity": "blocking",
+        "description": "MAPJ_LOG_LEVEL is documented as an environment variable in the environment variables table (section 2.5), but it is NOT actually implemented as an environment variable in the code. The code only supports `--log-level` CLI flag (see internal/cli/root.go: rootCmd.PersistentFlags().StringVar(&logLevel, \"log-level\", \"info\", ...)). The environment variables that ARE implemented are: MAPJ_TRACE_ID and MAPJ_OBSERVE=1. MAPJ_LOG_LEVEL should be removed from the table or documented as a CLI flag instead."
+      }
+    ]
+  },
+  "blockingIssues": [
+    "MAPJ_LOG_LEVEL is incorrectly documented as an environment variable in section 2.5 (line 164). This env var does not exist in the codebase - only --log-level CLI flag is implemented. This is misinformation that violates the documentation mandate and could cause developers to waste time trying to use a non-existent environment variable."
+  ],
+  "nonBlockingIssues": [
+    "Section renumbering (2→3, 3→4, etc.) is mechanical but correct. All internal references were properly updated.",
+    "The skillFeedback notes docs-worker skill was not found, but the skill now exists at .factory/skills/docs-worker/. This appears to be a timing issue - the skill was created after this work was completed."
+  ],
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The docs-worker skill specified in feature.skillName was reported as not found during the work session, but the skill now exists at .factory/skills/docs-worker/SKILL.md. The handoff correctly documents this deviation in skillFeedback.",
+      "evidence": "handoff.discoveredIssues: 'The docs-worker skill specified in feature skillName does not exist. Work was completed directly using base procedures.' and skillFeedback.followedProcedure: false"
+    }
+  ],
+  "fulfills": ["VAL-CONTRIB-001"],
+  "assertions": {
+    "VAL-CONTRIB-001": {
+      "name": "Observability Architecture Documented",
+      "criteriaMet": true,
+      "criteria": {
+        "mentions_internal/logging/": true,
+        "mentions_internal/cli/observability.go": true,
+        "mentions_internal/cli/health.go": true,
+        "explains_ObservableCommand_pattern": true
+      }
+    }
+  },
+  "addressesFailureFrom": null,
+  "summary": "Feature update-contributing correctly added the observability architecture section to CONTRIBUTING.md with all required components (internal/logging/, internal/cli/observability.go, internal/cli/health.go, ObservableCommand interface). However, the review fails due to a blocking documentation error: MAPJ_LOG_LEVEL is incorrectly listed as an environment variable in section 2.5 when it is not actually implemented as such in the codebase. Remove MAPJ_LOG_LEVEL from the environment variables table (or document it as a CLI flag only) to fix this issue."
+}
