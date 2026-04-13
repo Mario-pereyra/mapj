@@ -1,0 +1,57 @@
+{
+  "milestone": "plugin",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": {
+      "passed": false,
+      "command": "go test ./internal/cli/... -count=1 -timeout 180s",
+      "exitCode": 1,
+      "note": "Integration tests in internal/cli require external services (Protheus SQL Server). Unit tests pass. ObservableCommand unit test passes."
+    },
+    "test-unit": {
+      "passed": true,
+      "command": "go test ./internal/logging/... ./internal/output/... ./internal/errors/... ./internal/preset/... ./internal/auth/... -v",
+      "exitCode": 0
+    },
+    "build": {
+      "passed": true,
+      "command": "go build -o mapj.exe ./cmd/mapj",
+      "exitCode": 0
+    },
+    "vet": {
+      "passed": true,
+      "command": "go vet ./internal/...",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "echo 'golangci-lint not installed - skipping'",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md",
+      "suggestion": "Add guidance on Prometheus metrics conventions: LabeledCounters and CommandMetrics types should be used for new metrics. Include pattern for bucket boundaries (use ms <= bucket semantics).",
+      "evidence": "observability-metrics review found that architecture.md mentions 'Metrics: counter y histogram' but doesn't detail implementation conventions. Workers extending metrics lack guidance.",
+      "isSystemic": true
+    },
+    {
+      "target": "skills",
+      "suggestion": "Investigate skill discovery discrepancy: backend-worker skill exists at .factory/skills/backend-worker/SKILL.md but workers report it as not found. May need to fix skill registration/loading mechanism.",
+      "evidence": "Both observability features specified 'backend-worker' skill but workers reported it doesn't exist.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}

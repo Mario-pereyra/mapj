@@ -1,0 +1,39 @@
+{
+  "featureId": "observability-metrics",
+  "reviewedAt": "2026-04-12T22:30:00Z",
+  "commitId": "d7dba73",
+  "transcriptSkeletonReviewed": false,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation is correct and complete. All required metrics are implemented with proper thread-safety, Prometheus formatting, and test coverage.",
+    "issues": [
+      {
+        "file": "internal/cli/observability.go",
+        "line": 243,
+        "severity": "non_blocking",
+        "description": "The ToPrometheusFormat method for LabeledCounters parses the cmd:exitCode key by finding the last ':' character. If a command path contained a colon (e.g., 'cmd:sub:0'), the parsing would be incorrect. However, Cobra command paths typically don't contain colons, making this a theoretical edge case only."
+      },
+      {
+        "file": "internal/cli/observability.go",
+        "line": 91,
+        "severity": "non_blocking",
+        "description": "The old Metrics struct and RecordCommand(), IncCommandCount(), AddLatency(), GetMetrics() functions are now unused after migration to RecordCommandMetrics(). They remain in the codebase but are dead code. Consider removing in a cleanup pass."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The feature specified skillName 'backend-worker', which exists at .factory/skills/backend-worker/SKILL.md. However, the worker's skillFeedback indicates the skill was not found in the available skills list. The worker proceeded without the skill's guidance. This suggests a discrepancy between skill registration/discovery and the worker's skill loading mechanism, OR the worker searched for the skill in a different location than where it actually exists.",
+      "evidence": "Handoff: skillFeedback.followedProcedure=false, deviations[0].step='Invoke backend-worker skill', whatIDidInstead='The backend-worker skill does not exist in the available skills list.' Yet .factory/skills/backend-worker/SKILL.md exists with valid content."
+    },
+    {
+      "area": "conventions",
+      "observation": "The old RecordCommand() and Metrics struct/funcs (IncCommandCount, AddLatency, GetMetrics) are now dead code after the metrics rewrite. AGENTS.md documents ObservableCommand interface and zap logging conventions, but doesn't mention the pattern for Prometheus metrics or the LabeledCounters/CommandMetrics types. If future workers are expected to extend metrics, they lack guidance on the established patterns.",
+      "evidence": "internal/cli/observability.go:91-120 contain unused functions. architecture.md mentions 'Metrics: counter y histogram' but doesn't detail implementation conventions."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Feature observability-metrics passes review. Implementation correctly provides mapj_command_total{cmd,exit_code} counter (thread-safe LabeledCounters), mapj_command_duration_ms{cmd} histogram with correct bucket boundaries (5,10,25,50,100,250,500,1000,2500,5000,10000), and 'mapj observability metrics' command showing Prometheus format. Thread-safety is correct with mutex locks on all collectors. Tests cover core functionality. Two minor non-blocking observations: theoretical key-parsing edge case for colon-containing commands, and dead code from old Metrics struct."
+}
