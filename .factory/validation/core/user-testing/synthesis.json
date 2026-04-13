@@ -1,0 +1,24 @@
+{
+  "milestone": "core",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-README-001",
+    "VAL-README-002",
+    "VAL-README-003",
+    "VAL-CONTRIB-001",
+    "VAL-CHANGELOG-001",
+    "VAL-CHANGELOG-002"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "notes": "All core milestone documentation assertions verified. README.md includes mapj health and observability metrics with tables and detailed sections. CONTRIBUTING.md documents observability architecture (internal/logging/, internal/cli/observability.go, internal/cli/health.go, ObservableCommand interface). CHANGELOG.md has v0.3.0 entry with all observability features listed. No external services required - pure documentation validation."
+}
