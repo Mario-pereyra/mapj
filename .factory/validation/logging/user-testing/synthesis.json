@@ -1,0 +1,23 @@
+{
+  "milestone": "logging",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-LOG-001",
+    "VAL-LOG-002",
+    "VAL-LOG-003",
+    "VAL-LOG-004",
+    "VAL-LOG-005",
+    "VAL-LOG-006"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}

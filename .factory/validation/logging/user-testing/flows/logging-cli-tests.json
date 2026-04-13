@@ -1,0 +1,71 @@
+{
+  "flowId": "logging-cli-tests",
+  "assertions": [
+    "VAL-LOG-001",
+    "VAL-LOG-002",
+    "VAL-LOG-003",
+    "VAL-LOG-004",
+    "VAL-LOG-005",
+    "VAL-LOG-006"
+  ],
+  "status": "pass",
+  "tool": "cli",
+  "isolation": {
+    "workingDirectory": "D:\\Proyectos_Personales\\CLI\\mapj_cli\\mapj_cli",
+    "appBinary": "mapj.exe"
+  },
+  "tests": [
+    {
+      "assertion": "VAL-LOG-001",
+      "description": "Structured JSON Logging to stderr",
+      "command": "./mapj.exe --json tdn search \"test\" 2>stderr.txt >stdout.txt",
+      "verification": "stderr.txt contains valid JSON log entries with timestamp, level, message, traceId",
+      "result": "pass",
+      "evidence": "stderr contained: {\"level\":\"info\",\"timestamp\":\"2026-04-12T20:59:53.713-0400\",\"message\":\"command started\",\"traceId\":\"829d019b-71cb-44cc-b782-2ee9da6199fa\",\"command\":\"tdn search\",\"status\":\"started\"}"
+    },
+    {
+      "assertion": "VAL-LOG-002",
+      "description": "Log Level Configuration Flag",
+      "command": "./mapj.exe --help",
+      "verification": "--log-level flag exists with debug/info/warn/error options, default info",
+      "result": "pass",
+      "evidence": "Found: --log-level string   Log level: debug, info, warn, error (default \"info\")"
+    },
+    {
+      "assertion": "VAL-LOG-003",
+      "description": "Correlation ID (traceId) Generation",
+      "command": "./mapj.exe --json tdn search \"test\" 2>&1",
+      "verification": "traceId present in all log entries and error responses",
+      "result": "pass",
+      "evidence": "traceId: 829d019b-71cb-44cc-b782-2ee9da6199fa present in command started log"
+    },
+    {
+      "assertion": "VAL-LOG-004",
+      "description": "Command Metadata in Log Entries",
+      "command": "./mapj.exe --json tdn search \"test\" 2>&1",
+      "verification": "Logs include command path, latencyMs, and status fields",
+      "result": "pass",
+      "evidence": "Completion log: {\"command\":\"tdn search\",\"status\":\"success\",\"latencyMs\":756}"
+    },
+    {
+      "assertion": "VAL-LOG-005",
+      "description": "Error Enrichment with Correlation IDs",
+      "command": "./mapj.exe confluence export INVALID --output-path /tmp 2>&1",
+      "verification": "Error response includes traceId, hint, retryable",
+      "result": "pass",
+      "evidence": "Error: {\"code\":\"INVALID_URL\",\"message\":\"could not parse Confluence URL: INVALID\",\"hint\":\"Provide a valid Confluence page ID...\",\"retryable\":false,\"traceId\":\"...\"}"
+    },
+    {
+      "assertion": "VAL-LOG-006",
+      "description": "stdout/stderr Separation",
+      "command": "./mapj.exe --json tdn search \"test\" 2>stderr.txt >stdout.txt",
+      "verification": "JSON response goes to stdout, logs to stderr, no interleaving",
+      "result": "pass",
+      "evidence": "stdout.txt contains pure JSON response, stderr.txt contains only JSON log lines"
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "toolsUsed": ["cli"],
+  "summary": "All 6 logging assertions passed CLI validation. Structured JSON logging to stderr works correctly with traceId correlation, command metadata, and proper stdout/stderr separation."
+}
