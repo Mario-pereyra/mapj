@@ -1,0 +1,33 @@
+{
+  "milestone": "health",
+  "round": 1,
+  "status": "fail",
+  "assertionsSummary": {
+    "total": 6,
+    "passed": 3,
+    "failed": 3,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-HEALTH-001",
+    "VAL-HEALTH-002",
+    "VAL-HEALTH-006"
+  ],
+  "failedAssertions": [
+    {
+      "id": "VAL-HEALTH-003",
+      "reason": "Exit code 1 instead of 4 for retryable network error when Protheus connection fails"
+    },
+    {
+      "id": "VAL-HEALTH-004",
+      "reason": "Exit code 1 instead of 3 for auth error when TDS has no active profile"
+    },
+    {
+      "id": "VAL-HEALTH-005",
+      "reason": "Exit codes 2, 3, 4 not returned correctly. Root cause: health.go line 91 returns fmt.Errorf() when !allHealthy, giving exit code 1 instead of propagating specific error types"
+    }
+  ],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}

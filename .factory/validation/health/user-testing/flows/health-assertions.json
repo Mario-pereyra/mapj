@@ -1,0 +1,58 @@
+{
+  "milestone": "health",
+  "groupId": "health-assertions",
+  "assertions": [
+    "VAL-HEALTH-001",
+    "VAL-HEALTH-002",
+    "VAL-HEALTH-003",
+    "VAL-HEALTH-004",
+    "VAL-HEALTH-005",
+    "VAL-HEALTH-006"
+  ],
+  "results": [
+    {
+      "assertionId": "VAL-HEALTH-001",
+      "status": "pass",
+      "evidence": "mapj health returns exit code 1 (non-zero) when services fail, JSON output includes all service statuses with healthy=false for protheus and tds"
+    },
+    {
+      "assertionId": "VAL-HEALTH-002",
+      "status": "pass",
+      "evidence": "mapj health --service=tdn returns exit code 0, shows tdn.healthy=true, tdn.latencyMs=466"
+    },
+    {
+      "assertionId": "VAL-HEALTH-003",
+      "status": "fail",
+      "evidence": "mapj health --service=protheus returns exit code 1, but should return exit code 4 (RetryableError) per VAL-HEALTH-005 contract. The network timeout error 'dial tcp 192.168.99.102:1433: i/o timeout' should trigger RetryableError exit code 4.",
+      "reason": "Exit code 1 instead of 4 for retryable network error"
+    },
+    {
+      "assertionId": "VAL-HEALTH-004",
+      "status": "fail",
+      "evidence": "mapj health --service=tds returns exit code 1, but should return exit code 3 (AuthError) per VAL-HEALTH-005 contract. The 'no active profile' error should trigger AuthError exit code 3.",
+      "reason": "Exit code 1 instead of 3 for auth error"
+    },
+    {
+      "assertionId": "VAL-HEALTH-005",
+      "status": "fail",
+      "evidence": "Exit code aggregation is incorrect: mapj health --service=invalid returns exit code 1 but should be 2 (UsageError). The root cause is in health.go line 91: 'return fmt.Errorf(...)' returns general error (code 1) instead of properly propagating the specific error types (UsageError, AuthError, RetryableError) with their correct exit codes.",
+      "reason": "Exit codes 2, 3, 4 not being returned correctly"
+    },
+    {
+      "assertionId": "VAL-HEALTH-006",
+      "status": "pass",
+      "evidence": "Protheus health check shows hint: '💡 VPN: This is a TOTALPEC server. Verify the TOTALPEC VPN is active.' for server 192.168.99.102 - correct VPN hint for 192.168.99.x range"
+    }
+  ],
+  "frictions": [],
+  "blockers": [
+    {
+      "assertionId": "VAL-HEALTH-003",
+      "assertionId": "VAL-HEALTH-004",
+      "assertionId": "VAL-HEALTH-005",
+      "rootCause": "health.go line 91 returns fmt.Errorf() when !allHealthy, which gives exit code 1 instead of propagating the specific error types (RetryableError for network errors, AuthError for missing credentials) with their correct exit codes"
+    }
+  ],
+  "toolsUsed": ["CLI test"],
+  "isolation": "local"
+}
