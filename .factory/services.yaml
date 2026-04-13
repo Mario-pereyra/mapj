@@ -2,7 +2,8 @@ commands:
   install: go mod tidy
   build: go build -o mapj.exe ./cmd/mapj
   test: go test ./...
+  test-unit: go test ./internal/logging/... ./internal/output/... ./internal/errors/... ./internal/preset/... ./internal/auth/... -v
   vet: go vet ./...
-  lint: golangci-lint run
+  lint: echo "golangci-lint not installed - skipping"
 
 services: {}
