@@ -19,6 +19,8 @@
 | Query Protheus ERP | `mapj protheus query "SELECT * FROM SA1010"` | TOON tabular results |
 | Discover Table Schema | `mapj protheus schema <table_name>` | Columns, types, and lengths |
 | Manage DB Connections | `mapj protheus connection list/add/use` | Encrypted named profiles |
+| Health Check | `mapj health` | Status + latency for all services |
+| Observability Metrics | `mapj observability metrics` | Prometheus-format metrics |
 
 All commands output **Auto-detected formats** (TOON for tables, LLM for objects). Use `-o toon` or `-o llm` to force.
 
@@ -82,6 +84,56 @@ mapj protheus query "SELECT TOP 10 A1_COD, A1_NOME FROM SA1010"
 | `-o llm` | Compact JSON | Machine-readable deterministic parsing |
 | `-o toon` | Tabular YAML | Highest token efficiency for agents |
 | `-o json` | Pretty JSON | Human debugging (includes metadata) |
+
+---
+
+## Observability Commands (CLI v0.3.0)
+
+### Health Check — `mapj health`
+
+Verify connectivity to all configured services (TDN, Confluence, Protheus SQL Server, TDS AppServer).
+
+```bash
+mapj health                    # check all services
+mapj health --service=tdn     # check single service
+mapj health --service=protheus
+mapj health --service=tds
+```
+
+**Exit codes:**
+- `0` — all healthy
+- `1` — general error
+- `2` — usage error
+- `3` — auth error
+- `4` — retryable error
+
+### Observability Metrics — `mapj observability metrics`
+
+Show command execution metrics in Prometheus exposition format.
+
+```bash
+mapj observability metrics
+```
+
+Outputs metrics like:
+- `mapj_command_duration_seconds` — command execution time histogram
+- `mapj_command_total` — total commands executed counter
+- `mapj_command_success` — successful commands counter
+- `mapj_command_error` — failed commands counter
+
+---
+
+## Global Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--log-level` | Log verbosity: `debug`, `info`, `warn`, `error` | `info` |
+| `--observe` | Enable observability middleware (tracing, metrics) | `false` |
+| `--config` | Path to config file | `~/.config/mapj/config.yaml` |
+| `--output`, `-o` | Output format: `auto`, `llm`, `toon`, `json` | `auto` |
+| `--verbose` | Include debug/trace fields in output | `false` |
+
+**Environment variable:** Set `MAPJ_OBSERVE=1` to enable observability by default.
 
 ---
 
