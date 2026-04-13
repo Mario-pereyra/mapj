@@ -1,0 +1,30 @@
+{
+  "milestone": "plugin",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-PLUGIN-001",
+    "VAL-PLUGIN-002",
+    "VAL-PLUGIN-003",
+    "VAL-PLUGIN-004",
+    "VAL-PLUGIN-005",
+    "VAL-PLUGIN-006",
+    "VAL-PLUGIN-007"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null,
+  "notes": [
+    "All 7 plugin assertions passed",
+    "VAL-CROSS-001 remains pending - blocked by milestone 'validation' not being complete",
+    "Metrics are per-process (not persisted between CLI invocations), which is expected behavior for CLI tools",
+    "go test ./... timed out due to integration tests - targeted internal/cli tests were run instead"
+  ]
+}
