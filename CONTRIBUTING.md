@@ -169,7 +169,6 @@ Histogram buckets (ms): `5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000`
 |----------|-------------|
 | `MAPJ_TRACE_ID` | Override trace ID for log correlation |
 | `MAPJ_OBSERVE=1` | Enable observability collection |
-| `MAPJ_LOG_LEVEL` | Log level (debug, info, warn, error) |
 
 ---
 
