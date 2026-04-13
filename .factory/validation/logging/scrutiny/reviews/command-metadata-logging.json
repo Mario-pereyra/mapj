@@ -1,33 +1,45 @@
 {
   "featureId": "command-metadata-logging",
-  "reviewedAt": "2026-04-12T20:30:00Z",
+  "reviewedAt": "2026-04-13T00:45:00Z",
   "commitId": "e29d904",
   "transcriptSkeletonReviewed": true,
   "diffReviewed": true,
   "status": "pass",
   "codeReview": {
-    "summary": "Implementation correctly adds command metadata to all log entries and enriches errors with traceId, hints, and retryable flag. All validation criteria are met.",
+    "summary": "Implementation correctly adds command metadata (cmd path, latencyMs, status) to logs and enriches errors with traceId, hints, and retryable flag. Phase field exists in ErrDetail but is not populated in error responses.",
     "issues": [
       {
         "file": "internal/output/envelope.go",
+        "line": 75,
         "severity": "non_blocking",
-        "description": "NewErrorEnvelopeWithPhase function exists but is unused anywhere in the codebase. Dead code but not harmful."
+        "description": "NewErrorEnvelopeWithPhase is defined but never called anywhere. The Phase field in ErrDetail remains unset in all error responses. VAL-LOG-005 pass criteria don't explicitly require phase (only traceId, hint, retryable), but feature description mentions 'phase information' should be enriched."
+      },
+      {
+        "file": "internal/logging/fields.go",
+        "line": 48,
+        "severity": "non_blocking",
+        "description": "NewErrorEnvelopeFull is defined but never used. Dead code that could be removed or utilized."
+      },
+      {
+        "file": "internal/logging/fields.go",
+        "line": 63,
+        "severity": "suggestion",
+        "description": "Status field only logs 'started', 'success', 'error' - missing 'running' status mentioned in VAL-LOG-004 criteria. However, for a CLI tool, having only start/completion status is reasonable since there's no intermediate 'running' state logged."
       }
     ]
   },
   "sharedStateObservations": [
     {
       "area": "conventions",
-      "observation": "AGENTS.md documents an EnrichedError struct and ObservableCommand interface pattern, but the implementation uses different patterns: LogCommandStart/LogCommandComplete standalone functions and ErrDetail struct with auto-injecting constructors. The documentation should be updated to reflect the actual implementation.",
-      "evidence": "AGENTS.md lines 20-28 show EnrichedError struct pattern, but internal/output/envelope.go uses ErrDetail with auto-injected traceId via NewErrorEnvelope/NewErrorEnvelopeWithHint constructors"
+      "observation": "The feature adds error constructors NewErrorEnvelopeWithPhase and NewErrorEnvelopeFull but they are unused. This suggests the error enrichment implementation was partially completed beyond what was strictly required by VAL-LOG-005.",
+      "evidence": "internal/output/envelope.go lines 75-91 define these functions but grep shows no callers"
     },
     {
-      "area": "skills",
-      "observation": "The backend-worker SKILL.md documents a specific zap logging pattern with var logger *zap.Logger and init() approach, but the implementation uses a package-level Init() function with zap.Config. This is a minor documentation deviation that doesn't affect functionality.",
-      "evidence": "SKILL.md shows 'var logger *zap.Logger' with init(), but internal/logging/logger.go uses logging.Init(logging.Config{...}) pattern"
+      "area": "knowledge",
+      "observation": "The Phase field concept (validate, auth, execute, cleanup) appears in ErrDetail but is not actually used. If this is intended to be implemented in future, it should be documented.",
+      "evidence": "internal/output/envelope.go:31 shows Phase field but no code sets it"
     }
   ],
   "addressesFailureFrom": null,
-  "fulfills": ["VAL-LOG-004", "VAL-LOG-005"],
-  "summary": "Feature implementation passes all review criteria. Command metadata (command path, latencyMs, status) is properly added to all log entries via LogCommandStart and LogCommandComplete functions. Error enrichment (traceId, hint, retryable) is correctly implemented via auto-injection in error envelope constructors. The confluence export command uses NewErrorEnvelopeWithHint for all error cases with appropriate recovery hints. No blocking issues found."
+  "summary": "Implementation passes validation criteria. Command metadata (command path, latencyMs, status) is correctly added to all log entries via WithCommandMetadata which chains WithTraceID(). Error responses include traceId (auto-injected from logging context) and hints (added in confluence commands). The Phase field exists but is not populated - this is non-blocking since VAL-LOG-005 criteria don't explicitly require phase."
 }
