@@ -13,7 +13,7 @@
 > |---|---|
 > | New command or flag | Skill file + `docs/` guide + `SKILL.md` commands table |
 > | Changed command behavior | Skill file + `docs/` guide |
-> | New/changed data model | `CONTRIBUTING.md` section 4 (Credential Store) or relevant section |
+> | New/changed data model | `CONTRIBUTING.md` section 5 (Credential Store) or relevant section |
 > | New service added | `store.go`, `login.go`, `logout.go`, `status.go`, new skill, new guide, `SKILL.md` |
 > | Bug fix that changes output | Skill error table + guide troubleshooting section |
 >
@@ -34,7 +34,9 @@ internal/
 │   ├── confluence.go     ← `mapj confluence export` + `export-space` commands
 │   ├── protheus.go       ← `mapj protheus query` + `schema` commands
 │   ├── protheus_connection.go ← `mapj protheus connection *` commands
-│   └── tdn.go            ← `mapj tdn search` command
+│   ├── tdn.go            ← `mapj tdn search` command
+│   ├── observability.go  ← ObservableCommand interface + metrics collection
+│   └── health.go         ← `mapj health` command for service connectivity checks
 │
 ├── auth/                 ← Credential storage (encrypted) + login/logout/status
 │   ├── store.go          ← ServiceCreds struct, AES-256-GCM encryption, machine key derivation
@@ -44,6 +46,10 @@ internal/
 │
 ├── errors/               ← Strongly typed errors + ExitCoder interface
 │   └── codes.go
+│
+├── logging/              ← zap-based structured logging with trace ID support
+│   ├── logger.go         ← Init, Config, log level management
+│   └── trace.go          ← Trace ID generation and propagation
 │
 └── output/               ← JSON/TOON envelope builder + formatters
     ├── envelope.go       ← Envelope, ErrDetail structs + constructors
@@ -81,7 +87,93 @@ tests/fixtures/           ← Test HTML fixtures
 
 ---
 
-## 2. Key Data Flows
+## 2. Observability Architecture
+
+The CLI includes a plugin-based observability system for logging, metrics, and health checks.
+
+### 2.1 Logging (`internal/logging/`)
+
+- **zap** as the logging library (zero-allocation, <5ms overhead)
+- JSON structured output to stderr
+- Log levels: debug, info, warn, error
+- Trace ID (UUID v4) per session via `MAPJ_TRACE_ID` env var or auto-generated
+
+```go
+// Configuration
+type Config struct {
+    Level   string  // debug, info, warn, error
+    TraceID string  // optional trace ID override
+}
+```
+
+### 2.2 ObservableCommand Interface (`internal/cli/observability.go`)
+
+Commands can opt-in to custom observability behavior by implementing `ObservableCommand`:
+
+```go
+type ObservableCommand interface {
+    ObservableName() string
+    Observe(ctx context.Context, cmd *cobra.Command, runErr error, dur time.Duration)
+}
+```
+
+**Boilerplate for new commands (≤5 lines):**
+
+```go
+// 1. Implement the interface
+type myCmd struct{}
+func (c *myCmd) ObservableName() string { return "myCommand" }
+func (c *myCmd) Observe(ctx context.Context, cmd *cobra.Command, runErr error, dur time.Duration) { /* custom logic */ }
+
+// 2. Register in init()
+func init() {
+    cmd := &cobra.Command{...}
+    RegisterObservable(cmd, &myCmd{})
+}
+```
+
+### 2.3 Health Checks (`internal/cli/health.go`)
+
+The `mapj health` command verifies connectivity to all configured services:
+
+| Service | Auth Required | Latency | Checks |
+|---------|--------------|---------|--------|
+| TDN | No | ✓ | Public API ping |
+| Confluence | Token | ✓ | API ping |
+| Protheus | Profile | ✓ | SQL Server ping |
+| TDS | Profile | ✓ | AppServer validate |
+
+**Flags:**
+- `--service=tdn|confluence|protheus|tds` - Check specific service
+
+### 2.4 Metrics Collection
+
+Global metrics are collected for all commands:
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `mapj_command_total` | Counter | Total commands by name + exit code |
+| `mapj_command_duration_ms_count` | Counter | Command execution count |
+| `mapj_command_duration_ms_sum` | Counter | Total latency in ms |
+| `mapj_command_duration_ms_bucket` | Histogram | Latency distribution buckets |
+| `mapj_command_duration_ms_min/max` | Gauge | Min/max latency per command |
+
+Histogram buckets (ms): `5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000`
+
+**Commands:**
+- `mapj observability metrics` - Print Prometheus text format
+
+### 2.5 Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MAPJ_TRACE_ID` | Override trace ID for log correlation |
+| `MAPJ_OBSERVE=1` | Enable observability collection |
+| `MAPJ_LOG_LEVEL` | Log level (debug, info, warn, error) |
+
+---
+
+## 3. Key Data Flows
 
 ### Confluence Export Flow (Concurrent)
 
@@ -124,7 +216,7 @@ internal/cli/protheus.go
 
 ---
 
-## 3. Exit Codes (internal/errors/codes.go)
+## 4. Exit Codes (internal/errors/codes.go)
 
 The CLI uses an `ExitCoder` interface for machine-readable errors:
 
@@ -138,7 +230,7 @@ The CLI uses an `ExitCoder` interface for machine-readable errors:
 
 ---
 
-## 4. Credential Store
+## 5. Credential Store
 
 File: `~/.config/mapj/credentials.enc` (AES-256-GCM)
 
@@ -155,7 +247,7 @@ type ServiceCreds struct {
 
 ---
 
-## 5. Design Decisions
+## 6. Design Decisions
 
 ### ① Prefix-based SQL Validation
 Instead of regex blacklists, we use a whitelist of allowed prefixes (`SELECT`, `WITH`, `EXEC`). This prevents bypasses via comments or unusual syntax. We also check for forbidden keywords (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, MERGE, GRANT, REVOKE, DENY, BACKUP, RESTORE) anywhere in the query to detect SQL injection patterns.
@@ -171,7 +263,7 @@ The HTTP client internally handles retries for transient errors. Agents shouldn'
 
 ---
 
-## 6. Known Gotchas
+## 7. Known Gotchas
 
 ### ① Auth type stored, not inferred
 
@@ -203,7 +295,7 @@ Without `MAPJ_ENCRYPTION_KEY`, the key is derived from `sha256(hostname + userna
 
 ---
 
-## 7. Build & Test
+## 8. Build & Test
 
 ```bash
 # Full check before committing
