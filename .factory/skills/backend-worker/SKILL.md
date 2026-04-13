@@ -1,55 +1,77 @@
 # Backend Worker Skill
 
+skillName: backend-worker
+
 ## Overview
-Implementa features de logging, health checks, y observabilidad para CLI mapj.
+Implementa features de logging, health checks, y observabilidad para CLI mapj en Go.
 
 ## Procedures
 
 ### 1. Setup
 1. Lee `mission.md` del missionDir
-2. Lee `AGENTS.md` del missionDir
-3. Ejecuta baseline tests: `go test ./...`
-4. Verifica que el build funciona: `go build ./...`
+2. Lee `AGENTS.md` del missionDir  
+3. Lee `features.json` para ver la feature a implementar
+4. Ejecuta baseline tests: `go test ./...`
+5. Verifica que el build funciona: `go build ./...`
 
-### 2. Implementación
+### 2. Implementation
 Para cada feature:
-1. Crear archivo en directorio apropiado
-2. Implementar código siguiendo convenciones en AGENTS.md
-3. Agregar tests unitarios
-4. Verificar con `go test ./...`
+1. Leer la description de la feature en features.json
+2. Crear/modificar archivos necesarios en `internal/` o `cmd/`
+3. Implementar código siguiendo convenciones en AGENTS.md
+4. Agregar tests unitarios en archivos `*_test.go`
+5. Verificar con `go test ./...`
 
-### 3. Verificación
-- Todos los tests pasan
-- `go vet ./...` sin errores
+### 3. Verification
 - `go build ./...` compila sin errores
+- `go test ./...` pasa (o falla gracefully con justificación)
+- `go vet ./...` sin errores
 
 ## Conventions
 
 ### Logging con zap
 ```go
-logger, _ := zap.NewProduction()
+import "go.uber.org/zap"
+
+var logger *zap.Logger
+
+func init() {
+    var err error
+    logger, err = zap.NewProduction()
+    if err != nil {
+        logger = zap.NewNop()
+    }
+}
 defer logger.Sync()
-logger.Info("message", zap.String("key", value))
+
+logger.Info("message",
+    zap.String("key", value),
+    zap.String("traceId", GetTraceID()),
+)
+```
+
+### Cobra PersistentPreRunE
+```go
+var rootCmd = &cobra.Command{
+    PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+        // Logging middleware
+        return nil
+    },
+}
 ```
 
 ### Errores enriquecidos
 ```go
-type EnrichedError struct {
-    Code      string
-    Message   string
-    Hint      string
-    Retryable bool
-    TraceId   string
+func NewErrorWithTrace(errMsg string) * EnrichedError {
+    return &EnrichedError{
+        Message: errMsg,
+        TraceId: GetTraceID(),
+    }
 }
 ```
 
-### Cobra commands
-- Usar `PersistentPreRunE` para middleware
-- No modificar commands existentes sin necesidad
-- Mantener backward compatibility
-
 ## Output
-Al completar, returns:
-- Handoff con feature implementado
-- Tests agregados
-- Verificación de build
+Al completar, returns handoff con:
+- Feature implementada
+- Tests agregados/actualizados
+- Commit con cambios
