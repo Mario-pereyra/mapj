@@ -685,6 +685,21 @@ mapj protheus query "WITH active AS (SELECT A1_COD FROM SA1010 WHERE A1_MSBLQL !
 
 ---
 
+## Health and Observability
+
+```bash
+# Check Protheus service health
+mapj health --service=protheus
+
+# View observability metrics (Prometheus format)
+mapj observability metrics
+```
+
+Use `mapj health --service=protheus` to verify Protheus database connectivity before querying.
+Use `mapj observability metrics` to monitor query execution traces and latency.
+
+---
+
 ## Error Reference
 
 | Code | Condition | Fix |

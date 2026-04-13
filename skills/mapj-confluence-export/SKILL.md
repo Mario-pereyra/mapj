@@ -223,6 +223,21 @@ mapj confluence export <url> --output-path ./docs --verbose
 
 ---
 
+## Health and Observability
+
+```bash
+# Check Confluence service health
+mapj health --service=confluence
+
+# View observability metrics (Prometheus format)
+mapj observability metrics
+```
+
+Use `mapj health --service=confluence` to verify Confluence connectivity before exporting.
+Use `mapj observability metrics` to monitor export operation traces and throughput.
+
+---
+
 ## Error Reference
 
 | Error | Condition | Fix |

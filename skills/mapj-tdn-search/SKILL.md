@@ -225,6 +225,21 @@ mapj tdn search "ponto de entrada" --space PROT --max-results 25 --export-to ./d
 
 ---
 
+## Health and Observability
+
+```bash
+# Check TDN service health
+mapj health --service=tdn
+
+# View observability metrics (Prometheus format)
+mapj observability metrics
+```
+
+Use `mapj health --service=tdn` to verify TDN connectivity before searching.
+Use `mapj observability metrics` to monitor search operation traces and latency.
+
+---
+
 ## Error Reference
 
 | Code | Condition | Fix |
