@@ -129,7 +129,6 @@ func Execute() int {
 		if currentCommand != nil && isObservabilityEnabled() {
 			duration := time.Since(commandStartTime)
 			observeCommand(context.Background(), currentCommand, runErr, duration)
-			RecordCommand(duration)
 		}
 
 		// Log error completion with latency and status
@@ -140,10 +139,20 @@ func Execute() int {
 
 		// Don't print raw error - the command has already output a structured JSON envelope
 		// Just return the appropriate exit code
+		var exitCode int
 		if exitCoder, ok := runErr.(errors.ExitCoder); ok {
-			return exitCoder.ExitCode()
+			exitCode = exitCoder.ExitCode()
+		} else {
+			exitCode = errors.ExitError
 		}
-		return errors.ExitError
+
+		// Record metrics for this command execution
+		if currentCommand != nil {
+			duration := time.Since(commandStartTime)
+			RecordCommandMetrics(currentCommand.CommandPath(), exitCode, duration)
+		}
+
+		return exitCode
 	}
 
 	// Capture success for observability
@@ -153,13 +162,15 @@ func Execute() int {
 	if currentCommand != nil && isObservabilityEnabled() {
 		duration := time.Since(commandStartTime)
 		observeCommand(context.Background(), currentCommand, nil, duration)
-		RecordCommand(duration)
 	}
 
 	// Log success completion with latency and status
 	if currentCommand != nil {
 		duration := time.Since(commandStartTime)
 		logging.LogCommandComplete(currentCommand, duration, true)
+
+		// Record metrics for successful command execution
+		RecordCommandMetrics(currentCommand.CommandPath(), errors.ExitSuccess, duration)
 	}
 	return errors.ExitSuccess
 }
