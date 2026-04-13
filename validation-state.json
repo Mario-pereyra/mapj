@@ -1,0 +1,16 @@
+{
+  "assertions": {
+    "VAL-README-001": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-README-002": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-README-003": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-CONTRIB-001": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-CHANGELOG-001": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-CHANGELOG-002": { "status": "passed", "validatedAtMilestone": "core" },
+    "VAL-SKILL-001": { "status": "pending" },
+    "VAL-SKILL-002": { "status": "pending" },
+    "VAL-SKILL-003": { "status": "pending" },
+    "VAL-COMPLETE-001": { "status": "pending" },
+    "VAL-COMPLETE-002": { "status": "pending" },
+    "VAL-COMPLETE-003": { "status": "pending" }
+  }
+}

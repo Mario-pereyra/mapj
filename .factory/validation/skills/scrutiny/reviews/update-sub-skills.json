@@ -1,0 +1,15 @@
+{
+  "featureId": "update-sub-skills",
+  "reviewedAt": "2026-04-13T04:15:00Z",
+  "commitId": "42fcfd9",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "All 3 sub-skills (mapj-tdn-search, mapj-confluence-export, mapj-protheus-query) were updated to include a 'Health and Observability' section. Each section references `mapj health --service=<service>` and `mapj observability metrics`, with descriptive text mentioning 'traces' and 'latency'. The changes are consistent with the main mapj/SKILL.md routing documentation.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Feature update-sub-skills passes review. All 3 sub-skills now include observability references consistent with main skill documentation. Criteria met: (1) all 3 sub-skills mention observability/logging/trace terms, (2) references are consistent with mapj/SKILL.md which shows `mapj health --service=<service>` and `mapj observability metrics` at lines 42-43, (3) fulfills VAL-SKILL-003."
+}

@@ -1,0 +1,75 @@
+{
+  "featureId": "health-check-command",
+  "reviewedAt": "2026-04-13T02:30:00Z",
+  "commitId": "1f3703f",
+  "transcriptSkeletonReviewed": false,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "Implementation covers basic health check functionality for all 4 services (tdn, confluence, protheus, tds) with VPN hints. However, VAL-HEALTH-005 exit code aggregation is NOT properly implemented - the command uses fmt.Errorf() for all errors which results in exit code 1, but the validation contract requires specific exit codes 2 (usage), 3 (auth), 4 (retryable). The command documentation falsely advertises these exit codes.",
+    "issues": [
+      {
+        "file": "internal/cli/health.go",
+        "line": 120,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: Unknown service error returns fmt.Errorf() which gives exit code 1, but should give exit code 2 (USAGE_ERROR). The internal/errors package has UsageError type but it's not used here."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 186,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: checkConfluence() returns fmt.Errorf() for 'not configured' error which gives exit code 1, but this is essentially an auth/configuration error that should give exit code 3 (AUTH_ERROR)."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 216,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: checkProtheus() returns fmt.Errorf() for 'no active profile' error which gives exit code 1, but should give exit code 3 (AUTH_ERROR) since it's a configuration/auth issue."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 244,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: When Protheus ping fails with a network error (potentially retryable), the code returns fmt.Errorf() which gives exit code 1, but should give exit code 4 (RETRYABLE) for network timeouts."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 279,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: checkTDS() 'no active profile' returns fmt.Errorf() instead of an error with exit code 3."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 302,
+        "severity": "blocking",
+        "description": "VAL-HEALTH-005 violation: TDS connection failure returns fmt.Errorf() which gives exit code 1, but network connection failures to AppServer could be retryable (exit code 4)."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 28,
+        "severity": "non_blocking",
+        "description": "Command documentation (Long description) advertises exit codes 0-4 but implementation only supports 0 and 1. This is misleading documentation."
+      },
+      {
+        "file": "internal/cli/health.go",
+        "line": 0,
+        "severity": "non_blocking",
+        "description": "No unit tests added for health command. The handoff notes 'Health command implemented but no dedicated unit tests added (would require mocking external services)'. While mocking is needed, the lack of any test coverage is a gap."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "The internal/errors package provides specialized error types (UsageError, AuthError, RetryableError, GeneralError) with proper exit codes, but the health command doesn't use them. AGENTS.md doesn't document when to use these error types vs fmt.Errorf().",
+      "evidence": "internal/errors/codes.go defines ExitCoder interface with specific exit codes. health.go uses fmt.Errorf() exclusively."
+    },
+    {
+      "area": "conventions",
+      "observation": "Health command's Long description advertises exit codes 2, 3, 4 but the implementation cannot produce them. This inconsistency between documentation and implementation could mislead users.",
+      "evidence": "internal/cli/health.go:28-33 shows exit codes 0=healthy, 1=error, 2=usage, 3=auth, 4=retryable, but all return fmt.Errorf() which only produces exit code 1."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "The health-check-command implementation provides basic functionality for checking TDN, Confluence, Protheus, and TDS connectivity with VPN hints. However, it FAILS to properly implement VAL-HEALTH-005 because it uses fmt.Errorf() for all error cases, resulting in only exit codes 0 and 1. The validation contract requires distinct exit codes 2 (usage), 3 (auth), and 4 (retryable). The codebase has proper error types in internal/errors package that support these exit codes, but they're not used. Additionally, the command documentation falsely advertises support for exit codes that aren't actually implemented."
+}

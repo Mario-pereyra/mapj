@@ -1,0 +1,59 @@
+{
+  "featureId": "health-exit-codes-fix",
+  "reviewedAt": "2026-04-13T03:00:00Z",
+  "commitId": "e1d4651",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Fix properly addresses all 6 VAL-HEALTH-005 exit code issues from the original health-check-command feature. All fmt.Errorf() calls have been replaced with the correct specialized error types (UsageError, AuthError, RetryableError) from the internal/errors package. Build succeeds, go vet passes.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": ".factory/validation/health/scrutiny/reviews/health-check-command.json",
+  "fixVerification": {
+    "issue1_unknown_service": {
+      "line": 100,
+      "was": "fmt.Errorf()",
+      "now": "mapjerrors.UsageError",
+      "exitCode": 2,
+      "status": "fixed"
+    },
+    "issue2_confluence_not_configured": {
+      "line": 192,
+      "was": "fmt.Errorf()",
+      "now": "mapjerrors.AuthError",
+      "exitCode": 3,
+      "status": "fixed"
+    },
+    "issue3_protheus_no_profile": {
+      "line": 240,
+      "was": "fmt.Errorf()",
+      "now": "mapjerrors.AuthError",
+      "exitCode": 3,
+      "status": "fixed"
+    },
+    "issue4_protheus_network_error": {
+      "line": 259,
+      "was": "err (fmt.Errorf)",
+      "now": "mapjerrors.RetryableError",
+      "exitCode": 4,
+      "status": "fixed"
+    },
+    "issue5_tds_no_profile": {
+      "line": 288,
+      "was": "fmt.Errorf()",
+      "now": "mapjerrors.AuthError",
+      "exitCode": 3,
+      "status": "fixed"
+    },
+    "issue6_tds_connection_failure": {
+      "line": 324,
+      "was": "err (fmt.Errorf)",
+      "now": "mapjerrors.RetryableError",
+      "exitCode": 4,
+      "status": "fixed"
+    }
+  },
+  "summary": "The health-exit-codes-fix feature successfully resolves all 6 blocking issues from the original health-check-command review. All error returns now use the correct specialized error types from internal/errors package, which properly implement the ExitCoder interface for VAL-HEALTH-005 compliance."
+}

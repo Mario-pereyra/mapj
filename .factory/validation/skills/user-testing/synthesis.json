@@ -1,0 +1,23 @@
+{
+  "milestone": "skills",
+  "round": 1,
+  "status": "pass",
+  "assertionsSummary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "blocked": 0
+  },
+  "passedAssertions": [
+    "VAL-SKILL-001",
+    "VAL-SKILL-002",
+    "VAL-SKILL-003",
+    "VAL-COMPLETE-001",
+    "VAL-COMPLETE-002",
+    "VAL-COMPLETE-003"
+  ],
+  "failedAssertions": [],
+  "blockedAssertions": [],
+  "appliedUpdates": [],
+  "previousRound": null
+}
