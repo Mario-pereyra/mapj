@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	mapjerrors "github.com/Mario-pereyra/mapj/internal/errors"
 	"github.com/Mario-pereyra/mapj/internal/auth"
 	"github.com/Mario-pereyra/mapj/internal/output"
 	"github.com/Mario-pereyra/mapj/pkg/confluence"
@@ -94,7 +95,7 @@ func healthRun(cmd *cobra.Command, args []string) error {
 			env := output.NewErrorEnvelope(cmd.CommandPath(), "USAGE_ERROR",
 				fmt.Sprintf("unknown service: %s. Valid services: tdn, confluence, protheus, tds", svc), false)
 			fmt.Println(formatter.Format(env))
-			return fmt.Errorf("unknown service: %s", svc)
+			return &mapjerrors.UsageError{Msg: fmt.Sprintf("unknown service: %s", svc)}
 		}
 
 		if err != nil {
@@ -187,7 +188,7 @@ func checkConfluence() (serviceHealth, error) {
 		health.Healthy = false
 		health.Error = "not configured"
 		health.Hint = "Run: mapj auth login confluence --url URL --token TOKEN"
-		return health, fmt.Errorf("confluence not configured")
+		return health, &mapjerrors.AuthError{Msg: "confluence not configured"}
 	}
 
 	client := confluence.NewClient(creds.Confluence.BaseURL, creds.Confluence.Token)
@@ -234,7 +235,7 @@ func checkProtheus() (serviceHealth, error) {
 		health.Healthy = false
 		health.Error = "no active profile"
 		health.Hint = "Run: mapj protheus connection add <name> --server ... --database ... --user ... --password ... --use"
-		return health, fmt.Errorf("no active Protheus profile")
+		return health, &mapjerrors.AuthError{Msg: "no active Protheus profile"}
 	}
 
 	health.Server = profile.Server
@@ -253,7 +254,7 @@ func checkProtheus() (serviceHealth, error) {
 		health.Healthy = false
 		health.Error = err.Error()
 		health.Hint = protheusVPNHint(profile.Server)
-		return health, err
+		return health, &mapjerrors.RetryableError{Msg: err.Error()}
 	}
 
 	health.Healthy = true
@@ -282,7 +283,7 @@ func checkTDS() (serviceHealth, error) {
 		health.Healthy = false
 		health.Error = "no active profile"
 		health.Hint = "Run: mapj advpl connection add <name> --server ... --port ... --environment ... --user ... --password ... --use"
-		return health, fmt.Errorf("no active TDS profile")
+		return health, &mapjerrors.AuthError{Msg: "no active TDS profile"}
 	}
 
 	health.Server = profile.Server
@@ -317,7 +318,7 @@ func checkTDS() (serviceHealth, error) {
 		health.Healthy = false
 		health.Error = fmt.Sprintf("connection to %s:%d failed: %s", profile.Server, profile.Port, err.Error())
 		health.Hint = tdsVPNHint(profile.Server)
-		return health, err
+		return health, &mapjerrors.RetryableError{Msg: fmt.Sprintf("connection to %s:%d failed: %s", profile.Server, profile.Port, err.Error())}
 	}
 
 	health.Healthy = true
