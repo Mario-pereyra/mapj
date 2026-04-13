@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"time"
 
 	"github.com/Mario-pereyra/mapj/internal/errors"
@@ -17,10 +18,13 @@ var (
 	profileName  string
 	noColor      bool
 	logLevel     string
+	observe      bool // --observe flag for opt-in observability
 	// commandStartTime tracks when the current command started executing
 	commandStartTime time.Time
 	// currentCommand tracks the current executing command for post-run logging
 	currentCommand *cobra.Command
+	// currentRunErr captures any error from command execution for observability
+	currentRunErr error
 )
 
 var rootCmd = &cobra.Command{
@@ -106,12 +110,28 @@ func Execute() int {
 	// Display flags
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable colored output")
 
+	// Observability flag
+	rootCmd.PersistentFlags().BoolVar(&observe, "observe", false, "Enable observability middleware (or set MAPJ_OBSERVE=1)")
+
 	// Silence errors for all commands that output structured JSON errors
 	// Each command that returns an ExitCoder error has already output its JSON envelope
 	rootCmd.SilenceErrors = true
 
+	// Set global observeEnabled based on flag
+	observeEnabled = observe
+
 	var runErr error
 	if runErr = rootCmd.Execute(); runErr != nil {
+		// Capture runErr for observability
+		currentRunErr = runErr
+
+		// Call Observe() for registered observables if enabled
+		if currentCommand != nil && isObservabilityEnabled() {
+			duration := time.Since(commandStartTime)
+			observeCommand(context.Background(), currentCommand, runErr, duration)
+			RecordCommand(duration)
+		}
+
 		// Log error completion with latency and status
 		if currentCommand != nil {
 			duration := time.Since(commandStartTime)
@@ -124,6 +144,16 @@ func Execute() int {
 			return exitCoder.ExitCode()
 		}
 		return errors.ExitError
+	}
+
+	// Capture success for observability
+	currentRunErr = nil
+
+	// Call Observe() for registered observables if enabled
+	if currentCommand != nil && isObservabilityEnabled() {
+		duration := time.Since(commandStartTime)
+		observeCommand(context.Background(), currentCommand, nil, duration)
+		RecordCommand(duration)
 	}
 
 	// Log success completion with latency and status
