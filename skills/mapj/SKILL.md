@@ -96,6 +96,12 @@ What do you need to do?
 ├─ Manage Protheus connection profiles (add/list/switch/ping/remove)
 │   → Load: mapj-protheus-query/SKILL.md
 │
+├─ Check health status of all services (TDN, Confluence, Protheus, TDS)
+│   → mapj health --service=<service>  (no sub-skill needed)
+│
+├─ View observability metrics (Prometheus format)
+│   → mapj observability metrics  (no sub-skill needed)
+│
 └─ Check auth status / logout
     → Use auth commands below (no sub-skill needed)
 ```
