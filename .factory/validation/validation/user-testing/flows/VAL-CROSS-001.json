@@ -1,0 +1,42 @@
+{
+  "assertionId": "VAL-CROSS-001",
+  "description": "Full Command Flow with Observability",
+  "passCriteria": [
+    "traceId propagated de inicio a fin",
+    "Errores incluyen traceId para correlación",
+    "Health checks usan mismo sistema de logging"
+  ],
+  "status": "pass",
+  "evidence": [
+    {
+      "test": "tdn search with traceId propagation",
+      "traceId": "7f642321-0a33-4a53-a1a7-6d0f12bd6149",
+      "observation": "Start log and completion log both contain the same traceId, confirming propagation"
+    },
+    {
+      "test": "Error response with traceId",
+      "traceId": "85b6222b-8395-4032-878a-e81989f41e75",
+      "observation": "Error envelope includes traceId for correlation, along with hint and retryable flag"
+    },
+    {
+      "test": "Health check logging",
+      "traceId": "e2a80389-5edd-416a-9ac6-6285e2948e6d",
+      "observation": "Health check uses same JSON logging format with traceId in start and completion logs"
+    },
+    {
+      "test": "Observability metrics command",
+      "observation": "metrics command works correctly with proper logging"
+    },
+    {
+      "test": "--observe flag",
+      "observation": "Flag documented in --help output and works correctly"
+    },
+    {
+      "test": "--log-level flag",
+      "observation": "Flag documented in --help output with all 4 levels (debug, info, warn, error)"
+    }
+  ],
+  "toolsUsed": ["CLI terminal testing"],
+  "frictions": [],
+  "blockers": []
+}
