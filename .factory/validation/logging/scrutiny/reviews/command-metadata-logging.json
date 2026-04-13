@@ -1,0 +1,33 @@
+{
+  "featureId": "command-metadata-logging",
+  "reviewedAt": "2026-04-12T20:30:00Z",
+  "commitId": "e29d904",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Implementation correctly adds command metadata to all log entries and enriches errors with traceId, hints, and retryable flag. All validation criteria are met.",
+    "issues": [
+      {
+        "file": "internal/output/envelope.go",
+        "severity": "non_blocking",
+        "description": "NewErrorEnvelopeWithPhase function exists but is unused anywhere in the codebase. Dead code but not harmful."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "conventions",
+      "observation": "AGENTS.md documents an EnrichedError struct and ObservableCommand interface pattern, but the implementation uses different patterns: LogCommandStart/LogCommandComplete standalone functions and ErrDetail struct with auto-injecting constructors. The documentation should be updated to reflect the actual implementation.",
+      "evidence": "AGENTS.md lines 20-28 show EnrichedError struct pattern, but internal/output/envelope.go uses ErrDetail with auto-injected traceId via NewErrorEnvelope/NewErrorEnvelopeWithHint constructors"
+    },
+    {
+      "area": "skills",
+      "observation": "The backend-worker SKILL.md documents a specific zap logging pattern with var logger *zap.Logger and init() approach, but the implementation uses a package-level Init() function with zap.Config. This is a minor documentation deviation that doesn't affect functionality.",
+      "evidence": "SKILL.md shows 'var logger *zap.Logger' with init(), but internal/logging/logger.go uses logging.Init(logging.Config{...}) pattern"
+    }
+  ],
+  "addressesFailureFrom": null,
+  "fulfills": ["VAL-LOG-004", "VAL-LOG-005"],
+  "summary": "Feature implementation passes all review criteria. Command metadata (command path, latencyMs, status) is properly added to all log entries via LogCommandStart and LogCommandComplete functions. Error enrichment (traceId, hint, retryable) is correctly implemented via auto-injection in error envelope constructors. The confluence export command uses NewErrorEnvelopeWithHint for all error cases with appropriate recovery hints. No blocking issues found."
+}
