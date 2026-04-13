@@ -77,6 +77,7 @@ func healthRun(cmd *cobra.Command, args []string) error {
 	}
 
 	allHealthy := true
+	var firstError error
 
 	for _, svc := range services {
 		var health serviceHealth
@@ -100,6 +101,9 @@ func healthRun(cmd *cobra.Command, args []string) error {
 
 		if err != nil {
 			allHealthy = false
+			if firstError == nil {
+				firstError = err
+			}
 		}
 		result.Services[svc] = health
 	}
@@ -110,7 +114,7 @@ func healthRun(cmd *cobra.Command, args []string) error {
 	fmt.Println(formatter.Format(env))
 
 	if !allHealthy {
-		return fmt.Errorf("one or more services unhealthy")
+		return firstError
 	}
 	return nil
 }
