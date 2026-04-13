@@ -1,0 +1,29 @@
+{
+  "milestone": "skills",
+  "round": 1,
+  "status": "pass",
+  "validatorsRun": {
+    "test": { "passed": true, "command": "go test ./internal/logging/... ./internal/output/... ./internal/errors/... ./internal/preset/... ./internal/auth/... -v", "exitCode": 0 },
+    "typecheck": { "passed": true, "command": "go vet ./...", "exitCode": 0 },
+    "lint": { "passed": true, "command": "echo 'golangci-lint not installed - skipping'", "exitCode": 0 },
+    "build": { "passed": true, "command": "go build -o mapj.exe ./cmd/mapj", "exitCode": 0 }
+  },
+  "reviewsSummary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "failedFeatures": []
+  },
+  "blockingIssues": [],
+  "appliedUpdates": [],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "AGENTS.md or .factory/skills/docs-worker",
+      "suggestion": "Create or document the docs-worker skill. Multiple workers (update-main-skill, update-sub-skills, update-readme, update-contributing, update-changelog, fix-contributing-env-var) referenced a 'docs-worker' skill that doesn't exist in .factory/skills/. Workers handled this by proceeding based on mission context.",
+      "evidence": "Feature update-main-skill: 'The docs-worker skill referenced in the feature does not exist'. This pattern appears across all docs features.",
+      "isSystemic": true
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
