@@ -1,0 +1,28 @@
+{
+  "featureId": "fix-contributing-env-var",
+  "reviewedAt": "2026-04-13T04:00:00Z",
+  "commitId": "d6791cb",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The fix correctly removes MAPJ_LOG_LEVEL from the environment variables table in CONTRIBUTING.md section 2.5. The diff shows a single line deletion: the MAPJ_LOG_LEVEL row was removed from the env vars table. MAPJ_TRACE_ID and MAPJ_OBSERVE=1 remain as the only documented environment variables. The original blocking issue is resolved.",
+    "issues": [
+      {
+        "file": "CONTRIBUTING.md",
+        "line": 172,
+        "severity": "non_blocking",
+        "description": "ExpectedBehavior item 3 states '--log-level documented as CLI flag only', but --log-level is not documented as a CLI flag in CONTRIBUTING.md. However, this appears to be an enhancement beyond the original failure scope. The original failure only required removing MAPJ_LOG_LEVEL from the env vars table (which is done). The --log-level flag IS documented in .factory/library/architecture.md. CONTRIBUTING.md does not have a CLI flags section - only an Environment Variables section."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The docs-worker skill exists at .factory/skills/docs-worker/SKILL.md but the worker reported it wasn't found during execution. The handoff notes: 'The docs-worker skill was not found during execution'. This appears to be a timing issue - the skill may have been created after this work session completed. skillFeedback.followedProcedure is false due to this deviation.",
+      "evidence": "handoff.discoveredIssues: 'The docs-worker skill was not found during execution, but the fix was straightforward'. Skill exists at .factory/skills/docs-worker/SKILL.md as confirmed by Glob search."
+    }
+  ],
+  "addressesFailureFrom": ".factory/validation/core/scrutiny/reviews/update-contributing.json",
+  "summary": "Fix for update-contributing review is PASS. The fix correctly removes MAPJ_LOG_LEVEL from the environment variables table in CONTRIBUTING.md section 2.5. The original blocking issue (MAPJ_LOG_LEVEL incorrectly documented as an environment variable) is resolved. MAPJ_TRACE_ID and MAPJ_OBSERVE=1 remain as the only documented environment variables. The non-blocking issue about --log-level documentation is beyond the original failure scope and does not block approval."
+}
