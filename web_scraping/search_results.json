@@ -1,0 +1,1456 @@
+[
+  {
+    "id": "29122656640023",
+    "raw_id": "z_29122656640023",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Como Leer Campos S_T_A_M_P_ y I_N_S_D_T_ desde ADVPL",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Como Leer Campos S_T_A_M_P_ y I_N_S_D_T_ desde ADVPL",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/29122656640023-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Como-Leer-Campos-S-T-A-M-P-y-I-N-S-D-T-desde-ADVPL",
+    "body": "   Tiempo aproximado de lectura  00:03:00 min     \n   Duda:  \n ¿Como crear un campo interno en las tablas DBAccess,  no visible  en la estructura de acceso de  AdvPL , para registrar la  fecha y hora  (marca de tiempo) de cada registro insertado y/o modificado en la base de datos? \n   Entorno    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12 en adelante   Solución  \n La implementación del campo de control  S_T_A_M_P_  en los siguientes gestores de base de datos: \n \n  MSSQL  \n  ORACLE  \n  POSTGRES  \n \n El campo se actualiza directamente por el  DBMS  cada vez que se ejecuta una instrucción  UPDATE . \n \n Tipo de campo:\n \n \n MSSQL:   DATETIME \n \n \n Postgres/Oracle:   TIMESTAMP \n \n \n \n Actualización del campo:\n \n Durante la  inserción  de nuevos registros. \n Durante la  modificación  de registros existentes. \n El valor se guarda en la zona horaria  UTC , obtenido de manera nativa por la base de datos. \n \n \n Responsabilidad:\n \n La  creación del campo  y su mantenimiento (a través de triggers) es responsabilidad de  DBAccess . \n \n \n Incorporación del campo en tablas:\n \n Nuevas tablas: Se incluye automáticamente al momento de su creación. \n Tablas existentes: Se puede agregar bajo demanda utilizando la función   TCConfig()  . \n \n \n Restricciones:\n \n En tablas existentes, los valores del campo  S_T_A_M_P_  permanecen como  NULL  hasta que los registros sean modificados. \n \n No se aplica  a tablas temporales. \n \n \n Consulta del campo S_T_A_M_P_:\n \n Cuando se consulta directamente, DBAccess interpreta la información como un campo de tipo  \"D\" (Fecha)  en  AdvPL  y solo devuelve la  fecha  (sin incluir la hora). \n Para obtener la fecha y hora completa en formato  aaaa-mm-dd\n      hh:MM:ss.mmm , se debe realizar un  CAST . \n \n \n \n  Información adicional:  \n \n Llamada relacionada: MTEC-3238 \n Documentación: Consulte la sección [Entorno], clave UseRowStamp en la documentación de DBAccess. \n Notas importantes:\n \n Las columnas  S_T_A_M_P_  no se llenan automáticamente en registros existentes al agregar el campo a una tabla ya creada. \n \n \n La información de  fecha y hora  completa solo puede ser recuperada correctamente mediante  CAST  en consultas SQL. \n \n  Conozca más:  \n  Implementação - Campo de controle adicional no DBAccess - S_T_A_M_P_ - TOTVSTEC - TDN  ",
+    "updated_at": "2025-01-10T17:26:48Z",
+    "score": 47.683655,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:03:00 min     \n   Duda:  \n ¿Como crear un campo interno en las tablas DBAccess,  no visible  en la estructura de acceso de  <b>AdvPL</b> , para registrar la  fecha y hora",
+        "  (marca de tiempo) de cada registro insertado y/o modificado en la base de datos? \n   Entorno    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión 12 en",
+        "  \"D\" (Fecha)  en  <b>AdvPL</b>  y solo devuelve la  fecha  (sin incluir la hora). \n Para obtener la fecha y hora completa en formato  aaaa-mm-dd\n      hh:MM:ss.mmm , se debe realizar un  CAST"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360025970853",
+    "raw_id": "z_360025970853",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Como convertir un caracter (String) a tipo fecha (Data) en ADVPL",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Como convertir un caracter (String) a tipo fecha (Data) en ADVPL",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360025970853-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Como-convertir-un-caracter-String-a-tipo-fecha-Data-en-ADVPL",
+    "body": "      Duda     ¿Cómo convertir un carácter (String) a tipo fecha (Data) en ADVPL?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - A partir de la versión 11.80   Solución     A través de la función  CtoD , puede convertir un string para el tipo fecha   Sintaxis :    CtoD( &lt;   cData       &gt; )      Parámetros : \n \n \n \n \n   Nombre   \n \n \n   Tipo   \n \n \n   Descripción   \n \n \n   Obligatorio   \n \n \n   Referencia   \n \n \n \n cData \n Carácter \n Indica el string que contiene una fecha a ser convertida \n X \n   \n \n \n   \n \n   Retorno : \n \n \n \n \n   Nombre   \n \n \n   Tipo   \n \n \n   Descripción   \n \n \n \n dRet \n data \n Retorna la fecha convertida \n \n \n   \n \n   Ejemplo :          También está disponible la función  SToD , la cual permite retornar una fecha a partir de un String de 8 caracteres en formato de año, mes y día (aaaammdd)   Sintaxis :  SToD ( &lt; cData&gt; ) --&gt; dRet  Parámetros:   \n \n \n \n \n   Nombre   \n \n \n   Tipo   \n \n \n   Descripción   \n \n \n   Obligatorio   \n \n \n   Referencia   \n \n \n \n cData \n Caracter \n Indica la fecha en formato año, mes y día (aaaammdd) \n X \n   \n \n \n   \n \n   Retorno :  \n \n \n \n \n   Nombre   \n \n \n   Tipo   \n \n \n   Descripción   \n \n \n \n dRet \n data \n Retorna la fecha convertida en 8 caracteres \n \n \n   \n \n   Ejemplo :           ***** Ejemplo de validaciones y/o inicializadores en campos de la tabla SX3 *****  \n \n \n \n   X3_CAMPO   \n   X3_TIPO   \n   X3_TAMANHO   \n   X3_PICTURE   \n   X3_VALID   \n   X3_RELACAO   \n \n \n  EF1_DT_ANT  \n D \n 8 \n @D \n CTOD(\"\") \n CtoD(\"\") \n \n \n  QUB_REFAUD  \n D \n 8 \n   \n dDatabase \n dDatabase \n \n \n  TNN_COMISS  \n D \n 8 \n   \n CTOD(\"  /  /  \") \n CTOD(\"  /  /  \") \n \n \n  VPN_DATPED  \n D \n 8 \n @D \n If(INCLUI,M-&gt;VPN_DATMOV==DDATABASE,if(M-&gt;VPN_OPEMOV==\"S\",(M-&gt;VPN_DATMOV==DataValida(M-&gt;VPN_DATMOV)),M-&gt;VPN_DATMOV==VPN_DATMOV)) \n DDATABASE \n \n \n  CVN_DTVIGF  \n D \n 8 \n   \n Vazio() .OR. IIF(!EMPTY(M-&gt;CVN_DTVIGF),(M-&gt;CVN_DTVIGF &gt;= M-&gt;CVN_DTVIGI),.T.) \n STOD(\"\") \n \n \n  NO_VIGFIM  \n D \n 8 \n   \n NaoVazio() .AND. M-&gt;NO_VIGFIM &gt;= M-&gt;NO_VIGINI \n STOD(\"\") \n \n \n   \n \n    Nota:  En caso de identificar algún incidente, escenario, error o duda en específico, deberá registrar un ticket de atención a soporte Mercado Internacional para su evaluación correspondiente.  --- Proporcionar en el ticket su evidencia en vídeo el patrón de emulación, las configuraciones utilizadas en el escenario. --- Enviar SX6 de la empresa / filial donde se presenta el incidente. --- Log completo del error en bloc de notas, en caso de aplicar.    Vídeo: ¿Como abrir un ticket de atención en el Portal del Cliente?    Conozca más : Para consultar la información contenida en nuestro banco de cocimientos, acceda a los siguientes enlaces: \n  MP - CFG - CFGX031 - ¿Cuales son los campos de la tabla SX3 del diccionario de datos en Protheus?  \n  MP - CFG - CFGX031 - ¿Cuales son las Máscaras para la configuracion de los campos de Protheus?  \n  How To - Como responder la encuesta de satisfacción de tickets de atención TOTVS  ",
+    "updated_at": "2022-04-06T15:07:11Z",
+    "score": 42.814735,
+    "highlight": {
+      "body": [
+        "      Duda     ¿Cómo convertir un carácter (String) a tipo fecha (Data) en <b>ADVPL</b>?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la versión 11.80"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "33026894769047",
+    "raw_id": "z_33026894769047",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisRet",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisRet",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/33026894769047-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-MaFisRet",
+    "body": "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisRet   Entorno [ Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Todas las versiones   Solución  La Función MaFisIniLoad devuelve el contenido en el caso de valores de impuestos, por ejemplo devolverá los valores calculados de la referencia fiscal informada en el parámetro cCampo. Al informar referencias “IT_” y “LF_” los valores devueltos serán del ítem informado en el parámetro nItem, array interno aNFItem y referencias “NF_” devolverán contenidos del array interno aNFCab, de esta manera dispensan la información de nItem.   Así se puede considerar que:  nItem: Es el ítem del documento, si la información fuera referente a un ítem. Si fuera una información del encabezado, no es necesario transmitir la información. cCampo: Es un texto fijo que corresponde a una información de la factura. aTrbGen: Es un array bidimensional que corresponde a valores de los tributos genéricos calculados por el configurador de tributos.  Para mayor información sugerimos leer el boletín técnico  Función MaFisRet     ",
+    "updated_at": "2025-06-24T21:20:17Z",
+    "score": 40.818348,
+    "highlight": {
+      "body": [
+        "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisRet   Entorno [ Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Todas las versiones   Solución  La Función"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "33007937472919",
+    "raw_id": "z_33007937472919",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisIniLoad",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisIniLoad",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/33007937472919-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-MaFisIniLoad",
+    "body": "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisIniLoad   Entorno  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Todas las versiones   Solución  La Función  MaFisIniLoad  devuelve el contenido en el caso de valores de impuestos, por ejemplo devolverá los valores calculados de la referencia fiscal informada en el parámetro cCampo. Al informar referencias “IT_” y “LF_” los valores devueltos serán del ítem informado en el parámetro nItem, array interno aNFItem y referencias “NF_” devolverán contenidos del array interno aNFCab, de esta manera dispensan la información de nItem.   Así se puede considerar que:  nItem: Es el ítem del documento, si la información fuera referente a un ítem. Si fuera una información del encabezado, no es necesario transmitir la información. cCampo: Es un texto fijo que corresponde a una información de la factura. aTrbGen: Es un array bidimensional que corresponde a valores de los tributos genéricos calculados por el configurador de tributos.  Para mayor información sugerimos leer el boletín técnico  Función MaFisRet  ",
+    "updated_at": "2025-06-24T14:49:32Z",
+    "score": 40.818348,
+    "highlight": {
+      "body": [
+        "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisIniLoad   Entorno  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Todas las versiones   Solución  La Función"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "30067006466327",
+    "raw_id": "z_30067006466327",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Execauto GetRmtTime()",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Execauto GetRmtTime()",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/30067006466327-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Execauto-GetRmtTime",
+    "body": "   Tiempo aproximado de lectura  00:03:00 min    Duda    ¿Para que sirve la función Execauto GetRmtTime()?   Entorno    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12 en adelante   Solución     \n  ¿Qué hace la función  GetRmtTime() ?  \n La función  GetRmtTime()  obtiene la hora actual del servidor en formato de texto. Se usa en este código para registrar el inicio y fin de la ejecución en la consola, permitiendo medir el tiempo que tomó el proceso. \n Probablemente  GetRmtTime()  sea una función personalizada o nativa de Protheus que devuelve la hora en formato  HH:MM:SS , lo que permite calcular cuánto tardó la ejecución de la rutina a testear, ejemplo: MYMT120() .   Ejemplo de aplicación:    \n \n \n #Include     \"Protheus.ch\" \n \n \n #Include     \"RwMake.ch\" \n \n \n #Include     \"TbiConn.ch\" \n \n \n \n User     Function     MYMT120  () \n \n \n       Local   aCabec \n \n \n       Local   aItems \n \n \n       Local   aLinha \n \n \n       Local   nX \n \n \n       Local   lRet            :=     .T. \n \n \n       Local   cErrRet         :=     \"\" \n \n \n       Private   lMsErroAuto   :=     .F. \n \n \n     cNumPc                :=     FWInputBox  (  \"Numero documento\"  ,     \"\"  )   //Manual doc \n \n \n \n ConOut  (  \"Inicio de Ejecucción MYMT120: \"  +  GetRmtTime  ())   //Tiempo de ejecución \n \n        \n \n     aCabec                :=   {} \n \n \n       aadd  (aCabec  ,   {  \"C7_EMISSAO\"  ,     Date  ()}) \n \n \n       aadd  (aCabec  ,   {  \"C7_FILIAL\"     ,     '0101'  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_NUM\"        ,   cNumPc}) \n \n \n       aadd  (aCabec  ,   {  \"C7_FORNECE\"  ,     '000001'  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_LOJA\"       ,     '01'  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_COND\"       ,     '220'  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_MOEDA\"      ,     1  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_TXMOEDA\"  ,     1  }) \n \n \n       aadd  (aCabec  ,   {  \"C7_FILENT\"     ,     '0101'  }) \n \n \n \n aItems                :=   {} \n \n \n FOR   nX                :=     1     TO     10 \n \n \n     aLinha                :=   {} \n \n \n       aadd  (aLinha  ,   {  \"C7_PRODUTO\"  ,     \"000001\"     ,     Nil  })  \n \n \n       aadd  (aLinha  ,   {  \"C7_QUANT\"      ,     1            ,     Nil  }) \n \n \n       aadd  (aLinha  ,   {  \"C7_DATPRF\"     ,   dDataBase  ,     Nil  }) \n \n \n       aadd  (aLinha  ,   {  \"C7_PRECO\"      ,     20           ,     Nil  }) \n \n \n       aadd  (aLinha  ,   {  \"C7_TES\"        ,     \"001\"        ,     Nil  }) \n \n \n       aadd  (aLinha  ,   {  \"C7_LOCAL\"      ,     \"01\"         ,     Nil  }) \n \n \n       aadd  (aItems  ,   aLinha) \n \n \n NEXT   nX \n \n \n \n BEGIN   TRANSACTION \n \n \n \n SETFUNNAME  (  \"MATA121\"  ) \n \n \n MSExecAuto  ({|x  ,  y  ,  z  ,  k|  MATA120  (x  ,  y  ,  z  ,  k)}  ,  1  ,  aCabec  ,  aItems  ,  3  ) \n \n \n \n If   lMsErroAuto   \n \n \n           MostraErro  () \n \n \n       else \n \n \n           msgInfo  (  \"Pedido de compra incluido: \"     +   cNumPc  ,     \"ExecAuto MYMT120\"  )   //cNumPc confirmación grabado pedido \n \n        \n \n       ConOut  (  \"Fin de Ejecucción MYMT120: \"  +  GetRmtTime  ())   //Tiempo de ejecución \n \n        \n \n       Endif \n \n \n \n END   TRANSACTION \n \n \n \n ConfirmSX8  () \n \n \n  RETURN  \n \n     \n   \n   ",
+    "updated_at": "2025-02-18T21:59:35Z",
+    "score": 40.818348,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:03:00 min    Duda    ¿Para que sirve la función Execauto GetRmtTime()?   Entorno    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "23536568550423",
+    "raw_id": "z_23536568550423",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Función FWMsExcel()",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Función FWMsExcel()",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/23536568550423-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-FWMsExcel",
+    "body": "   Tiempo aproximado de lectura:  00:05:00 min    Duda  \n Aun es utilizada la Función FWMsExcel() ? \n   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Todas las versiones 12   Solución  La clase FWMsExcel() se encuentra descontinuada y ya no recibe mantenimiento o innovaciones. Ya que su uso para generar hojas de cálculo extensas puede resultar en un uso elevado de la memoria del servidor. \n En caso necesario, utilice las clases  FWMsExcelEx    y      FWMsExcelXlsx    para generar sus plantillas    \n   ",
+    "updated_at": "2024-05-16T18:26:30Z",
+    "score": 40.13556,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura:  00:05:00 min    Duda  \n Aun es utilizada la Función FWMsExcel() ? \n   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - Todas las"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "33007999759639",
+    "raw_id": "z_33007999759639",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisIni",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función MaFisIni",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/33007999759639-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-MaFisIni",
+    "body": "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisIni   Entorno  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Todas las versiones   Solución  La función MaFisIni() es responsable por iniciar todo el proceso de la MATXFIS. Es la función que forma el array aNFCab (Encabezado del documento fiscal) por medio de los datos informados en los parámetros informados por la función, parámetros SX6, datos de la tabla de Cliente (SA1) y/o Proveedor (SA2) y Modalidad financiera (SED), dando forma de esta manera al documento fiscal que se generará.  Para mayor información sugerimos leer el boletín técnico  Función MaFisIni  ",
+    "updated_at": "2025-06-24T14:50:59Z",
+    "score": 39.762154,
+    "highlight": {
+      "body": [
+        "       Tiempo aproximado de lectura  00:03:00 min   Duda  Función MaFisIni   Entorno  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Todas las versiones   Solución  La función"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "14394440109719",
+    "raw_id": "z_14394440109719",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Connections Disabled\"",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Connections Disabled\"",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/14394440109719-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Connections-Disabled",
+    "body": "   Tiempo aproximado de lectura:  00:05:00 min    Ocurrencia    Error \"Cannot StartJob() - Connections Disabled\" presentado al ejecutar la función StartJob() en una rutina o punto de entrada.     Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Todas las versiones 12   Causa    \n   Este error se genera debido a la capacidad de iniciar nuevos subprocesos de su   AppServer     en los que el usuario ha alcanzado el límite. Cuando  se inicia un trabajo    desde una función en tiempo de ejecución (  STARTJOB),     este   trabajo    se    inicia en el propio AppServer     /port que se asigna al rol de llamada. Dado que el   AppServer    está    en el límite de conexión/memoria, se genera el error.   \n  Cada   JOB    ejecutado    desde una función no entra en las reglas de equilibrio y se llama/ejecuta en el mismo servicio.  \n   Solución     \n  Para evitar este error necesitarás aumentar el número  de Esclavos    en tu entorno para evitar que con la acumulación de usuarios tus   Esclavos        alcancen el límite de conexiones. \n   \n  Más información  \n  Equilibrio de carga  ",
+    "updated_at": "2023-05-05T18:02:59Z",
+    "score": 39.762154,
+    "highlight": {
+      "body": [
+        ".     Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - Todas las versiones 12   Causa    \n   Este error se genera debido a la capacidad de iniciar nuevos subprocesos de su"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "30773380119191",
+    "raw_id": "z_30773380119191",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Función Modelo3()",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Función Modelo3()",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/30773380119191-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-Modelo3",
+    "body": "   Tiempo aproximado de lectura:  00:05:00 min    Duda  \n ¿Para que sirve la función Modelo3()? \n   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Todas las versiones 12   Solución  La función Modelo3() Muestra un formulario de registro que contiene una  enchoice  y una opción para obtener datos  getdados  \n   \n  Sintaxis  \n Modelo3 ( cTitulocAliascAlias2 [ aMyEncho ] [ cLinhaOk ] [ cTudoOk ] [ nOpcE ] [ nOpcG ] [ cFieldOk ] [ lVirtual ] [ nLinhas ] [ aAltEnchoice ] [ nFreeze ] [ aButtons ] [ aCordW ] [ nSizeHeader ] ) --&gt; lRet \n   \n Ejemplo \n  #include \"protheus.ch\"  \n  #include \"rwmake.ch\"      \n   \n  User Function RDMOD3()  \n  Local cOpcao        as character  \n  Local nOpcE         as numeric  \n  Local nOpcG         as numeric  \n  Local nUsado        as numeric  \n  Local _ni           as numeric  \n   \n  Private aHeader     as array  \n  Private aRotina     as array  \n  Private aCols       as array  \n   \n  aRotina := {{ \"Pesquisa\",\"AxPesqui\", 0 , 1}, { \"Visual\",\"AxVisual\", 0 , 2}, { \"Inclui\",\"AxInclui\", 0 , 3}, { \"Altera\",\"AxAltera\", 0 , 4, 20 }, { \"Exclui\",\"AxDeleta\", 0 , 5, 21 }}  \n   \n  //+--------------------------------------------------------------+  \n  //| Opcoes de acesso para a Modelo 3                             |  \n  //+--------------------------------------------------------------+  \n  cOpcao:= \"INCLUIR\"  \n   \n  Do Case  \n \n       Case cOpcao==\"INCLUIR\"; nOpcE:=3 ; nOpcG:=3 \n \n \n       Case cOpcao==\"ALTERAR\"; nOpcE:=3 ; nOpcG:=3 \n \n \n       Case cOpcao==\"VISUALIZAR\"; nOpcE:=2 ; nOpcG:=2 \n \n  EndCase  \n   \n  DbSelectArea(\"SC5\")  \n  DbSetOrder(1)  \n  DbGotop()  \n   \n  //+--------------------------------------------------------------+  \n  //| Cria variaveis M-&gt;????? da Enchoice                          |  \n  //+--------------------------------------------------------------+  \n  RegToMemory(\"SC5\", (cOpcao==\"INCLUIR\"))  \n  //+--------------------------------------------------------------+  \n  //| Cria aHeader e aCols da GetDados                             |  \n  //+--------------------------------------------------------------+  \n  nUsado := 0  \n   \n  dbSelectArea(\"SX3\")  \n  DbSetOrder(1)  \n  DbSeek(\"SC6\")  \n  aHeader := {}  \n  While !Eof() .And. (X3_ARQUIVO == \"SC6\")     \n \n       If Alltrim(X3_CAMPO) == \"C6_ITEM\"       \n \n \n           dbSkip()        \n \n \n           Loop    \n \n \n       Endif   \n \n \n       If X3USO(X3_USADO) .And. cNivel &gt;= X3_NIVEL      \n \n \n           nUsado := nUsado+1        \n \n \n           Aadd(aHeader,{ TRIM(X3_TITULO),; \n \n \n                           AllTrim(X3_CAMPO),; \n \n \n                           X3_PICTURE,; \n \n \n                           X3_TAMANHO,; \n \n \n                           X3_DECIMAL,; \n \n \n                           \"AllwaysTrue()\",; \n \n \n                           X3_USADO,; \n \n \n                           X3_TIPO,; \n \n \n                           X3_ARQUIVO,; \n \n \n                           X3_CONTEXT } )  \n \n \n       Endif \n \n \n       dbSkip() \n \n  EndDo  \n   \n  If cOpcao == \"INCLUIR\"   \n \n       aCols:={Array(nUsado+1)}    \n \n \n       aCols[1, nUsado+1] := .F.   \n \n   \n \n       For _ni := 1 to nUsado      \n \n \n           aCols[1, _ni] := CriaVar(aHeader[_ni, 2])   \n \n \n       Next \n \n  Else     \n \n       aCols := {} \n \n \n       dbSelectArea(\"SC6\") \n \n \n       dbSetOrder(1)   \n \n \n       dbSeek(xFilial()+M-&gt;C5_NUM)  \n \n \n       While !eof() .and. SC6-&gt;C6_NUM == M-&gt;C5_NUM       \n \n \n           AADD(aCols, Array(nUsado+1))        \n \n   \n \n           For _ni := 1 to nUsado          \n \n \n               aCols[Len(aCols), _ni] := FieldGet(FieldPos(aHeader[_ni, 2]))       \n \n \n           Next        \n \n   \n \n           aCols[Len(aCols), nUsado+1] := .F.      \n \n \n           dbSkip()    \n \n \n       EndDo \n \n  Endif  \n \n        \n  If Len(aCols) &gt; 0     \n  //+--------------------------------------------------------------+   \n  //| Executa a Modelo 3                                           |   \n  //+--------------------------------------------------------------+   \n \n       cTitulo := \"Teste de Modelo3\"   \n \n \n       cAliasEnchoice := \"SC5\" \n \n \n       cAliasGetD := \"SC6\" \n \n \n       cLinOk := \"AllwaysTrue()\"   \n \n \n       cTudOk := \"AllwaysTrue()\"   \n \n \n       cFieldOk := \"AllwaysTrue()\" \n \n \n       _lRet:= Modelo3(cTitulo, cAliasEnchoice, cAliasGetD,, cLinOk, cTudOk, nOpcE, nOpcG, cFieldOk)   \n \n \n       //+--------------------------------------------------------------+  \n \n \n       //| Executar processamento                                       |  \n \n \n       //+--------------------------------------------------------------+  \n \n \n       If _lRet        \n \n \n           Aviso(\"Modelo3()\", \"Confirmada operacao!\", {\"Ok\"})  \n \n \n       Endif \n \n  Endif                  \n  Return  \n   \n   \n  Conozca   más  \n  Modelo3     ",
+    "updated_at": "2025-03-19T19:54:06Z",
+    "score": 39.72025,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura:  00:05:00 min    Duda  \n ¿Para que sirve la función Modelo3()? \n   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - Todas las versiones"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "16108379860119",
+    "raw_id": "z_16108379860119",
+    "type": "zendesk",
+    "title": "FRAMEWORK - Framework (Línea Protheus) MI - APPSERVER- ADVPL BROKER",
+    "title_name": "FRAMEWORK - Framework (Línea Protheus) MI - APPSERVER- ADVPL BROKER",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/16108379860119-FRAMEWORK-Framework-L%C3%ADnea-Protheus-MI-APPSERVER-ADVPL-BROKER",
+    "body": "   Tiempo aproximado de lectura:  00:05:00 min    Duda     Al configurar el modo de depuración se está generando el error Totvs Broker Client Gateway  \n   Ambiente    FRAMEWORK - Framework (Línea Protheus) MI - APPSERVER - Todas las versiones 12    Solución     En el modo de depuración, debe crear una \"Nueva configuración de activación\" en \"Configuraciones de depuración\" que apunte a un SmartClient.exe donde en el smartclient.ini debe tener la clave Brokerproxy=1 comentada.  ",
+    "updated_at": "2023-07-18T13:59:53Z",
+    "score": 39.72025,
+    "highlight": {},
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "24946126649367",
+    "raw_id": "z_24946126649367",
+    "type": "zendesk",
+    "title": "FRAMEWORK - Framework (Línea Protheus) - MI - VsCode - ¿Cuáles son los métodos Criptografía disponibles ADVPL?",
+    "title_name": "FRAMEWORK - Framework (Línea Protheus) - MI - VsCode - ¿Cuáles son los métodos Criptografía disponibles ADVPL?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/24946126649367-FRAMEWORK-Framework-L%C3%ADnea-Protheus-MI-VsCode-Cu%C3%A1les-son-los-m%C3%A9todos-Criptograf%C3%ADa-disponibles-ADVPL",
+    "body": " \n \n \n     Tiempo aproximado de lectura:     00:03:00 min \n \n \n \n \n \n     Duda     \n ¿Cuáles son los métodos Criptografía disponibles ADVPL? \n   Ambiente    FRAMEWORK - Framework (Línea Protheus) MI - VsCode - Todas las versiones 12. Todos los países   Solución  \n Actualmente, en ADVPL se cuentan con 37 distintos métodos de Criptografia para la protección de datos sensibles. \n   \n   \n Para mas información ir a la sección  Conozca Más  \n   \n  Conozca más  \n  Criptografia  \n \n ",
+    "updated_at": "2024-07-16T20:35:46Z",
+    "score": 34.879597,
+    "highlight": {
+      "body": [
+        " \n \n \n     Tiempo aproximado de lectura:     00:03:00 min \n \n \n \n \n \n     Duda     \n ¿Cuáles son los métodos Criptografía disponibles <b>ADVPL</b>? \n   Ambiente    FRAMEWORK - Framework (Línea Protheus) MI",
+        " - VsCode - Todas las versiones 12. Todos los países   Solución  \n Actualmente, en <b>ADVPL</b> se cuentan con 37 distintos métodos de Criptografia para la protección de datos sensibles. \n   \n   \n Para mas información ir a la sección  Conozca Más  \n   \n  Conozca más  \n  Criptografia  \n \n "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "38576579269527",
+    "raw_id": "z_38576579269527",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Collation, Character Type y Code Set/Encoding",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Collation, Character Type y Code Set/Encoding",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/38576579269527-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Collation-Character-Type-y-Code-Set-Encoding",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cuáles son los tipos de character y code set de acuerdo a mi Collation?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Las aplicaciones AdvPL, especialmente las rutinas heredadas, que acceden a bases de datos relacionales a través de TOTVS | DBAccess requieren que la tabla de caracteres compatible, su comparación y clasificación (comportamiento heredado) se respeten para su funcionamiento.  Tabla de caracteres compatibles: CP1252 / Windows-1252  : tabla de caracteres estándar de Windows que incluye caracteres acentuados de idiomas latinos. Ordenación y comparación:  Orden binario : orden ascendente según el valor de byte de cada carácter. Para cumplir con este requisito, la instancia y/o base de datos debe crearse y/o configurarse de acuerdo con las siguientes definiciones:    ",
+    "updated_at": "2026-02-23T14:58:14Z",
+    "score": 32.801067,
+    "highlight": {
+      "body": [
+        " - <b>ADVPL</b> - A partir de la versión 12.1.2210   Solución  Las aplicaciones <b>AdvPL</b>, especialmente las rutinas heredadas, que acceden a bases de datos relacionales a través de TOTVS | DBAccess requieren que la"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "27914839174423",
+    "raw_id": "z_27914839174423",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI -  ADVPL - TC_FilterEx - NO CONNECTION",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI -  ADVPL - TC_FilterEx - NO CONNECTION",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/27914839174423-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-TC-FilterEx-NO-CONNECTION",
+    "body": "   Tiempo aproximado de lectura  00:02:00 min    Duda    ¿ Como solucionar el mensaje ? \n TC_FilterEx - NO CONNECTION on FWBRWTABLE:CLEANEXFILTER(FWBRWTABLE.PRW) 27/03/2017 09:31:58 line : 212   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 11.80   Solución     \n El error se produce cuando, durante la llamada de la instrucción TC_FilterEx, el hilo AdvPL pierde la conexión con DBAccess. \n Grabando el incidente en la consola.  [FATAL][SERVIDOR] ********************************************** *****************************  TOTVS Build 7.00.131227A-20170519 ERROR DE HILO NG \n ([4956], nbsantos, GUABE007) 21/ 09/2017 16:41:15 \n TC_FilterEx - SIN CONEXIÓN en FWBRWTABLE: CLEANEXFILTER (FWBRWTABLE.PRW) 27/03/2017 09:31:58 línea: 212 \n   \n Para un análisis más detallado, se recomienda abrir un ticket con el equipo de Soporte. ",
+    "updated_at": "2024-11-19T18:48:33Z",
+    "score": 32.801067,
+    "highlight": {
+      "body": [
+        "   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión 11.80   Solución     \n El error se produce cuando, durante la llamada de la instrucción TC_FilterEx, el",
+        " hilo <b>AdvPL</b> pierde la conexión con DBAccess. \n Grabando el incidente en la consola.  [FATAL][SERVIDOR] ********************************************** *****************************  TOTVS Build"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39433513077143",
+    "raw_id": "z_39433513077143",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Descarga de archivos vía REST",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Descarga de archivos vía REST",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39433513077143-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Descarga-de-archivos-v%C3%ADa-REST",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cómo descargar un archivo desde una URL?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Utilice la función  FwRest()  Fuente   // BIBLIOTECAS NECESSÃRIAS #Include \"TOTVS.ch\"  // BAIXA UM ARQUIVO .PDF DE UMA URL User Function T170FILEGET()     Local cURL    := \"http://www.imt.usp.br\"                      // URL DO SERVIÇO     Local cPath   := \"/wp-content/uploads/comissoes/cipa/NR5.pdf\" // RECURSO DA URI     Local aHeader := {}                                           // CABEÇALHO DE INFORMAÇÕES DA REQUISIÇÃO     Local oRest   := NIL                                          // CLIENTE PARA CONSUMO     Local nHandle := 00                                           // CÓDIGO DE SUPORTE AO ARQUIVO          // INSTANCIA O CLIENTE REST         oRest := FwRest():New(cURL)          // INFORMA O RECURSO E O BODY         oRest:SetPath(cPath)          // ENVIA A REQUISIÇÃO E VALIDA O RESULTADO         If (oRest:Get(aHeader))             // CRIA O NOME DO ARQUIVO (FUNÇÕES UTILIZADAS PARA EVITAR CONFLITO DE NOME)             nHandle := FCreate(\"\\dirdoc\\\" + StrTran(DToS(Date()) + \"_\" + Time() + \"_DOCUMENT.pdf\", \":\", \"\"))             FWrite(nHandle, oRest:GetResult())             FClose(nHandle)              // VERIFICA SE O ARQUIVO FOI CRIADO CORRETAMENTE             If (!File(\"\\dirdoc\\\" + cFileName))                 ConOut(\"@ADVPL: Couldn't generate *.PDF file\")             EndIf         Else             ConOut(\"@ADVPL: Couldn't consume API\")         EndIf    Return (NIL)  ",
+    "updated_at": "2026-03-31T23:21:48Z",
+    "score": 32.428905,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cómo descargar un archivo desde una URL?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión",
+        "             If (!File(\"\\dirdoc\\\" + cFileName))                 ConOut(\"@<b>ADVPL</b>: Couldn't generate *.PDF file\")             EndIf         Else             ConOut(\"@<b>ADVPL</b>: Couldn't consume API\")         EndIf    Return (NIL)  "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39433909293719",
+    "raw_id": "z_39433909293719",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Totvs Branch API",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Totvs Branch API",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39433909293719-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Totvs-Branch-API",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Incidente   Al consumir la  API  , no se devuelve ninguna respuesta con los datos debido a un error interno.    Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Para utilizar el servicio, la clave SECURITY debe estar habilitada en su archivo .ini.  [HTTPURI] \nPuerto=8080 \nURIs=HTTPURI  SEGURIDAD=1  ",
+    "updated_at": "2026-03-31T23:24:21Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        " Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión 12.1.2210   Solución  Para utilizar el servicio, la clave SECURITY debe estar habilitada en su archivo .ini.  [HTTPURI] \nPuerto=8080 \nURIs=HTTPURI  SEGURIDAD=1  "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39326363256983",
+    "raw_id": "z_39326363256983",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - ¿Cómo enviar un archivo mediante una solicitud REST?",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - ¿Cómo enviar un archivo mediante una solicitud REST?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39326363256983-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-C%C3%B3mo-enviar-un-archivo-mediante-una-solicitud-REST",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cómo enviar un archivo mediante una solicitud REST?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Para devolver cualquier archivo mediante un servicio REST, simplemente lea el archivo con su clase preferida (para un mejor rendimiento, recomendamos usar la clase FwFileReader() con el método FullRead()).  Tras leerlo, envíe el archivo y el encabezado que aparece a continuación, ya que indican que el archivo se puede descargar a través del navegador (si la llamada se realiza a través del navegador).  Importante: Solo es posible manipular archivos que se encuentren dentro de la ruta raíz de Protheus.  // BIBLIOTECAS NECESARIAS #Include \"TOTVS.ch\" #Include \"RESTFUL.ch\"  // DECLARAÇÃO DO SERVIÇO REST WSRESTFUL DOWNLOAD_FILE DESCRIPTION \"Servicio para teste de envió de archivo.\"     // DECLARAÇÃO DO MÉTODO GET     WSMETHODGET DESCRIPTION\"Regresa un archivo por medio del método FwFileReader().\" END WSRESTFUL  // MÉTODO GET WSMETHOD GET WSREST DOWNLOAD_FILE     Local cFile := \"\"// VALORES RETORNADOS EN LA LECTURA     Local oFile := FwFileReader():New(\"/NR5.pdf\") // RUTA ROOTPATH      // SE FOR POSSÍVEL ABRIR O ARQUIVO, LEIA-O     // SE NÃO, EXIBA O ERRO DE ABERTURA     If (oFile:Open())         cFile := oFile:FullRead() // EFETUA A LEITURA DO ARQUIVO          // RETORNA O ARQUIVO PARA DOWNLOAD         Self:SetHeader(\"Content-Disposition\", \"attachment; filename=NR5.pdf\")         Self:SetResponse(cFile)          lSuccess := .T. // CONTROLE DE SUCESSO DA REQUISIÇÃO     Else         SetRestFault(002, \"can't load file\") // GERA MENSAGEM DE ERRO CUSTOMIZADA          lSuccess := .F. // CONTROLE DE SUCESSO DA REQUISIÇÃO     EndIf Return (lSuccess) ",
+    "updated_at": "2026-03-27T14:04:27Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cómo enviar un archivo mediante una solicitud REST?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39260297222935",
+    "raw_id": "z_39260297222935",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL -  API de TOTVS con campos en blanco",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL -  API de TOTVS con campos en blanco",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39260297222935-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-API-de-TOTVS-con-campos-en-blanco",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  Al realizar una solicitud, observamos que varios campos del JSON devuelto estaban en blanco. Esto plantea la siguiente pregunta: ¿puedo completar todos los campos del JSON?      Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Las API de TOTVS no son exclusivas de una sola línea de productos (aunque algunas actualmente solo están disponibles para una línea). Por lo tanto, las API ya están creadas según el concepto del comité interno de TOTVS para admitir datos de otros productos en el futuro.  Por lo tanto, recomendamos utilizar únicamente los campos relacionados con su línea de productos.   Nota:  No todos los campos están listados en las API de TOTVS; por consiguiente, los registros más complejos deben realizarse mediante rutinas automatizadas o creando su propio servicio REST (ambos mediante personalizaciones desarrolladas por el cliente). ",
+    "updated_at": "2026-03-24T16:06:55Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        " completar todos los campos del JSON?      Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión 12.1.2210   Solución  Las API de TOTVS no son exclusivas de una"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "28003600230295",
+    "raw_id": "z_28003600230295",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Error: Too Many users",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Error: Too Many users",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/28003600230295-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Error-Too-Many-users",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error: Too Many users - en el Appserver   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.33   Causa     Este tipo de ocurrencia se reproduce cuando utilizamos los comandos ERP CREATE RPC CONN... y/o PREPARE ENVIRONMENT, para preparar un ambiente ERP en un servidor, y el número de licencias de uso de ERP ya no da cabida a los usuarios conectados.   Solución     \n Verifique la cantidad de licencias de ERP para la empresa/sucursal que se utiliza para la conexión y proporcione más licencias de uso si es necesario. \n ----------------------------------------Library ............ KLIB_EX version 2.0204231030 (HTTP)Protheus RPO ....... AP6 6.09 SQL DemexDate / Time ........ 20020430 17:33:04Environment ........ DEMEX (01/01)DataBase ........... (not connected)Sessions ID ........ (empty)Working Thread ID .. 01390671Error description .. Too Many usersGeneric Code/SubCode 56 / 0---------------------------------------- \n   ",
+    "updated_at": "2024-11-22T20:25:54Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error: Too Many users - en el Appserver   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360025284392",
+    "raw_id": "z_360025284392",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - MVC - Puntos de entrada MVC",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - MVC - Puntos de entrada MVC",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360025284392-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-MVC-Puntos-de-entrada-MVC",
+    "body": "  Duda  Como utilizar los puntos de entrada MVC para ambientes Protheus? \n  Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL – A partir de P11   Solución  Para solucionar esta duda deben realizarse los siguientes pasos:  Revise la siguiente documentación de puntos de entrada en el siguiente link;   http://tdn.totvs.com/pages/releaseview.action?pageId=208345968      Ejemplo;                     ",
+    "updated_at": "2021-06-17T00:18:58Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "  Duda  Como utilizar los puntos de entrada MVC para ambientes Protheus? \n  Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> – A partir de P11   Solución  Para solucionar"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360043153374",
+    "raw_id": "z_360043153374",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Sección TDS Server",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Sección TDS Server",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360043153374-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Secci%C3%B3n-TDS-Server",
+    "body": "  Duda    ¿Cuál es la configuración que se utiliza para aplicación de PATCHS en servidores remotos?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de versión 12   Solución    Existe una configuración para habilitar la aplicación de PATCH la cual debe ser incluida en la sección TDS del archivo de configuración de su servidor de aplicaciones appserver.ini \n  ALLOWAPPLYPATCH =&lt;estaciones permitidas&gt; \n Existe una configuración para habilitar la edición (compilación de fuentes). \n  ALLOWEDIT =&lt;estaciones permitidas&gt; \n En ambas configuraciones en el apartado &lt;estaciones permitidas&gt; se indica la lista de IP's o nombres de estaciones, separados por coma   (,)   que pueden efectuar acciones sobre el servidor. \n    En caso de que se incluya un  ( *)   cualquier máquina estará habilitada para efectuar la acción correspondiente en ese servidor.   ",
+    "updated_at": "2021-06-08T17:05:37Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "  Duda    ¿Cuál es la configuración que se utiliza para aplicación de PATCHS en servidores remotos?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360025465832",
+    "raw_id": "z_360025465832",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - ¿Cómo identificar los PE en el fuente?",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - ¿Cómo identificar los PE en el fuente?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360025465832-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-C%C3%B3mo-identificar-los-PE-en-el-fuente",
+    "body": "  Duda    ¿Cómo identificar los PE en el fuente? \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL  \n  Solución    Para identificar los PE en el fuente es necesario realizar los siguientes pasos: 1. Ingresar a TFS y buscar en el fuente la palabra  ExecBlock ;   2. Al dar clic en buscar siguiente se mostraran los PE que existen en el fuente que se está consultando.   ",
+    "updated_at": "2021-05-25T14:46:20Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "  Duda    ¿Cómo identificar los PE en el fuente? \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b>  \n  Solución    Para identificar los PE en el fuente es necesario"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500004659301",
+    "raw_id": "z_1500004659301",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Enviar informe TReport por correo electrónico",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Enviar informe TReport por correo electrónico",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500004659301-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Enviar-informe-TReport-por-correo-electr%C3%B3nico",
+    "body": "  Duda       ¿Es posible enviar un informe por correo electrónico utilizando la clase TReport( )?         Ambiente  Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - A partir de la versión 12   Solución       No, solo es posible enviar el informe por correo electrónico:          \n // BIBLIOTECAS NECESSÁRIAS #Include \"TOTVS.ch\" #Include \"REPORT.ch\" #Include \"TBICONN.CH\"  // SIMULA A EXECUÇÃO VIA JOB User Function T153START()     StartJob(\"U_T153RPTMAIL\", GetEnvServer(), .T.) Return (NIL)  // FUNÇÃO PRINCIPAL User Function T153RPTMAIL()     Local oReport := NIL // OBJETO TREPORT     Local oBreak  := NIL // QUEBRA DE PÁGINA     Local oSA1    := NIL // SEÇÃO SA1      RPCSetEnv(\"99\", \"01\", /*cUserId*/, /*cPasswd*/ , \"FIN\") // PREPARAÇÃO DE AMBIENTE (COMENTAR SE VIA GUI)         // INSTANCIAÇÃO DE VARIÁVEL OREPORT         DEFINE REPORT oReport NAME \"REPORT1\" TITLE \"Relatorio de Clientes\" PARAMETER \"REPORT\" ACTION {|oReport| PrintReport(oReport)}          // DEFINIÇÃO DA SEÇÃO OSA1         DEFINE SECTION oSA1 OF oReport TITLE \"Cliente\" TABLES \"SA1\"             DEFINE CELL NAME \"A1_COD\"  OF oSA1 ALIAS \"SA1\"             DEFINE CELL NAME \"A1_NOME\" OF oSA1 ALIAS \"SA1\"             DEFINE CELL NAME \"A1_VEND\" OF oSA1 ALIAS \"SA1\"         DEFINE BREAK oBreak OF oSA1 WHEN oSA1:Cell(\"A1_VEND\")          DEFINE FUNCTION FROM oSA1:Cell(\"A1_COD\") FUNCTION COUNT BREAK oBreak          oReport:nRemoteType := NO_REMOTE        // FORMA DE GERAÇÃO DO RELATÓRIO         oReport:nDevice     := 8                // ENVIO DE .PDF VIA E-MAIL         oReport:cEmail      := \"SEU EMAIL AQUI\" // DESTINATÁRIO          oReport:SetReportPortal(\"cRptPortal\") // DEFINE O NOME DO RELATÓRIO         oReport:Print()     RPCClearEnv() // ENCERRRA AMBIENTE (COMENTAR SE VIA GUI) Return (NIL)  // DADOS DE EXIBIÇÃO Static Function PrintReport(oReport)     Local cAlias := \"\" // ALIAS TEMPORÁRIO      // SE AMBIENTE IGUAL A TOPCONNECT     #IFDEF TOP         cAlias := GetNextAlias() // RECUPERA O PRÓXIMO ALIAS TEMPORÁRIO DO SISTEMA         MakeSQLExp(\"REPORT\")          // INICIA QUERY PARA RETORNO DE DADOS         BEGIN REPORT QUERY oReport:Section(1)             BEGINSQL ALIAS cAlias                 SELECT A1_COD, A1_NOME, A1_VEND                 FROM %Table:SA1% SA1                 WHERE A1_FILIAL = %XFilial:SA1% AND SA1.%NotDel%                 ORDER BY A1_FILIAL, A1_VEND             ENDSQL         END REPORT QUERY oReport:Section(1)          oReport:Section(1):Print(.F.)     #ENDIF Return (NIL) ",
+    "updated_at": "2021-05-06T20:29:12Z",
+    "score": 32.127075,
+    "highlight": {
+      "body": [
+        "  Duda       ¿Es posible enviar un informe por correo electrónico utilizando la clase TReport( )?         Ambiente  Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "29231052792727",
+    "raw_id": "z_29231052792727",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Funciones disponibles en ADVPL",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Funciones disponibles en ADVPL",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/29231052792727-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Configurador-SIGACFG-Funciones-disponibles-en-ADVPL",
+    "body": "      Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Dónde encuentro las guías a las funciones disponibles de ADVPL?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - A partir de la versión 12.1.33   Solución    Guía de referencia de funciones AdvPL \n \n   Ambiente   \n   Base de datos   \n   Componentes de interface visual   \n   conexión TCP   \n   control de acceso   \n   control de errores   \n   Control de impresión   \n   Control de procesamiento   \n   Conversión entre tipos y datos   \n   Decimales de coma fija   \n   Ejecución entre procesos   \n   Integración con Excel   \n   Interfaz HTTP   \n   Manipulación de archivos, discos y IO   \n   Manipulación de clase   \n   Manipulación de fecha y hora   \n   Manipulación de matrices   \n   Manipulación de la memoria   \n   Manejo de RPO   \n   Manipulación de cuerdas   \n   Manipulación de variables globales   \n   Manipulación de variables numéricas.   \n   *Manipulación del archivo de configuración INI   \n   Manipulación de bloques de código   \n   Matemáticas   \n   Seguridad   \n   Sincronización de datos   \n   Manejo de correo electrónico   \n   Manejo de XML   \n   Validación   \n   Comprobando tipos de variables   \n   Servicios web   \n   SAML   \n   Manipulación de matrices (HashMap)   \n   Manipulación de variables globales (HashMap)   \n   Interfaz SFTP   \n ",
+    "updated_at": "2025-01-15T14:28:40Z",
+    "score": 31.988605,
+    "highlight": {
+      "body": [
+        "      Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Dónde encuentro las guías a las funciones disponibles de <b>ADVPL</b>?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI",
+        " - Configurador (SIGACFG) - A partir de la versión 12.1.33   Solución    Guía de referencia de funciones <b>AdvPL</b> \n \n   Ambiente   \n   Base de datos   \n   Componentes de interface visual   \n   conexión TCP"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "36232327994519",
+    "raw_id": "z_36232327994519",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función AADD",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función AADD",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/36232327994519-Cross-Segmentos-TOTVS-Backoffice-Linea-Protheus-MI-ADVPL-C%C3%BAal-es-el-uso-de-la-funci%C3%B3n-AADD",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función AADD?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - A partir de la versión 12.1.2410   Solución  La función AADD() agrega un nuevo elemento al final de un array, aumentando su tamaño. El contenido del nuevo elemento es el resultado suministrado por la expresión.    Argumentos      &lt; array &gt;    Define el nombre del array en el cual se agregará el nuevo elemento.    &lt; expresión &gt;    Define el contenido que se atribuirá al nuevo elemento del array.     \n   Sugerencias   \n La función AADD() es semejante a la función ASIZE(). Mientras AADD() agrega solamente un elemento en cada vez al array especificado, el ASIZE() puede agregar varios elementos de una única vez, dejando el array especificado con el tamaño deseado. Sin embargo, la función AADD() puede atribuir un contenido al nuevo elemento, mientras que ASIZE() no. \n A pesar de parecer semejantes, las funciones AINS() y AADD() tienen una diferencia básica: la función AINS() agrega un nuevo elemento en una determinada posición del array y mueve todos los otros al final, descartando el último. Por lo tanto, no modifica el tamaño del array. La función AADD() agrega un nuevo elemento al final del array, aumentando su tamaño. \n Si la expresión especificada es otro array, el nuevo elemento contendrá solamente una referencia al array especificado por el argumento &lt;expresión&gt;. \n   \n   Ejemplos   \n Los siguientes ejemplos muestran utilizaciones típicas de la función AADD(): \n // Crea un array vacío. Es decir, sin elementos \n aMatriz := { } \n   \n // Agrega un nuevo elemento al array, que tendrá solamente 1 elemento, cuyo contenido es el valor \n // numérico 5 \n AADD(aMatriz, 5) \n   \n // Muestra 5 \n MSGALERT( aMatriz[1] ) \n   \n // Agrega un elemento más al array, que ahora tendrá 2 elementos \n AADD(aMatriz, 10) \n   \n // Muestra 10 \n MSGALERT( aMatriz[2] ) \n   \n // Agrega un elemento más al array, que pasa a ser multidimensional y a tener 4 elementos, pues el \n // elemento agregado es otro array \n AADD(aMatriz, { 20, 30 }) \n   \n // Muestra 20 y 30, respectivamente \n MSGALERT(aMatriz[3, 1]) \n MSGALERT(aMatriz[3, 2]) \n ",
+    "updated_at": "2025-11-10T18:10:21Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función AADD?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - <b>ADVPL</b> - A partir de la versión"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "36232689194007",
+    "raw_id": "z_36232689194007",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función ABS",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función ABS",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/36232689194007-Cross-Segmentos-TOTVS-Backoffice-Linea-Protheus-MI-ADVPL-C%C3%BAal-es-el-uso-de-la-funci%C3%B3n-ABS",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función ABS?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - A partir de la versión 12.1.2410   Solución  La función ABS() suministra un valor numérico no negativo, representando el valor absoluto, o módulo, del resultado de la expresión numérica especificada. Permite, entre otras cosas, obtener la magnitud de una expresión numérica o la diferencia entre dos números, cuando el signo del resultado no es relevante.  La función ABS(x) siempre suministrará un número no negativo. Es decir, ABS(x) = x &gt;= 0.    Argumentos      &lt; expresión numérica &gt;    Define una expresión numérica válida que se evaluará.      Ejemplos    Los siguientes ejemplos muestran utilizaciones típicas de la función ABS():  nNumA := 20  nNumB := 100  nNumC := -50     MSGALERT( ABS(nNumA – nNumB) )  // Muestra 80.  MSGALERT( ABS(nNumB – nNumA) )  // Muestra 80.  MSGALERT( ABS(nNumC) )                  // Muestra 50.  MSGALERT( ABS(0) )                            // Muestra 0.  MSGALERT( ABS(-1) )                           // Muestra 1.       ",
+    "updated_at": "2025-11-10T18:09:49Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función ABS?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - <b>ADVPL</b> - A partir de la versión"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "36232488643863",
+    "raw_id": "z_36232488643863",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función ABS",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - Cúal es el uso de la función ABS",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/36232488643863-Cross-Segmentos-TOTVS-Backoffice-Linea-Protheus-MI-ADVPL-C%C3%BAal-es-el-uso-de-la-funci%C3%B3n-ABS",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función ABS?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - ADVPL - A partir de la versión 12.1.2410   Solución  La función ABS() suministra un valor numérico no negativo, representando el valor absoluto, o módulo, del resultado de la expresión numérica especificada. Permite, entre otras cosas, obtener la magnitud de una expresión numérica o la diferencia entre dos números, cuando el signo del resultado no es relevante.  La función ABS(x) siempre suministrará un número no negativo. Es decir, ABS(x) = x &gt;= 0.    Argumentos      &lt; expresión numérica &gt;    Define una expresión numérica válida que se evaluará.      Ejemplos    Los siguientes ejemplos muestran utilizaciones típicas de la función ABS():  nNumA := 20  nNumB := 100  nNumC := -50     MSGALERT( ABS(nNumA – nNumB) )  // Muestra 80.  MSGALERT( ABS(nNumB – nNumA) )  // Muestra 80.  MSGALERT( ABS(nNumC) )                  // Muestra 50.  MSGALERT( ABS(0) )                            // Muestra 0.  MSGALERT( ABS(-1) )                           // Muestra 1.       ",
+    "updated_at": "2025-11-10T18:09:48Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Duda  ¿Cúal es el uso de la función ABS?   Entorno  Cross Segmentos - TOTVS Backoffice (Linea Protheus) - MI - <b>ADVPL</b> - A partir de la versión"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "29314374026135",
+    "raw_id": "z_29314374026135",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Clases descontinuadas en AdvPL",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Clases descontinuadas en AdvPL",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/29314374026135-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Configurador-SIGACFG-Clases-descontinuadas-en-AdvPL",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cuáles son las clases descontinuadas en Advpl?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - A partir de la versión 12.1.33   Solución     TAvPrinter (descontinuado)   TDrawer (descontinuado)   TIBrowser (descontinuado)   TMainDock (descontinuado)   TMediaPlayer (descontinuado)   TMSGraphic (descontinuado)   TMSPrinter (descontinuado)   TMSPrinterSpool (descontinuado)   TMultiBtn (descontinuado)   TOleContainer (descontinuado)   TPageView (descontinuado)   TSystemTray (descontinuado)   TTabs (descontinuado)   TTrackMenu (descontinuado)   TWindowDock (descontinuado)   VCBrowse (descontinuado)  ",
+    "updated_at": "2025-01-17T18:41:17Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Cuáles son las clases descontinuadas en <b>Advpl</b>?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "28789008342295",
+    "raw_id": "z_28789008342295",
+    "type": "zendesk",
+    "title": "FRAMEWORK - Framework (Línea Protheus) - MI - AdvPL-  Función RpcSetEnv en rutinas automáticas",
+    "title_name": "FRAMEWORK - Framework (Línea Protheus) - MI - AdvPL-  Función RpcSetEnv en rutinas automáticas",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/28789008342295-FRAMEWORK-Framework-L%C3%ADnea-Protheus-MI-AdvPL-Funci%C3%B3n-RpcSetEnv-en-rutinas-autom%C3%A1ticas",
+    "body": " \n \n \n \n     Tiempo aproximado de lectura:     00:05:00 min \n \n  Duda  \n \n \n \n \n \n ¿Cuál es la finalidad de la función  RpcSetEnv  en rutinas automáticas \n   Ambiente    FRAMEWORK - Framework (Línea Protheus) MI - AdvPL- Todas las versiones 12.   Solución     \n  La función  RpcSetEnv  se utiliza para abrir un entorno en rutinas automáticas, permitiéndonos definir la empresa y sucursal en la que deseamos inicializar el entorno, especificando el usuario y contraseña para determinar los derechos y acciones a realizar. También es posible especificar qué tablas se abrirán para su uso en el entorno y qué módulo se utilizará.  \n   \n  Sintaxis  \n  RpcSetEnv( [ cRpcEmp ] [ cRpcFil ] [ cEnvUser ] [ cEnvPass ] [ cEnvMod ] [ cFunName ] [ aTables ] [ lShowFinal ] [ lAbend ] [ lOpenSX ] [ lConnect ] ) → lRet  \n   \n  Ejemplo  \n Define el ambiente con la empresa 99, filial 01, con los accesos del usuario administrador, en el módulo CTB, en la rutina CTBA102. \n  RpcSetEnv( \"99\",\"01\", \"Administrador\", \" \", \"CTB\", \"CTBA102\", aTables, , , , )  \n   \n  Conozca más:  \n   RpcSetEnv   \n   \n   \n   \n   \n   \n   \n \n ",
+    "updated_at": "2024-12-26T16:15:24Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        " Protheus) MI - <b>AdvPL</b>- Todas las versiones 12.   Solución     \n  La función  RpcSetEnv  se utiliza para abrir un entorno en rutinas automáticas, permitiéndonos definir la empresa y sucursal en la que"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "27825898459671",
+    "raw_id": "z_27825898459671",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Type mismatch on AliasSelect char expected",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Type mismatch on AliasSelect char expected",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/27825898459671-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Type-mismatch-on-AliasSelect-char-expected",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Por que surge el error type mismatch on AliasSelect char expected ?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.33   Solución    type mismatch on AliasSelect (char expected on left side)   Esta ocurrencia de error se reproduce cuando usamos el operador de alias (-&gt;), especificando una expresión o variable en el alias, cuyo tipo no es un carácter. En el siguiente ejemplo, ilustramos una expresión que provoca que se produzca este error. \n Ejemplo \n cAlias := NIL cNome := (cAlias)-&gt;A1_NOME ",
+    "updated_at": "2024-11-15T15:13:23Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        " - <b>ADVPL</b> - A partir de la versión 12.1.33   Solución    type mismatch on AliasSelect (char expected on left side)   Esta ocurrencia de error se reproduce cuando usamos el operador de alias (-&gt"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4421276737687",
+    "raw_id": "z_4421276737687",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Códigos de error HTTP mas comunes",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Códigos de error HTTP mas comunes",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4421276737687-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-C%C3%B3digos-de-error-HTTP-mas-comunes",
+    "body": "   Tiempo aproximado para lectura:  00:05:00 min    Duda     Que significan los errores 400 ,401,403 ,404 y 500 del  WebService ?    Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - A partir de la versión 12 \n   Solución       Los códigos de estado de respuesta HTTP indican si una solicitud HTTP se completó correctamente.     Las respuestas se agrupan en cinco clases:         \n    Respuestas de información (100-199);         \n    Respuestas exitosas (200-299);         \n    Redirecciones (300-399);         \n    Errores del cliente       (400-499);         \n    Errores del servidor (500-599).         \n    Aquí vamos a comentar los códigos de error más comunes en una solicitud REST en PROTHEUS, pero para identificar el problema, será necesario un análisis más profundo por parte del desarrollador.         \n     400    Bad Request       \n        Se violó alguna regla de negocio o algún parámetro era incorrecto         \n  401    Unauthorized   \n    El usuario no está autenticado o la autenticación no es válida         \n  403    Forbidden   \n    El usuario está autenticado pero no tiene permiso de acceso         \n  404    Not Found   \n    Recurso no encontrado.         \n  500    Internal Server Error   \n         El servidor encontró una situación que no sabe cómo manejar (generalmente errores de personalización).       \n   \n    Mas información:  Códigos de estado de respuesta HTTP     \n   ",
+    "updated_at": "2022-02-02T18:11:05Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        " - <b>ADVPL</b> - A partir de la versión 12 \n   Solución       Los códigos de estado de respuesta HTTP indican si una solicitud HTTP se completó correctamente.     Las respuestas se agrupan en cinco clases"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360048559714",
+    "raw_id": "z_360048559714",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL -  Protheus se encuentra homologado con Office 365",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL -  Protheus se encuentra homologado con Office 365",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360048559714--Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Protheus-se-encuentra-homologado-con-Office-365",
+    "body": "  Duda    ¿Protheus se encuentra homologado con Office 365?   Ambiente     Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL – A partir de la versión 11.80   Solución  Conforme a la documentación existente, la suite Office 365 no esta homologada. Esta suite no es soportada por la falta de los componentes utilizados en la integración directa con el ejecutable. \n  Conozca más:   \n \n \n   SmartClient - Office   \n \n \n   SmartClient - Office descontinuados   \n \n    Office 365    \n ",
+    "updated_at": "2021-05-17T15:55:19Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "  Duda    ¿Protheus se encuentra homologado con Office 365?   Ambiente     Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> – A partir de la versión 11.80   Solución  Conforme a la"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360062192694",
+    "raw_id": "z_360062192694",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Es posible la programación de informes Protheus",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Es posible la programación de informes Protheus",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360062192694--Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Es-posible-la-programaci%C3%B3n-de-informes-Protheus",
+    "body": "  Duda    Es posible la programación de informes Protheus? \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - A partir de la versión 12   Solución       Para ejecución programada (Schedule) NO es posible, debido a que estos informes no poseen una interfaz fuente el cual es necesario para la carga en Schedule.       \n  Para mas información:  \n   https://tdn.totvs.com/display/public/PROT/Agendamento+Protheus+Report   \n   ",
+    "updated_at": "2021-05-06T20:24:31Z",
+    "score": 31.911934,
+    "highlight": {
+      "body": [
+        "  Duda    Es posible la programación de informes Protheus? \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la versión 12   Solución       Para ejecución"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500001460541",
+    "raw_id": "z_1500001460541",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - OFFICE 365 NO HOMOLOGADO",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - OFFICE 365 NO HOMOLOGADO",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500001460541-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-OFFICE-365-NO-HOMOLOGADO",
+    "body": "     Duda    Office 365 ¿Se encuentra homologado con Protheus?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de la versión 12.1.23      Solución    El office 365 no se encuentra homologado para el uso con Protheus. \n   \n   \n Se anexan los links oficiales de TDN, donde podrá validar las versiones homologadas para uso con Protheus: \n  Office no soportados  \n  Información office 365 falta de componentes  \n  Office homologados  \n   \n   \n   ",
+    "updated_at": "2021-06-08T21:23:20Z",
+    "score": 31.840807,
+    "highlight": {
+      "body": [
+        "     Duda    Office 365 ¿Se encuentra homologado con Protheus?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de la versión 12.1.23      Solución    El"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "27993438278295",
+    "raw_id": "z_27993438278295",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Error: Too many fields in query limit is 255",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Error: Too many fields in query limit is 255",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/27993438278295-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Error-Too-many-fields-in-query-limit-is-255",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error: Too many fields in query limit is 255   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.33   Causa     Se produjo un error fatal en la aplicación AdvPL, que se desencadenó al abrir una consulta que devolvió más de 255 columnas. En las compilaciones de Application Server, a partir de 2007, este suceso dejó de ser un error fatal y comenzó a registrar solo una advertencia en el registro de la consola de Application Server.   Solución    Este mensaje se reproduce cuando se utilizan consultas en el lenguaje AdvPL. Al abrir una consulta , en AdvPL, hay un límite de columnas que devolverá la consulta , definida como 255 columnas. No es posible abrir una consulta que supere este límite. ",
+    "updated_at": "2024-11-22T15:47:25Z",
+    "score": 31.74805,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error: Too many fields in query limit is 255   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir",
+        " de la versión 12.1.33   Causa     Se produjo un error fatal en la aplicación <b>AdvPL</b>, que se desencadenó al abrir una consulta que devolvió más de 255 columnas. En las compilaciones de Application Server",
+        " se utilizan consultas en el lenguaje <b>AdvPL</b>. Al abrir una consulta , en <b>AdvPL</b>, hay un límite de columnas que devolverá la consulta , definida como 255 columnas. No es posible abrir una consulta que supere este límite. "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "25303935028631",
+    "raw_id": "z_25303935028631",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - FINA998 - ¿Cómo habilitar la nueva forma de pago por GRID ADVPL?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - FINA998 - ¿Cómo habilitar la nueva forma de pago por GRID ADVPL?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/25303935028631-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-Financiero-SIGAFIN-FINA998-C%C3%B3mo-habilitar-la-nueva-forma-de-pago-por-GRID-ADVPL",
+    "body": "      Tiempo aproximado para lectura:  01:00 min    Duda     ¿Cómo habilitar la nueva forma de pago por GRID ADVPL?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - A partir de la versión 12.1.2310   Solución     \n La nueva forma de pago en ADVPL está disponible para todos los países. Para Activar esta función en TOTVS Recibo, es necesario habilitar (.T.) el parámetro \"MV_FPADVPL\" (Mostrar GRID en la forma de Pago) desde el módulo configurador como se muestra en la siguiente imagen: \n Configuración para habilitar la nueva forma de pago en ADVPL \n   \n   \n Para acceder a la nueva forma de pago es necesario estar en la sección de \"Nuevo Recibo\" y dar clic en \"Abrir\" en la sección de Formas de Pago. \n Nueva forma de pago \n   \n   ",
+    "updated_at": "2024-07-31T14:17:17Z",
+    "score": 31.694471,
+    "highlight": {
+      "body": [
+        "      Tiempo aproximado para lectura:  01:00 min    Duda     ¿Cómo habilitar la nueva forma de pago por GRID <b>ADVPL</b>?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero",
+        " (SIGAFIN) - A partir de la versión 12.1.2310   Solución     \n La nueva forma de pago en <b>ADVPL</b> está disponible para todos los países. Para Activar esta función en TOTVS Recibo, es necesario habilitar",
+        " (.T.) el parámetro \"MV_FPADVPL\" (Mostrar GRID en la forma de Pago) desde el módulo configurador como se muestra en la siguiente imagen: \n Configuración para habilitar la nueva forma de pago en <b>ADVPL</b>"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39325754496535",
+    "raw_id": "z_39325754496535",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Retirar autenticación de APIs",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Retirar autenticación de APIs",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39325754496535-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Retirar-autenticaci%C3%B3n-de-APIs",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Es posible solicitar una API REST sin autenticación?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Para configurar rutas que no requieran autenticación, utilice la clave pública en la sección REST . Al listar las API deseadas en esta clave, se harán públicas y, por lo tanto, no requerirán autenticación para acceder a ellas.  Ejemplo de configuración, esto se realiza en Appserver.INI, clave pública :  [HTTPENV] URL=/rest PrepareIn=ALL Instances=2,3 ENVIRONMENT=environment CORSEnable=1 AllowOrigin=*  Public  = api/crm/v1/customerVendor     Importante:  Se recomienda encarecidamente utilizar la autenticación en todas sus API, salvo en casos estrictamente necesarios, para garantizar la seguridad de sus datos y usuarios. La configuración de rutas públicas debe realizarse con precaución. ",
+    "updated_at": "2026-03-26T23:09:39Z",
+    "score": 31.667236,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Es posible solicitar una API REST sin autenticación?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "27909621145623",
+    "raw_id": "z_27909621145623",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI -  ADVPL - Type mismatch on XXXX",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI -  ADVPL - Type mismatch on XXXX",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/27909621145623-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Type-mismatch-on-XXXX",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error type mismatch on XXXX   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.33   Causa     Ocurrencias de esta naturaleza se reproducen cuando una expresión ADVPL intenta realizar operaciones de comparación y/o cálculo utilizando más de un argumento de tipos incompatibles. Por ejemplo, agregar una cadena a un número ( no coinciden los tipos en +), comparar una fecha con un valor booleano ( no coinciden los tipos en comparar ), usar un operador de inversión booleano con un argumento no booleano ( no coinciden los tipos en .NOT ).   Solución    Debe de realizarse una revisión manual para los operadores de comparación, apoyarse con los logs que arroja el sistema y visualizar la comparativa errónea. \n Observación: Los operadores de comparación permiten comparar argumentos de diferentes tipos, siempre que uno de los argumentos sea NIL (U), y los operadores de suma y resta permiten estas operaciones con argumentos de tipo Fecha y Numérico, en ese orden, dando como resultado una expresión de el tipo de fecha. ",
+    "updated_at": "2024-11-19T16:25:35Z",
+    "score": 31.667236,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min     Ocurrencia    Error type mismatch on XXXX   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión",
+        " 12.1.33   Causa     Ocurrencias de esta naturaleza se reproducen cuando una expresión <b>ADVPL</b> intenta realizar operaciones de comparación y/o cálculo utilizando más de un argumento de tipos incompatibles. Por"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360046854434",
+    "raw_id": "z_360046854434",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Execauto para generación de remito de entrada (MATA102N)",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Execauto para generación de remito de entrada (MATA102N)",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360046854434-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Execauto-para-generaci%C3%B3n-de-remito-de-entrada-MATA102N",
+    "body": " \n \n Ocurrencia     Execauto para generación de remito de entrada (MATA102N)   ;     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - A partir de P12.   Solución    Se anexa ejemplo de generación de rémitos de entrada;        Puede solicitar un ejemplo con el equipo de Soporte.     \n \n ",
+    "updated_at": "2021-05-17T23:45:01Z",
+    "score": 31.045689,
+    "highlight": {
+      "body": [
+        " \n \n Ocurrencia     Execauto para generación de remito de entrada (MATA102N)   ;     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de P12.   Solución    Se"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "29307156893207",
+    "raw_id": "z_29307156893207",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Guía de referencia a las clases AdvPL - Mobile",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - Guía de referencia a las clases AdvPL - Mobile",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/29307156893207-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Configurador-SIGACFG-Gu%C3%ADa-de-referencia-a-las-clases-AdvPL-Mobile",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Cuáles son las clases disponibles en Advpl para entorno Mobile ?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - Configurador (SIGACFG) - A partir de la versión 12.1.33   Solución    A continuación se muestran las principales clases disponibles en Advpl para el entorno Mobile: \n  TCalendarEvent   TMobile   TMobileContact   TMobileContactEmail   TMobileContactPhone   TMobileContactPostal  ",
+    "updated_at": "2025-01-17T15:59:26Z",
+    "score": 31.044525,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Cuáles son las clases disponibles en <b>Advpl</b> para entorno Mobile ?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI",
+        " - Configurador (SIGACFG) - A partir de la versión 12.1.33   Solución    A continuación se muestran las principales clases disponibles en <b>Advpl</b> para el entorno Mobile: \n  TCalendarEvent   TMobile   TMobileContact   TMobileContactEmail   TMobileContactPhone   TMobileContactPostal  "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39974400524311",
+    "raw_id": "z_39974400524311",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI  - ADVPL - API Totvs Sucursal (Branch)",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI  - ADVPL - API Totvs Sucursal (Branch)",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39974400524311-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-API-Totvs-Sucursal-Branch",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  Al realizar el consumo de API, no retorna la respuesta con los datos debido a un erro interno.   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI  - ADVPL  - A partir de la versión 12.1.2210   Solución  Para utilizar el servicio es necesario tener configurado el ambiente con la clave SECURITY habilitada en su archivo Appserver.ini.  [HTTPREST]\nPort=8080\nURIs=HTTPURI\n SECURITY=1      ",
+    "updated_at": "2026-04-24T14:04:32Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        " (Línea Protheus) - MI  - <b>ADVPL</b>  - A partir de la versión 12.1.2210   Solución  Para utilizar el servicio es necesario tener configurado el ambiente con la clave SECURITY habilitada en su archivo Appserver.ini.  [HTTPREST]\nPort=8080\nURIs=HTTPURI\n SECURITY=1      "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39323362411287",
+    "raw_id": "z_39323362411287",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Como configurar timeout en REST ?",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Como configurar timeout en REST ?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39323362411287-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Como-configurar-timeout-en-REST",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Como configurar timeout en REST ?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.2210   Solución  Es necesario verificar si el tiempo de espera se produce durante el consumo de la API o dentro de la propia API.  Para consumo:  Para establecer tiempos de espera para los servicios que se consumirán dentro de la clase FwRest, utilice el siguiente comando:  oRestClient:nTimeOut := 1200 //valor en segundos  Proveedor de API:  Si se encuentra en la API, esta configuración es responsabilidad del proveedor de la API, y si se encuentra en el consumo, debe verificar dónde cambiar el parámetro de tiempo de respuesta del punto final.  O si se trata de su propio servicio REST, la configuración que aparece a continuación se encuentra en el archivo appserver.ini.  [HTTPV11] \nEnable=1 \nAddressFamily=1 \nSockets=HTTPREST\nTimeOut=60000 ; equivale a 1 minuto.  ",
+    "updated_at": "2026-03-26T23:10:30Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Como configurar timeout en REST ?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la versión"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "39261268572311",
+    "raw_id": "z_39261268572311",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL -  Conceptos sobre servicios web",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL -  Conceptos sobre servicios web",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/39261268572311-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Conceptos-sobre-servicios-web",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Qué es una API? ¿Para qué se utiliza? ¿Qué es WSRESTFUL?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL  - A partir de la versión 12.1.2210   Solución  Para que puedas realizar tus integraciones de forma más eficaz y segura, necesitas comprender los conceptos básicos del mundo de los servicios web. En este articulo, mencionaremos los términos más utilizados por los desarrolladores.  \n \n API -       Interfaz de Programación de Aplicaciones.   Es una interfaz de comunicación mediante la cual un sistema expone algunas de sus funcionalidades a través de un servicio web. \n \n  Los servicios web   son servicios disponibles en la web que permiten la manipulación de datos sin necesidad de acceder a servidores o bases de datos.Se construyen siguiendo la    arquitectura SOAP  o    REST  . \n \n SOAP -       Protocolo     Simple     de Acceso     a Objetos     . El primer modelo en popularizarse. Generalmente funciona con XML y tiene un contrato de comunicación muy rígido.     \n \n \n REST -         Transferencia     de Estado     Representacional     . Popularizado más recientemente, simplifica formatos y contratos. Utiliza métodos  HTTP  para contextualizar el tipo de operación.       \n \n \n WSRESTFul es  la clase base de  ADVPL  para crear  API     REST  en la arquitectura  Protheus  .Requiere un servidor  REST  configurado y en funcionamiento para responder a las solicitudes. \n   *Este último término es más comúnmente utilizado por  los desarrolladores de Protheus.  ",
+    "updated_at": "2026-03-24T17:23:09Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda  ¿Qué es una API? ¿Para qué se utiliza? ¿Qué es WSRESTFUL?   Entorno  Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b>  - A",
+        " contratos. Utiliza métodos  HTTP  para contextualizar el tipo de operación.       \n \n \n WSRESTFul es  la clase base de  <b>ADVPL</b>  para crear  API     REST  en la arquitectura  Protheus  .Requiere un servidor"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "27826196254743",
+    "raw_id": "z_27826196254743",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Type mismatch in array subscriptor",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - Type mismatch in array subscriptor",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/27826196254743-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Type-mismatch-in-array-subscriptor",
+    "body": "   Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Por que surge el error Type mismatch in array subscriptor?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - ADVPL - A partir de la versión 12.1.33   Solución    Esta ocurrencia de error es reproducida cuando realizamos una referencia a un elemento de una matriz, por eso utilizamos un argumento de tipo diferente de \"N\" (numérico) para identificar el elemento de la matriz. Ejemplo: \n cId := \"123\" aTeste[cId] := 10 \n   ",
+    "updated_at": "2024-11-15T15:23:00Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        "   Tiempo aproximado de lectura  00:05:00 min    Duda    ¿Por que surge el error Type mismatch in array subscriptor?   Entorno    Cross Segmentos - TOTVS Backoffice (Línea Protheus) - MI - <b>ADVPL</b> - A"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4420967400983",
+    "raw_id": "z_4420967400983",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Llamar una rutina personalizada en el colector VTDEBUG",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Llamar una rutina personalizada en el colector VTDEBUG",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4420967400983-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Llamar-una-rutina-personalizada-en-el-colector-VTDEBUG",
+    "body": "   Tiempo aproximado para lectura:  00:05:00 min    Duda       Posterior a agregar en el menú SIGAACD una rutina personalizada, abrimos el colector VTDEBUG pero cuando llamo a la función el sistema dice que no existe en el RPO.       \n         \n   \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - A partir de la versión 12    Solución       Es necesario que el nombre de la expresión tenga \"U_MIFUNCION\" porque al configurar a través del menú SIGAACD no valida el tipo de función.       \n         ",
+    "updated_at": "2022-01-31T18:27:13Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        " dice que no existe en el RPO.       \n         \n   \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la versión 12    Solución       Es necesario que el nombre"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4420964823191",
+    "raw_id": "z_4420964823191",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Configurador (SIGACFG) - Función AdvPL DESCEND() - Descontinuada",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Configurador (SIGACFG) - Función AdvPL DESCEND() - Descontinuada",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4420964823191-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Configurador-SIGACFG-Funci%C3%B3n-AdvPL-DESCEND-Descontinuada",
+    "body": "   Tiempo aproximado de lectura:  00:05:00 min    Ocurrencia     La Función DESCEND() a sido descontinuada en bases de datos relacionales. El propósito de esta era crear una clave de indexación descendente.      Ambiente  Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Configurador (SIGACFG) - A partir de la versión 12   Solución  \n    Actualmente no existe ninguna función que realice un comportamiento similar al de la función Descend(), por lo tanto, las funciones para realizar una consulta   [  TcGenQry()  ,   TcQuery  , Embedded SQL] pueden usarse para cambiar el orden de el regreso de la búsqueda.       ",
+    "updated_at": "2022-01-31T17:21:52Z",
+    "score": 31.043213,
+    "highlight": {},
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360055882994",
+    "raw_id": "z_360055882994",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Funciones, clases y variables restringidas",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Funciones, clases y variables restringidas",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360055882994-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Funciones-clases-y-variables-restringidas",
+    "body": "  Ocurrencia  Considerando que la rutina MATA440 no está preparada para su uso automáticamente (MsExecAuto ()), el cliente está usando la funcion MaLibDoFat (), clase o variable no documentada en una personalización y está generando errores. \n   \n  Ambiente  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Release 11.8 \n   \n  Causa  Las funciones, clases y variables restringidas en fuentes personalizadas no están previstas por el soporte estándar, dado que no están documentadas, por lo que pueden ser descontinuadas o sufrir cambios de comportamiento sin previo aviso. \n   \n  Solución  El cliente tendrá que desarrollar una rutina que satisfaga la necesidad, utilizando funciones documentadas para ello. \n   \n LISTA DE RECURSOS RESTRINGIDOS \n 001      VALIDAAUTONFE 002      MA410IMPOS 003      MALIBDOFAT 004      TFONTEX 005      NFEPROCNFE 006      AVCPYFILE 007      F_OPCOES 008      AUTONFEENV 009      MASAPREREQ 010      MAPVLNFS 011      FTVDVENDA 012       MAALCDOC 013      FISA022TRS 014      FGX_STATF2 015      NG400TAR 016      CODSITRI 017      IW_MULTILINE 018      FWCHKFUNCACCESS 019      WSNFESBRA 020      SPEDDANFE 021      LJ7VENDA 022      STWMANAGREPORTPRINT 023      CBGrvEti() 024      A460ESTORNA 025      GETNUMSC7 026      ISCAIXALOJA 027      XNUMCAIXA 028      CALCEST 029      FRTGERASL 030      MSCLEARBUFFER 031      CA100INCL 032      SPEDNFERE2 033      FCARRTAB 034      SALDOTERC 035      FABAIXACR 036      A093PROD 037      OOBJ:GETDATA 038      AVSTACTION 039      VTGETSENHA 040      A450GRAVA 041      MAPVLNFS 042      FINA110 043      A410INCLUI 044      FP_CODFOL 045      NFECABDOC 046      OPENSRC 047      EXTRACT 048      INCNOTA 049      MOVIMENTO 050      ATFA050 051      PLSQUERY 052      PROXNUM 053      FILE2PRINTER 054      SPF_SEEK 055      SPF_UPDATE 056      FTVDVENDA 057      APPEND FROM 058      ACPORET 059      FBUSCACPO 060      A093PROD 061      LASTKEY 062      RPCSETYPE 063      WFPREPENV 064      SALDOB2 065      TMSA050EDI 066      GERATMP 067      A103ATUSE2 068      CTBANFS 069      WAITRUNSRV 070      MANFS2NFS 071      SPDCRIATRB 072      A103NFISCAL 073      TTPVIEWER 074      MACANDELF2 075      MADELNFS 076      RET_CBARRA 077      A440LIBERA 078      RFMASHUPS 079      FWJWT2BEAR 080      CTGERPLAN 081      NXTSX5NOTA 082      FMONTA_TPR 083      COPY TO 084      FDIASAFASPERIODO 085      CBCHKTEMPLATE 086      TWFMAIL 087      ENGSX3117 088      FWLOOKUP 089      FRETAFASBRA 090      FWMVCROTAUTO 091      AVGXML2DBF 092      A94EXLIBER 093      ESTRUT 094      A030ALTERA 095      RPCSETTYPE 096      TMSA200PRC 097      HEADPROVA 098      DETPROVA 099      PARAMBOX 100      FWUIWORKSHEET 101      STATICCALL 102      MA410RODAP 103      WRITEPROFDEF 104      FINDPROFDEF 105      CBOPENPORT 106      FATATUEMPN 107      MAAVALSC9 108      VLDLOCALIZ 109      CALLPROC 110      NG420GRAVA 111      A381Manut 112      MATXFIS 113      MaFisAdd  114      CTGercomp 115      WFNotifyAdmin 116      a260Processa 117      a415Tabela 118      MaAvalCred 119      A100Distri 120      __SaveParam() 121      A110APROV 122      MDeMata103 123      BuscaTaxa() 124      CriaVar 125      E_FIELD 126      ApOleClient 127      GetServerPort 128      CheckStation 129      CTBAFIN 130      A415DESCAB 131      A410RECALC 132      X31UPDTABLE 133      FA050Venc ",
+    "updated_at": "2021-06-16T05:33:42Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        " personalización y está generando errores. \n   \n  Ambiente  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Release 11.8 \n   \n  Causa  Las funciones, clases y variables restringidas"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500002616241",
+    "raw_id": "z_1500002616241",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Divergencia en impresión de QRCode",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Divergencia en impresión de QRCode",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500002616241-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Divergencia-en-impresi%C3%B3n-de-QRCode",
+    "body": "  Ocurrencia    Al utilizar la clase  FWQRCode  () o método   QrCode(FwMsPrinter)   en   Smartclient x86   para versión  12.1.25 , la imagen se genera de forma incorrecta.  \n  Smartclient x86  \n   \n  Smartclient x64  \n   \n   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de versión 12.1.25   Causa    Este incidente ocurre porque existía una limitante de tamaño para la generación de QRCODE en versiones anteriores  . El binario más reciente de Protheus contempla también la versión más reciente del   printer.exe,     donde fue contemplada una mejora en relación al     QRCODE  .     Solución     Para corregir este incidente ejecute los siguientes pasos:  \n  1.- Verifique la versión del printer.exe instalado en su carpeta Smartclient  \n   MP - FRAME - ¿Cómo consultar mi versión del agente de impresión Printer.exe?   \n  2.- En caso de tener una versión inferior a la 1.7.2 del Printer.exe realice la descarga en Portal.  \n La versión más actualizada de Binario de Totvs Printer es disponibilizado para descarga en paquete individual en portal del cliente. \n  Central de Descargas - Printer  \n 3.- Realice la modificación de tamaño en el programa de impresión utilizado.   \n   Importante:  \n  Esta mejoría fue realizada para atender solicitud realizada por diferentes clientes. Sin embargo es importante compartir que la modificación del tamaño es responsabilidad del desarrollador en la lectura del  QRCode   , ya que de generar una imagen muy pequeña, la misma puede quedar corrompida comprometiendo la lectura del  QR .  \n   \n  Conozca más  \n   TDN: Implementación - Redimensionamento de QRCode e Datamatrix para dimensões inferiores ao natural.   ",
+    "updated_at": "2021-06-08T16:51:26Z",
+    "score": 31.043213,
+    "highlight": {
+      "body": [
+        "  \n   \n  Smartclient x64  \n   \n   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de versión 12.1.25   Causa    Este incidente ocurre porque existía una limitante de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500004647741",
+    "raw_id": "z_1500004647741",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Clase TREPORT: Alterar el tamaño fuente de secciones diferentes",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - Clase TREPORT: Alterar el tamaño fuente de secciones diferentes",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500004647741-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-ADVPL-Clase-TREPORT-Alterar-el-tama%C3%B1o-fuente-de-secciones-diferentes",
+    "body": "  Duda    Es posible alterar el tamaño fuente de las secciones del informe TReport? \n  Ambiente  Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - ADVPL - A partir de la versión 12   Solución       Actualmente, en el estándar no existe ningún método o propiedad que permita cambiar las fuentes para diferentes secciones dentro de la clase TReport ().       \n Mas información:  \n   TReport()   ",
+    "updated_at": "2021-05-06T20:30:27Z",
+    "score": 28.9408,
+    "highlight": {
+      "body": [
+        "  Duda    Es posible alterar el tamaño fuente de las secciones del informe TReport? \n  Ambiente  Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la versión 12   Solución"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360061972373",
+    "raw_id": "z_360061972373",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es el uso de la función RECNO() de AVDPL?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es el uso de la función RECNO() de AVDPL?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360061972373-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1l-es-el-uso-de-la-funci%C3%B3n-RECNO-de-AVDPL",
+    "body": "  Duda    ¿Cuál es el uso de la función RECNO() de AVDPL? \n   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de versión 11.80   Solución  \n La función  RECNO()  d evuelve el número del registro actual de un área de trabajo.  \n Los registros de los archivos de datos del AdvPL se enumeran de 1 hasta el último registro físico, de acuerdo con el orden cronológico en el que se incluyeron. \n La función  RECNO()  se utiliza para  obtener el número de registro del archivo de datos en uso, el cual está marcado por el apuntador de registros del área de trabajo seleccionada. \n Cada área de trabajo mantiene un apuntador de registros, marcando el registro actual del archivo de datos que esté abierto. \n   \n  Sugerencias de Uso  \n El valor del número del registro suministrado por la función  RECNO()  puede almacenarse en una variable numérica o de tipo carácter. \n   \n  Ejemplo de Uso  \n    SE2-&gt;(RECNO())  -    Devolverá el valor del RECNO  numérico. \n    AllTrim(Str(SE2-&gt;(RECNO())))  -    Devolverá el valor del RECNO como tipo carácter.  \n   ",
+    "updated_at": "2021-06-08T16:53:33Z",
+    "score": 28.552309,
+    "highlight": {
+      "body": [
+        "  Duda    ¿Cuál es el uso de la función RECNO() de AVDPL? \n   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de versión 11.80   Solución  \n La función  RECNO",
+        "()  d evuelve el número del registro actual de un área de trabajo.  \n Los registros de los archivos de datos del <b>AdvPL</b> se enumeran de 1 hasta el último registro físico, de acuerdo con el orden"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360043154834",
+    "raw_id": "z_360043154834",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Problema al intentar aplicar PATCH de actualización en TDS",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Problema al intentar aplicar PATCH de actualización en TDS",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360043154834-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Problema-al-intentar-aplicar-PATCH-de-actualizaci%C3%B3n-en-TDS",
+    "body": "     Ocurrencia    En  Totvs Developer Studio,  al intentar aplicar un PATCH de actualización se detona mensaje que impide la aplicación   \"No fue posible enviar el archivo al servidor\"     \n  Ambiente  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de versión 12 \n   Causa   Este incidente puede ocurrir porque la estación donde se intenta hacer la aplicación no tiene permisos.   Solución    Para solucionar esta ocurrencia aplique los siguientes pasos: 1. El mensaje que se detona es debido a que la estación que intenta aplicar el PATCH en el servidor no tiene permisos. En este caso, deberá evaluar si asignará permisos a las estaciones de trabajo o solamente requieren que la aplicación de PATCH se realicen en el servidor. - Para el caso de que solo requiera que los PATCHS se apliquen en servidor deberá colocar el PATCH (archivo.ptm) que requiere aplicar en la carpeta protheus_data del servidor de aplicaciones para poder aplicar el PATCH. - También es posible permitir a las estaciones de trabajo la aplicación de actualizaciones. En caso de preferir esta configuración le recomendamos revisar el siguiente artículo:  MP - ADVPL - Sección TDS Server  2.- Luego de realizar los ajustes correspondientes, valide que pueda aplicar los PATCH de actualización. ",
+    "updated_at": "2021-06-08T16:55:31Z",
+    "score": 27.771248,
+    "highlight": {
+      "body": [
+        "\"     \n  Ambiente  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de versión 12 \n   Causa   Este incidente puede ocurrir porque la estación donde se intenta hacer la aplicación no tiene",
+        " permitir a las estaciones de trabajo la aplicación de actualizaciones. En caso de preferir esta configuración le recomendamos revisar el siguiente artículo:  MP - <b>ADVPL</b> - Sección TDS Server  2.- Luego de realizar los ajustes correspondientes, valide que pueda aplicar los PATCH de actualización. "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360022287751",
+    "raw_id": "z_360022287751",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Como descompilar un Punto de Entrada o Función de Usuario?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Como descompilar un Punto de Entrada o Función de Usuario?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360022287751-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Como-descompilar-un-Punto-de-Entrada-o-Funci%C3%B3n-de-Usuario",
+    "body": "   \n       Duda    ¿Como descompilar un Punto de Entrada o Función de Usuario en mi RPO?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - A partir de la versión 12    Solución    Para descompilar sus Puntos de entrada y/o funciones de usuario, es necesario que inicialmente respaldo de RPO y códigos fuentes a afectar;  Links de consulta en TDN con procedimiento para compilar y descompilar:  \n   \n  RPO fuentes compilar y descompilar (Eliminar) - Totvs Developer Studio 11.3     Excluir Fuente de RPO  - TOTVSDevStudio ",
+    "updated_at": "2022-04-06T16:31:44Z",
+    "score": 27.747566,
+    "highlight": {
+      "body": [
+        "   \n       Duda    ¿Como descompilar un Punto de Entrada o Función de Usuario en mi RPO?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de la versión 12"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "20505956706455",
+    "raw_id": "z_20505956706455",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ID de momento de ejecución de Punto de Entrada MVC",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ID de momento de ejecución de Punto de Entrada MVC",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/20505956706455-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-ID-de-momento-de-ejecuci%C3%B3n-de-Punto-de-Entrada-MVC",
+    "body": "      Tiempo aproximado para lectura:  1:30 min    Duda    ¿Cuáles son los ID de momento de ejecución de un punto de entrada MVC?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Solución    Los puntos de entrada MVC son llamados en varios momentos dentro del fuente, en la segunda posición de la estructura del vector (PARAMIXB) es pasado un ID que identifica cuál es este momento. Este parámetro puede tener como contenido: \n   \n \n \n \n   ID  \n   Momento de Ejecución del Punto de Entrada  \n \n \n  MODELPRE \n  Antes de la alteración de cualquier campo del modelo. \n \n \n  MODELPOS \n  En la validación total del modelo. \n \n \n  FORMPRE \n  Antes de la alteración de cualquier campo del formulario. \n \n \n  FORMPOS \n  En la validación total del formulario. \n \n \n  FORMLINEPRE \n  Antes de la alteración de la línea del formulario FWFORMGRID. \n \n \n  FORMLINEPOS \n  En la validación total de la línea del formulario FWFORMGRID. \n \n \n  MODELCOMMITTTS \n  Después de la grabación total del modelo y dentro de la transacción. \n \n \n  MODELCOMMITNTTS \n  Después de la grabación total del modelo y fuera de la transacción. \n \n \n  FORMCOMMITTTSPRE \n \n  Antes de la grabación de la tabla del formulario. \n \n \n \n  FORMCOMMITTTSPOS \n \n  Después de la grabación de la tabla del formulario.  \n \n \n \n  MODELCANCEL \n \n  Al cancelar con el botón. \n \n \n \n  BUTTONBAR \n \n  Para la inclusión de botones en la ControlBar. \n \n \n \n  MODELVLDACTIVE \n \n  En la activación del modelo. \n \n \n \n \n    Conozca más  Para adquirir más conocimiento, acceda al siguiente enlace:  TDN: Punto de Entrada estándar de MVC  ",
+    "updated_at": "2024-01-11T21:12:27Z",
+    "score": 26.96613,
+    "highlight": {
+      "body": [
+        ") - MI - <b>ADVPL</b> - Versión 12   Solución    Los puntos de entrada MVC son llamados en varios momentos dentro del fuente, en la segunda posición de la estructura del vector (PARAMIXB) es pasado un ID que"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "15803002500375",
+    "raw_id": "z_15803002500375",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL -  It wasn't possible to obtain exclusive access to the objects repository",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL -  It wasn't possible to obtain exclusive access to the objects repository",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/15803002500375-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-It-wasn-t-possible-to-obtain-exclusive-access-to-the-objects-repository",
+    "body": "      Tiempo aproximado para lectura:  00:02:30 min    Ocurrencia      Al intentar compilar un archivo (imagen, fuente, etc.) en el repositorio de objetos (RPO), en la consola del IDE (Integrated Development Environment) se muestra el siguiente mensaje de      error      :  \n    'It wasn't possible to obtain exclusive access to the objects repository'    \n   \n       Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - A partir de la version 12    Causa    \n  Este error ocurre cuando el IDE no pudo acceder al repositorio de objetos para compilar el archivo.  \n  Los motivos que pueden generar este error son:  \n \n  RPO está en uso por terceros  \n  privilegios de acceso  \n  El servidor dejó de responder  \n  entorno inexistente  \n \n   Solución     \n Para solucionar esta ocurrencia valide las siguientes opciones:  \n   \n  1.- Verifique a través de TOTVS Monitor si hay usuarios registrados y/o valide si hay      trabajos      programados actualmente en proceso (sección ONSTART) y descártelos/elimínelos temporalmente  \n   \n  2.- Agregue la clave BUILDKILLUSERS=1 a la sección GENERAL del Appserver.ini  \n  Porque con su uso obligará a todos los usuarios y procesos a estar conectados, dando prioridad para la compilación  \n   \n  3.- Dependiendo del sistema operativo, verifique los accesos para permitir que el IDE pueda leer/escribir el archivo:  \n   \n  4.- A veces, el servidor puede dejar de responder por algún motivo (gran cantidad de subprocesos que consumen, procesos de compilación simultáneos y similares), por lo tanto, es necesario reiniciar AppServer e intentarlo nuevamente.  \n   5.- Por alguna razón el cliente puede renombrar el ambiente, por lo tanto, una vez que se conecta el IDE a un ambiente que ya no existe, y se intenta compilarlo, se generará el error mencionado en el ítem 4.  \n   \n   Conozca mas:    Clave BUILKILLUSERS   Sección ONSTART   Permisos de Linux   Permisos de Windows   \n   \n   \n   \n   \n   \n   ",
+    "updated_at": "2023-07-05T23:05:10Z",
+    "score": 26.96613,
+    "highlight": {
+      "body": [
+        " - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - A partir de la version 12    Causa    \n  Este error ocurre cuando el IDE no pudo acceder al repositorio de objetos para compilar el archivo.  \n  Los"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "20505262572823",
+    "raw_id": "z_20505262572823",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Cuáles parámetros PARAMIXB recibe un Punto de Entrada en MVC?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Cuáles parámetros PARAMIXB recibe un Punto de Entrada en MVC?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/20505262572823-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1les-par%C3%A1metros-PARAMIXB-recibe-un-Punto-de-Entrada-en-MVC",
+    "body": "      Tiempo aproximado para lectura:  1:00 min    Duda    ¿Cuáles parámetros PARAMIXB recibe un Punto de Entrada en MVC?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Solución    Los puntos de entrada MVC reciben vía parámetro (PARAMIXB) un vector con información referente al fuente. Estos parámetros varían para cada situación, en común todos ellos tienen los 3 primeros elementos que son listados abajo.  Posiciones de array de parámetros comunes a todos los ID: \n \n \n \n   Posición  \n   Tipo  \n   Descripción  \n \n \n  1 \n  O \n  Objeto de formulario o de modelo, conforme el caso \n \n \n  2 \n  C \n  ID de momento de ejecución del ponto de entrada \n \n \n  3 \n  C \n  ID del formulario \n \n \n \n   \n  Conozca más  Para adquirir más conocimiento, acceda al siguiente enlace:  TDN: Punto de Entrada estándar de MVC    ",
+    "updated_at": "2024-01-11T21:14:12Z",
+    "score": 26.204456,
+    "highlight": {
+      "body": [
+        " - <b>ADVPL</b> - Versión 12   Solución    Los puntos de entrada MVC reciben vía parámetro (PARAMIXB) un vector con información referente al fuente. Estos parámetros varían para cada situación, en común todos ellos"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500002135641",
+    "raw_id": "z_1500002135641",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ERROR LOG AL IMPRIMIR INFORMES EN FORMATO DE TABLA",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ERROR LOG AL IMPRIMIR INFORMES EN FORMATO DE TABLA",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500002135641-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-ERROR-LOG-AL-IMPRIMIR-INFORMES-EN-FORMATO-DE-TABLA",
+    "body": "      Ocurrencia    Al intentar imprimir cualquier informe en formato de tabla, se presenta un error log:  \n erro no parâmetro FwPrinterXlsx: Versão da printer.exe não suporta a geração de arquivos .xlsx. on FWPRINTERXLSX:ACTIVATE \n    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL – A partir de la versión 12.1.23   Causa   Este incidente se presenta debido a una desactualización del archivo Printer.exe dentro del appserver / smartclient.   Solución    Es necesario actualizar dicho componente tanto en el appserver como en el smartclient \n La versión debe ser igual o superior a  2.1.0  \n  Para consultar la versión del Printer.exe contenido en su ambiente, es necesario realizar lo siguiente:  \n  1. Ingrese a su ventana de comandos y digite el siguiente comando: Printer.exe -v en Windows y   ./printer -v en Linux y Mac.  \n   \n Descargue el componente: \n   ",
+    "updated_at": "2021-06-08T21:19:27Z",
+    "score": 26.204456,
+    "highlight": {
+      "body": [
+        " .xlsx. on FWPRINTERXLSX:ACTIVATE \n    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> – A partir de la versión 12.1.23   Causa   Este incidente se presenta debido a una"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360022902612",
+    "raw_id": "z_360022902612",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - MILE - NO HAY REGISTRO RELACIONADO A ESTE CÓDIGO - MILE RUTINA OMSA010",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - MILE - NO HAY REGISTRO RELACIONADO A ESTE CÓDIGO - MILE RUTINA OMSA010",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360022902612-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-MILE-NO-HAY-REGISTRO-RELACIONADO-A-ESTE-C%C3%93DIGO-MILE-RUTINA-OMSA010",
+    "body": "       Ocurrencia   \n Se detona el mensaje \"No hay registro relacionado a este código\" al ejecutar MILE \n   \n   Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL -  Protheus versión 11 en adelante    Causa   \n La causa principal a este incidente es debido a que se intenta hacer registro en una tabla no correspondiente o no indicada. En este caso el \"Modelo\" indicado en la configuración del MILE es \"MODELO 1\" el cual hace referencia a que el sistema hará registro en una sola tabla. Sin embargo esto es incorrecto ya que la rutina OMSA010 hace uso de dos tablas \"DA0\" y \"DA1\" por lo que en este caso la configuración en el modelo debe ser \"Modelo 3\" ya que este especifica que se hace uso de 2 o mas tablas dentro de una rutina.    Solución  \n Como el Mile ya se encuentra generado no sera posible modificar el mismo por lo que sera necesario crear un nuevo MILE pero esta vez seleccionando la opción de \"Modelo 3\" una vez establecida la corrección en la configuración el registro se generara de forma exitosa.  \n   \n   \n   \n   ",
+    "updated_at": "2021-05-26T23:45:05Z",
+    "score": 26.204456,
+    "highlight": {
+      "body": [
+        "       Ocurrencia   \n Se detona el mensaje \"No hay registro relacionado a este código\" al ejecutar MILE \n   \n   Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b>"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4409640533783",
+    "raw_id": "z_4409640533783",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Como solicitar la creación de un nuevo punto de entrada",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Como solicitar la creación de un nuevo punto de entrada",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4409640533783-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Como-solicitar-la-creaci%C3%B3n-de-un-nuevo-punto-de-entrada",
+    "body": "      Tiempo aproximado para lectura:  00:10:00 min      \n  Duda    ¿ Cómo solicitar la creación de un nuevo punto de entrada ?    Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL  - Versión 12    Solución   \n Le compartimos que  para     solicitar la creación de un nuevo punto de entrada en la funcionalidad estándar actual de las rutinas de Protheus, deberá ser realizado a través de la Central de Colaboración TOTVS,   con la finalidad de que sea evaluado su requerimiento por nuestra área de desarrollo.     \n   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   ¡Bienvenida a la Central de colaboración TOTVS!   \n   \n Esta área fue creada para que puedas sugerir nuevas funciones para el producto TOTVS. \n   \n Las sugerencias de mejora serán monitoreadas por nuestro equipo de innovación y serán evaluadas para una futura implementación. \n   \n Al incluir su sugerencia, es muy importante que nos informe: \n   \n - Cómo está actualmente \n   \n - Qué puede cambiar: \n   \n - Valor de la entrega (beneficios o problemas que se resolverán con esta mejora) \n   \n  Cabe resaltar, que las mejoras seleccionadas se evaluarán bajo los criterios: valor de entrega (beneficios o problemas que se resolverán con la mejora), mayor número de votos y mayor número de comentarios.  \n   \n Entonces, ¡registra tus ideas, vota, divulga y participa! \n   \n Aquí te dejamos un video    How To    donde te explicamos paso a paso como se utiliza esta valiosa herramienta creada para ti. \n   \n    \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   \n   Una vez registrada la solicitud, deberá dar seguimiento a través de la centrar   colaborativa  , debido a que este tipo de solicitudes no son gestionadas por el Soporte Totvs estándar.    En caso de requerir apoyo para realizar el  análisis, implementación, debug y/o ajuste a desarrollo específicos de cliente o Puntos de entrada , deberá solicitar el acompañamiento del área de servicios TOTVS a su agente de solución de negocios.    En caso de tener dudas sobre el alcance de la atención del Soporte Protheus Mercado Internacional, puede solicitar una sesión de Onboarding a través de nuestra cuenta oficial   soporteprotheusmi@totvs.com.br    para que le presentemos nuestro proceso de atención.   \n \n \n OINF0011 - Pautas de servicio Soporte estándar MI   –   Sección NECESIDAD DE ATENCIÓN POR SOPORTE TÉCNICO   Alcance de atención       \n \n \n  Conozca más : Para consultar la información contenida en nuestro banco de conocimientos, acceda a los siguientes enlaces:  OINF0011 - Pautas de servicio Soporte estándar MI    Le invitamos a hacer   uso   del     Chat   Humanizado Protheus MI   (Ver video) para una cercanía y agilidad en dudas y requerimientos puntuales.  ",
+    "updated_at": "2022-10-13T18:03:24Z",
+    "score": 26.187332,
+    "highlight": {
+      "body": [
+        ") - MI - <b>ADVPL</b>  - Versión 12    Solución   \n Le compartimos que  para     solicitar la creación de un nuevo punto de entrada en la funcionalidad estándar actual de las rutinas de Protheus, deberá ser"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360056199974",
+    "raw_id": "z_360056199974",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuáles son los modelos de las impresoras homologadas? para la clase MSCBPRINTER?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuáles son los modelos de las impresoras homologadas? para la clase MSCBPRINTER?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360056199974-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1les-son-los-modelos-de-las-impresoras-homologadas-para-la-clase-MSCBPRINTER",
+    "body": "   Duda    ¿Cuáles son los modelos de las  impresoras   homologadas  para la clase   MSCBPRINTER  ?   Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL -  Versión 12    Solución  No realizamos la homologación de impresoras en función de su modelo, sino de los lenguajes de programación utilizados por estas impresoras (por ejemplo: ZPL, EPL, DPL, IPL, etc.), según documentación.  Articulo sugerido:   MP – ACD - ¿Cuáles son las impresoras homologadas para uso en el módulo SIGAACD?     \n Lenguajes homologados: \n \n ZPL - Lenguaje de programación de proveedor Zebra  \n \n EPL – Lenguaje de programación de proveedor EPL  \n \n DPL – Lenguaje de programación de proveedor DATAMAX  \n \n IPL – Lenguaje de programación de proveedor INTERMEC \n \n     \n  Conozca más : Para consultar la información contenida en nuestro banco de conocimientos, acceda a los siguientes enlaces: \n  TDN - MSCBPrinter - Configura Impressora  \n   ",
+    "updated_at": "2021-05-27T01:39:13Z",
+    "score": 26.187332,
+    "highlight": {
+      "body": [
+        "   Duda    ¿Cuáles son los modelos de las  impresoras   homologadas  para la clase   MSCBPRINTER  ?   Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> -  Versión 12"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360042168873",
+    "raw_id": "z_360042168873",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función para regresar la hora actual del sistema definida en la maquina donde está siendo ejecutado el SmartClient",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Función para regresar la hora actual del sistema definida en la maquina donde está siendo ejecutado el SmartClient",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360042168873-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Funci%C3%B3n-para-regresar-la-hora-actual-del-sistema-definida-en-la-maquina-donde-est%C3%A1-siendo-ejecutado-el-SmartClient",
+    "body": "  Duda  ¿Cuál es la función para regresar la hora actual del sistema definida en la maquina donde está siendo ejecutado el SmartClient? \n     Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL  – Todas las versiones   Solución  La función  GetRmtTime  regresa la hora actual del sistema definida en la maquina donde se está ejecutando el SmartClient; \n \n Sintaxis:   GetRmtTime()  \n \n Retorno:   \n \n Ejemplo:  \n \n ",
+    "updated_at": "2021-06-09T21:39:25Z",
+    "score": 25.881737,
+    "highlight": {
+      "body": [
+        " Protheus) - MI - <b>ADVPL</b>  – Todas las versiones   Solución  La función  GetRmtTime  regresa la hora actual del sistema definida en la maquina donde se está ejecutando el SmartClient; \n \n Sintaxis:   GetRmtTime()  \n \n Retorno:   \n \n Ejemplo:  \n \n "
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "6067913584663",
+    "raw_id": "z_6067913584663",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Es posible disponibilizar el código fuente de una rutina de Protheus para su envió vía ticket?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Es posible disponibilizar el código fuente de una rutina de Protheus para su envió vía ticket?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/6067913584663-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Es-posible-disponibilizar-el-c%C3%B3digo-fuente-de-una-rutina-de-Protheus-para-su-envi%C3%B3-v%C3%ADa-ticket",
+    "body": "     Tiempo aproximado para lectura: 00:10:00 min  Duda    ¿Es posible disponibilizar el código fuente de una rutina de Protheus para su envió vía ticket?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12    Solución   \n  Por políticas de seguridad y procedimiento de atención, soporte no dispone de códigos fuentes para su envió vía ticket; Por lo que   deberá enviar un correo con su solicitud para el envió de código fuente a   gcad.sp@totvs.com.br              Con esta acción se abre un ticket de seguimiento para nuestro equipo  GCAD.SP , quienes le podrán indicar si es posible o no, el envío del código fuente.    \n Existen códigos  fuentes de informes (Reportes)  que están disponible en el portal del cliente para su descarga y personalización, en la sección de descarga puede buscar por la palabra relatorio para consultar los archivos por segmentos y poder hacer su descarga:    Ruta: HOME &gt; TODOS &gt; TODOS &gt; TODOS &gt; PESQUISA  &gt; RELATORIO          Tambien existen códigos fuentes de  RDMAKE  disponibles para su descarga y personalización    Ruta:  HOME &gt; TODOS &gt; TODOS &gt; TODOS &gt; PESQUISA &gt; RDMAKE          Conozca más:  Para consultar la información contenida en nuestro banco de conocimientos, acceda al siguiente enlace:  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Análisis de Customización especifica de cliente, excede el alcance del soporte TOTVS al Producto estándar    \n   \n   OINF0011 - Pautas de servicio Soporte estándar MI   \n   ",
+    "updated_at": "2022-05-13T17:57:26Z",
+    "score": 25.5497,
+    "highlight": {
+      "body": [
+        " BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12    Solución   \n  Por políticas de seguridad y procedimiento de atención, soporte no dispone de códigos fuentes para su envió vía ticket; Por lo que",
+        " más:  Para consultar la información contenida en nuestro banco de conocimientos, acceda al siguiente enlace:  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Análisis de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "1500012613661",
+    "raw_id": "z_1500012613661",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Por que el punto de entrada LOCXPE16 no se ejecuta cuando esta compilado del punto de entrada MT100TOK",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Por que el punto de entrada LOCXPE16 no se ejecuta cuando esta compilado del punto de entrada MT100TOK",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/1500012613661-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Por-que-el-punto-de-entrada-LOCXPE16-no-se-ejecuta-cuando-esta-compilado-del-punto-de-entrada-MT100TOK",
+    "body": "  Duda    ¿Por qué el punto de entrada  LOCXPE16 no se ejecuta cuando también está compilado el punto de entrada MT100TOK?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Solución     LOCXPE16 y MT100TOK es el mismo punto de entrada, puede llamarse de ambas formas, por lo tanto, al estar compilado con los 2 nombres en el mismo Repositorio de Objetos, el punto de entrada denominado MT100TOK es el que tiene preferencia de ejecución sobre el punto de entrada denominado LOCXPE16.    Conozca más  Para adquirir más conocimiento, acceda al siguiente enlace:  TDN: Punto de entrada LOCXPE16   TDN: Punto de entrada MT100TOK    ",
+    "updated_at": "2021-05-29T00:04:46Z",
+    "score": 24.671753,
+    "highlight": {
+      "body": [
+        " - <b>ADVPL</b> - Versión 12   Solución     LOCXPE16 y MT100TOK es el mismo punto de entrada, puede llamarse de ambas formas, por lo tanto, al estar compilado con los 2 nombres en el mismo Repositorio de Objetos"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360049016833",
+    "raw_id": "z_360049016833",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - VSCODE - Cómo identificar cual índice está seleccionado en una tabla por debug en VSCODE",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - VSCODE - Cómo identificar cual índice está seleccionado en una tabla por debug en VSCODE",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360049016833-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-VSCODE-C%C3%B3mo-identificar-cual-%C3%ADndice-est%C3%A1-seleccionado-en-una-tabla-por-debug-en-VSCODE",
+    "body": "  Ocurrencia     ¿Cómo puedo saber cual índice está seleccionado en una tabla por debug en VSCODE?     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL – A partir de versión P12.   Solución    Existe una función que puede utilizarse dborderinfo(7). Esta función utilizada de esta forma devuelve la tabla y el indice que está seleccionado.   En la siguiente imagen vemos que la tabla SD1 fué ordenada por el indice 1. El dborderinfo(7) me devuelve SD10101 donde: SD1010: Tabla   1: Indice seleccionado   En la siguiente imagen cambiamos a indice 3 con DbSetorder(3) El dborderinfo(7) me devuelve SD10103    Mas información en el siguiente link  dborderinfo .    ",
+    "updated_at": "2023-11-04T11:57:37Z",
+    "score": 23.94944,
+    "highlight": {
+      "body": [
+        "  Ocurrencia     ¿Cómo puedo saber cual índice está seleccionado en una tabla por debug en VSCODE?     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> – A partir de versión"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "5600467038871",
+    "raw_id": "z_5600467038871",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es el picture (X3_PICTURE) a asignar para indicar * (Asterisco) en los campos de tipo Contraseña (senha)?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es el picture (X3_PICTURE) a asignar para indicar * (Asterisco) en los campos de tipo Contraseña (senha)?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/5600467038871-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1l-es-el-picture-X3-PICTURE-a-asignar-para-indicar-Asterisco-en-los-campos-de-tipo-Contrase%C3%B1a-senha",
+    "body": "     Tiempo aproximado para lectura: 00:10:00 min  Duda    ¿Cuál es el picture ( X3_PICTURE ) a asignar para indicar * ( Asterisco ) en los  campos de tipo Contraseña  (senha)?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12    Solución   \n Para indicar ¨(Asteriscos) en los campos de tipo Contraseña (Senha), debe utilizar el  picture @*  \n  Ver imagen de ejemplo: \n   \n  En el sistema Protheus, el campo se mostrara de esta manera, con una mascara de asteriscos: \n   \n   \n  Conozca más:  Para consultar la información contenida en nuestro banco de conocimientos, acceda al siguiente enlace: \n  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Configurador (SIGACFG) - CFGX031- ¿Cuáles son los Picture de los Campos que se pueden asignar en la propiedad X3_PICTURE?    \n   Help On-Line - Diccionario de datos (CFGX031)   ",
+    "updated_at": "2022-04-21T18:15:12Z",
+    "score": 23.605015,
+    "highlight": {
+      "body": [
+        " Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12    Solución   \n Para indicar ¨(Asteriscos) en los campos de tipo Contraseña (Senha), debe utilizar el  picture @*  \n  Ver imagen"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "5600005578007",
+    "raw_id": "z_5600005578007",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es la función que se utiliza para retornar el Picture de un campo de la tabla SX3?",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - ¿Cuál es la función que se utiliza para retornar el Picture de un campo de la tabla SX3?",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/5600005578007-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1l-es-la-funci%C3%B3n-que-se-utiliza-para-retornar-el-Picture-de-un-campo-de-la-tabla-SX3",
+    "body": "     Tiempo aproximado para lectura: 00:10:00 min  Duda    ¿Cuál es la  función   que  se utiliza para  retornar  el  Picture  de un campo de la tabla  SX3 ?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12    Solución   \n La función responsable por el retorno del Picture del campo en la tabla SX3 es  PesqPict() . \n \n \n Parámetros  PesqPict( \"alias\", \"Campo\")   \n \n  Ejemplo  \n \n \n \n \n #INCLUDE \"TOTVS.CH\"  User Function  PesqPict () Local cAlias := 'SD2' Local cCampo := 'D2_QUANT'  MsgInfo( 'Valor: ' + cAlias+'/'+cCampo + CRLF + \"Retorno: \" + PesqPict( cAlias, cCampo ), 'TESTE' )  Return( Nil ) \n \n \n \n   \n   \n  Conozca más:  Para consultar la información contenida en nuestro banco de conocimientos, acceda al siguiente enlace: \n  Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Configurador (SIGACFG) - CFGX031- ¿Cuáles son los Picture de los Campos que se pueden asignar en la propiedad X3_PICTURE?    \n   Help On-Line - Diccionario de datos (CFGX031)   ",
+    "updated_at": "2022-04-21T18:08:47Z",
+    "score": 23.56673,
+    "highlight": {
+      "body": [
+        " BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12    Solución   \n La función responsable por el retorno del Picture del campo en la tabla SX3 es  PesqPict() . \n \n \n Parámetros  PesqPict( \"alias"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "18452195335319",
+    "raw_id": "z_18452195335319",
+    "type": "zendesk",
+    "title": "FRAMEWORK - Framework (Línea Protheus) MI - AppServer Multiprotocolo activado no inicia en ambiente linux: Function error (|Cant connect on Lock Server in file ../../../advpl/publicenv.cpp",
+    "title_name": "FRAMEWORK - Framework (Línea Protheus) MI - AppServer Multiprotocolo activado no inicia en ambiente linux: Function error (|Cant connect on Lock Server in file ../../../advpl/publicenv.cpp",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/18452195335319-FRAMEWORK-Framework-L%C3%ADnea-Protheus-MI-AppServer-Multiprotocolo-activado-no-inicia-en-ambiente-linux-Function-error-Cant-connect-on-Lock-Server-in-file-advpl-publicenv-cpp",
+    "body": "   Tiempo aproximado para lectura:  00:01:30 min    Ocurrencia    Al actualizar Appserver para sistema operativo Linux y habilitar el puerto  multiprotocolo, no es posible iniciar el servicio deronando error: Function error (|Cant connect on Lock Server in file ../../../advpl/publicenv.cpp  \n   \n       Ambiente    FRAMEWORK - Framework (Línea Protheus) MI - A partir de versión 12   Causa    Este comportamiento ocurre debido a la configuración LockServer del archivo appserver.ini    Solución:     \n  A partir de la versión 20.3.1.0 de TOTVS | Application Server, no es necesario utilizar LockServer en entornos Linux   Para desactivar el uso de LockServer en TOTVS | Application Server, se debe configurar la sección   LOCKSERVER   con las claves Enable=0 y Server=NOCONFIG (en mayúsculas).       Para mayor detalle consulte el siguiente enlace:       https://tdn.totvs.com/pages/viewpage.action?pageId=6064850     \n  Para solucionar el incidente, deberá deshabilitar la configuración del LockServer en su ambiente.  \n  Ejemplo de configuración:     ",
+    "updated_at": "2023-10-20T23:55:02Z",
+    "score": 22.891567,
+    "highlight": {
+      "body": [
+        " deronando error: Function error (|Cant connect on Lock Server in file ../../../<b>advpl</b>/publicenv.cpp  \n   \n       Ambiente    FRAMEWORK - Framework (Línea Protheus) MI - A partir de versión 12   Causa    Este"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "24324276627351",
+    "raw_id": "z_24324276627351",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - FINA998-Cómo limpiar los archivos temporales de las nuevas rutinas con las tecnologías Angular, TL++, ADVPL, REST 2.0 y el framework PO UI.",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - FINA998-Cómo limpiar los archivos temporales de las nuevas rutinas con las tecnologías Angular, TL++, ADVPL, REST 2.0 y el framework PO UI.",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/24324276627351-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-Financiero-SIGAFIN-FINA998-C%C3%B3mo-limpiar-los-archivos-temporales-de-las-nuevas-rutinas-con-las-tecnolog%C3%ADas-Angular-TL-ADVPL-REST-2-0-y-el-framework-PO-UI",
+    "body": "       Tiempo aproximado para lectura:  00:03:00 min      Duda  \n ¿Cómo limpiar los archivos temporales de las nuevas rutinas con las tecnologías Angular, TL++, ADVPL, REST 2.0 y el framework PO UI.?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Financiero (SIGAFIN) - a partir de la versión 12.1.33   Solución   Para solucionar esa duda, realice los siguientes pasos:    1.1 Detener los servicios de protheus 1.2 Renombrar la carpeta “app-root” que se encuentra en protheus_data/http-root/app-root. 1.3 Iniciar los servicios de protheus. ",
+    "updated_at": "2024-06-20T22:33:13Z",
+    "score": 22.391747,
+    "highlight": {
+      "body": [
+        "       Tiempo aproximado para lectura:  00:03:00 min      Duda  \n ¿Cómo limpiar los archivos temporales de las nuevas rutinas con las tecnologías Angular, TL++, <b>ADVPL</b>, REST 2.0 y el framework PO UI"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4418726830999",
+    "raw_id": "z_4418726830999",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Punto de Entrada en rutina LOCXNF que sigue ejecutándose con cláusula IXBLOG=NORUN",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Punto de Entrada en rutina LOCXNF que sigue ejecutándose con cláusula IXBLOG=NORUN",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4418726830999-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Punto-de-Entrada-en-rutina-LOCXNF-que-sigue-ejecut%C3%A1ndose-con-cl%C3%A1usula-IXBLOG-NORUN",
+    "body": "   Tiempo aproximado para lectura:  00:01:00 min    Duda    ¿Cuál es el Punto de Entrada en rutina LOCXNF que se sigue ejecutando, a pesar de deshabilitar puntos de Entrada con cláusula IXBLOG=NORUN?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Solución     El punto de Entrada LOCXPE31, que se encuentra en rutina LOCXNF,  se definió a nivel código con la función   FindFunction  .    Cuando se habilita la cláusula  IXBLOG=NORUN , se Bloquea la ejecución de las funciones definidas como \"Existblock\", devolviendo siempre en el retorno de ExistBlock un valor Falso;  por lo que, aunque la función esté compilada en el repositorio no la va a ejecutar. \n Para el caso del punto de Entrada  LOCXPE31 , el colocar la claúsula IXBLOG=NORUN no desconsidera la llamada a los Puntos de Entrada, definidos como FindFunction y es por eso que aunque se configure la cláusula, los puntos de entrada continuaran ejecutándose en tu ambiente. \n En caso de requerir realizar alguna validación sin la ejecución del Punto de Entrada, se recomienda  en un ambiente alterno con los respaldos correspondientes, descompilar el punto de Entrada  LOCXPE31 .   ",
+    "updated_at": "2022-01-11T16:10:36Z",
+    "score": 22.21542,
+    "highlight": {
+      "body": [
+        "?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12   Solución     El punto de Entrada LOCXPE31, que se encuentra en rutina LOCXNF,  se definió a nivel código"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4409543491095",
+    "raw_id": "z_4409543491095",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Análisis de Customización especifica de cliente, excede el alcance del soporte TOTVS al Producto estándar",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Análisis de Customización especifica de cliente, excede el alcance del soporte TOTVS al Producto estándar",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4409543491095-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-An%C3%A1lisis-de-Customizaci%C3%B3n-especifica-de-cliente-excede-el-alcance-del-soporte-TOTVS-al-Producto-est%C3%A1ndar",
+    "body": "      Tiempo aproximado para lectura:  00:10:00 min      \n  Duda    ¿Es posible que soporte  TOTVS al Producto estándar  realice el a nálisis de Customización especifica de cliente ?    Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL  - Versión 12    Solución   \n Le compartimos que el resguardo de fuentes, análisis y ajustes en customizaciones especificas de cliente (Puntos de entrada / Funciones de usuario / Desarrollos específicos y/o implementación de asientos contables), exceden el alcance del soporte TOTVS al producto estándar, con base a nuestro proceso de atención indicado en el siguiente link:    \n \n \n OINF0011 - Pautas de servicio Soporte estándar MI   –   Sección NECESIDAD DE ATENCIÓN POR SOPORTE TÉCNICO   Alcance de atención       \n \n \n En caso de requerir apoyo para realizar el  análisis, implementación, debug y/o ajuste a desarrollo específicos de cliente , deberá solicitar el acompañamiento del área de servicios TOTVS a su agente de solución de negocios.   En caso de tener dudas sobre el alcance de la atención del Soporte Protheus Mercado Internacional, puede solicitar una sesión de Onboarding a través de nuestra cuenta oficial   soporteprotheusmi@totvs.com.br    para que le presentemos nuestro proceso de atención. \n   \n   \n  Conozca más : Para consultar la información contenida en nuestro banco de conocimientos, acceda a los siguientes enlaces:  OINF0011 - Pautas de servicio Soporte estándar MI  ",
+    "updated_at": "2021-09-27T18:20:19Z",
+    "score": 22.21542,
+    "highlight": {
+      "body": [
+        "     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b>  - Versión 12    Solución   \n Le compartimos que el resguardo de fuentes, análisis y ajustes en customizaciones especificas de cliente"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "14824856441239",
+    "raw_id": "z_14824856441239",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - error \"is not allowed more than one source with same name. Rename your source: <fonte.prw>\"",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - error \"is not allowed more than one source with same name. Rename your source: <fonte.prw>\"",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/14824856441239-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-error-is-not-allowed-more-than-one-source-with-same-name-Rename-your-source-fonte-prw",
+    "body": "   Tiempo aproximado para lectura:  00:01:30 min    Ocurrencia    En Protheus se presenta error.log   \"is not allowed more than one source with same name. Rename your source: &lt;fonte.prw&gt;\"       Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Causa   Este incidente se presenta a partir de la actualización de binarios  Build    20.3.1.0 , ya que a partir de dicha versión no será permitido el uso de fuentes y/o recursos con el mismo nombre de archivo ya existente en el RPO estandar.    Solución    Para solucionar esta ocurrencia, realice los siguientes pasos: 1.- Verifique que no tenga un fuente  compilado en el RPO Custom con el mismo nombre que el padrón para el programa indicado entre &lt;&gt;.  \n 2.- En este caso, evalué alguna de las siguientes alternativas: \n  a) Cambie la extensión del fuente de .prw a .prx  \n  b) Cambie el nombre del fuente personalizado, con el fin de que el sistema no detone el mensaje reportado       Nota:      \n   TDN - Is not allowed more than one source with same name   ",
+    "updated_at": "2023-05-24T23:12:23Z",
+    "score": 22.047356,
+    "highlight": {
+      "body": [
+        ";\"       Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12   Causa   Este incidente se presenta a partir de la actualización de binarios  Build    20.3.1.0 , ya que a"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "6345066207127",
+    "raw_id": "z_6345066207127",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Error.log: \"There is a source name conflict <<(RUTINA.PRW)>> that prevents continuing securely. on EXISTBLOCK(APLIB190.PRW)\"",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Error.log: \"There is a source name conflict <<(RUTINA.PRW)>> that prevents continuing securely. on EXISTBLOCK(APLIB190.PRW)\"",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/6345066207127-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Error-log-There-is-a-source-name-conflict-RUTINA-PRW-that-prevents-continuing-securely-on-EXISTBLOCK-APLIB190-PRW",
+    "body": "   Tiempo aproximado para lectura:  00:01:30 min    Ocurrencia    En sistema Protheus, se detona error.log:   \"There is a source name conflict &lt;&lt;(RUTINA.PRW)&gt;&gt; that prevents continuing securely. on EXISTBLOCK(APLIB190.PRW)\"   en la ejecución de una rutina del sistema.     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Causa   Este incidente se presenta cuando  hay una sobre escritura del fuente padrón, en la llamada a una función de usuario .PRW    Solución  \n Para solucionar esta ocurrencia, realice los siguientes pasos: 1. Inicialmente identifique en el log de error, en el STACK de la función \"EXISTBLOCK\" el nombre de la función que está generando el error.log \n   2. En el caso del ejemplo, el nombre de la función de usuario U_OMSA040 entra en conflicto porque el repositorio de objetos padrón tiene una rutina con el mismo nombre. 3. Luego de ubicar la función de Usuario, verifique el proceso deshabilitando Puntos de Entrada, cláusula IXBLOG=NORUN y confirme que de esta forma el error no se presenta. \n  Configuración y uso de clave IXBLOG  \n 4. Si su requerimiento es tener compilada  la función de usuario, modifique el nombre: Por ejemplo, PE_OMSA040.PRW y vuelva a hacer la compilación en su repositorio.  ",
+    "updated_at": "2022-06-22T14:47:45Z",
+    "score": 22.01234,
+    "highlight": {
+      "body": [
+        " securely. on EXISTBLOCK(APLIB190.PRW)\"   en la ejecución de una rutina del sistema.     Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12   Causa   Este incidente"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360021230832",
+    "raw_id": "z_360021230832",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Facturación (SIGAFAT) - invalid typecast in file d:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\tp11-buildv2appsrv-tec11win32rpo32\\advtec9_tt11\\advpl\\instrvar.inl at line 781 on LOCXDELNF(LOCXNF.PRW)",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Facturación (SIGAFAT) - invalid typecast in file d:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\tp11-buildv2appsrv-tec11win32rpo32\\advtec9_tt11\\advpl\\instrvar.inl at line 781 on LOCXDELNF(LOCXNF.PRW)",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360021230832-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Facturaci%C3%B3n-SIGAFAT-invalid-typecast-in-file-d-bamboo-agent-5-7-2-xml-data-build-dir-tp11-buildv2appsrv-tec11win32rpo32-advtec9-tt11-advpl-instrvar-inl-at-line-781-on-LOCXDELNF-LOCXNF-PRW",
+    "body": "  Ocurrencia  En el módulo  Facturación , al intentar borrar una Factura es presentado el error invalid typecast in file d:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\tp11-buildv2appsrv-tec11win32rpo32\\advtec9_tt11\\advpl\\instrvar.inl at line 781 on LOCXDELNF(LOCXNF.PRW).   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Facturación (SIGAFAT) – A partir de la versión 12   Causa   Este incidente ocurre, pues el parámetro  MV_CFDI_CA  es del tipo incorrecto.   Solución    Para solucionar esta ocurrencia, ajuste el parámetro  MV_CFDI_CA  para que corresponda a tipo Lógico. ",
+    "updated_at": "2021-06-16T21:11:17Z",
+    "score": 21.991901,
+    "highlight": {
+      "body": [
+        "\\advtec9_tt11\\<b>advpl</b>\\instrvar.inl at line 781 on LOCXDELNF(LOCXNF.PRW).   Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Facturación (SIGAFAT) – A partir de la versión 12   Causa"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4409631012247",
+    "raw_id": "z_4409631012247",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Cómo registrar una sugestión de mejoría de nuevas funciones para el producto TOTVS en la central de colaboración",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Cómo registrar una sugestión de mejoría de nuevas funciones para el producto TOTVS en la central de colaboración",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4409631012247-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-C%C3%B3mo-registrar-una-sugesti%C3%B3n-de-mejor%C3%ADa-de-nuevas-funciones-para-el-producto-TOTVS-en-la-central-de-colaboraci%C3%B3n",
+    "body": "      Tiempo aproximado para lectura:  00:10:00 min      \n  Duda    ¿Cómo registrar una sugestión de mejoría de nuevas funciones para el producto TOTVS en la central de colaboración?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12    Solución   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   ¡Bienvenida a la Central de colaboración TOTVS!   \n   \n Esta área fue creada para que puedas sugerir nuevas funciones para el producto TOTVS. \n   \n Las sugerencias de mejora serán monitoreadas por nuestro equipo de innovación y serán evaluadas para una futura implementación. \n   \n Al incluir su sugerencia, es muy importante que nos informe: \n   \n - Cómo está actualmente \n   \n - Qué puede cambiar: \n   \n - Valor de la entrega (beneficios o problemas que se resolverán con esta mejora) \n   \n  Cabe resaltar, que las mejoras seleccionadas se evaluarán bajo los criterios: valor de entrega (beneficios o problemas que se resolverán con la mejora), mayor número de votos y mayor número de comentarios.  \n   \n Entonces, ¡registra tus ideas, vota, divulga y participa! \n   \n Aquí te dejamos un video    How To    donde te explicamos paso a paso como se utiliza esta valiosa herramienta creada para ti. \n   \n    \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   \n Una vez registrada la solicitud,  deberá dar seguimiento a través de la central de colaboración , debido a que este tipo de solicitudes no son gestionadas por el Soporte Totvs estándar. \n \n \n Países MI  Norte Andino:  México, Colombia, Perú, Ecuador, Republica Dominicana, Costa Rica, Venezuela  \n \n \n Países MI Cono Sur:  Argentina, Bolivia, Chile, Uruguay, Paraguay \n \n   En caso de tener dudas sobre el alcance de la atención del Soporte Protheus Mercado Internacional, puede solicitar una sesión de Onboarding a través de nuestra cuenta oficial   soporteprotheusmi@totvs.com.br    para que le presentemos nuestro proceso de atención.   \n \n \n OINF0011 - Pautas de servicio Soporte estándar MI  –   Sección NECESIDAD DE ATENCIÓN POR SOPORTE TÉCNICO  Alcance de atención       \n \n \n  Conozca más : Para consultar la información contenida en nuestro banco de conocimientos, acceda a los siguientes enlaces:  OINF0011 - Pautas de servicio Soporte estándar MI  ",
+    "updated_at": "2022-09-23T20:03:53Z",
+    "score": 21.781021,
+    "highlight": {
+      "body": [
+        "    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12    Solución   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n \n   ¡Bienvenida a la"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360029051892",
+    "raw_id": "z_360029051892",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Cuál es la nomenclatura padrón utilizada por el sistema Protheus para el nombre de rutinas",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - Cuál es la nomenclatura padrón utilizada por el sistema Protheus para el nombre de rutinas",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360029051892-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Cu%C3%A1l-es-la-nomenclatura-padr%C3%B3n-utilizada-por-el-sistema-Protheus-para-el-nombre-de-rutinas",
+    "body": "        Duda  ¿Cual es la nomenclatura padrón utilizada por el sistema Protheus para el nombre de rutinas?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - A partir de la versión 12   Solución   La estandarización de las nomenclatura utilizada por Protheus facilitan la identificación del tipo de la rutina y su uso. Los programas de  TOTVS utilizan 7 dígitos y dos posibles extensiones .PRW o .PRX,  conforme a la siguiente explicación:    XXXYNNN.PRW     XXX  - Prefijo del módulo de la linea de Protheus, ejemplo: GPE para el módulo de Gestión de Personal, PON para el módulo de Reloj Registrador Electrónico, FAT para el módulo de Facturación, COM para el módulo de Compras, EST para el modulo de Stock y Costos, etc.   Y  - Código que identifica la operación del programa (Fuente), siendo:   \n \n   \n \n \n   Codigo   \n   Operación del programa   \n \n \n A \n Formularios (Catálogos) \n \n \n C \n Consulta de datos \n \n \n R \n Informes \n \n \n X \n Bibliotecas \n \n \n M \n Misceláneas \n \n \n \n   NNN  - Código secuencial del programa. Mantenga el estándar de numeración de 10 en 10 y vincule las operaciones de programa similares. Ejemplos:  GPEA010 - Archivo de empleados. GPEA020 – Archivo de personas. GPEA030 – Archivo de fórmulas. GPER010 – Informe de empleados. GPER020 – Informe de personas. GPER030 – Informe de fórmulas.   PRW  - Extensão PRW. Los archivos de rutinas antiguas aún mantienen el uso de la extensión PRX. En los cambios de versión del Protheus estas rutinas deben redenominarse con la extensión PRW.   \n Ejemplo de un fuente:   GPEM010 .PRW, a nivel Menú y consulta de rutina (Shift + F6) usted observara el nombre  GPEA010  \n    Nota:  En caso de identificar algún incidente, escenario, error o duda en especifico, deberá registrar un ticket de atención a soporte Mercado Internacional para su evaluación correspondiente.  --- Proporcionar en el ticket su evidencia en vídeo el patrón de emulación, las configuraciones utilizadas en el escenario. --- Enviar SX6 de la empresa / filial donde se presenta el incidente. --- Log completo del error en bloc de notas, en caso de aplicar.    Vídeo: ¿Como abrir un ticket de atención en el Portal del Cliente?    Conozca más : Para consultar la información contenida en nuestro banco de cocimientos, acceda a los siguientes enlaces:   TDN - Nomenclaturas  ",
+    "updated_at": "2022-04-06T15:32:35Z",
+    "score": 21.781021,
+    "highlight": {
+      "body": [
+        "        Duda  ¿Cual es la nomenclatura padrón utilizada por el sistema Protheus para el nombre de rutinas?    Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> - A partir de"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "4420970961687",
+    "raw_id": "z_4420970961687",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Punto de Entrada en rutina MATA462AN que sigue ejecutándose con cláusula IXBLOG=NORUN",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Punto de Entrada en rutina MATA462AN que sigue ejecutándose con cláusula IXBLOG=NORUN",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/4420970961687-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-Punto-de-Entrada-en-rutina-MATA462AN-que-sigue-ejecut%C3%A1ndose-con-cl%C3%A1usula-IXBLOG-NORUN",
+    "body": "   Tiempo aproximado para lectura:  00:01:00 min    Duda  \n ¿Cuál es el Punto de Entrada en rutina  MATA462an  que se sigue ejecutando, a pesar de deshabilitar puntos de Entrada con cláusula IXBLOG=NORUN?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - Versión 12   Solución     El punto de Entrada  M462SER , que se encuentra en rutina  MATA462AN ,  se definió a nivel código con la función   FindFunction  .    Cuando se habilita la cláusula  IXBLOG=NORUN , se Bloquea la ejecución de las funciones definidas como \"Existblock\", devolviendo siempre en el retorno de ExistBlock un valor Falso;  por lo que, aunque la función esté compilada en el repositorio no la va a ejecutar. \n Para el caso del punto de Entrada  m462ser , el colocar la cláusula IXBLOG=NORUN no desconsidera la llamada a los Puntos de Entrada, definidos como FindFunction y es por eso que aunque se configure la cláusula, los puntos de entrada continuaran ejecutándose en tu ambiente. \n En caso de requerir realizar alguna validación sin la ejecución del Punto de Entrada, se recomienda    en un ambiente alterno con los respaldos correspondientes, descompilar el punto de Entrada  m462ser .   ",
+    "updated_at": "2022-01-31T19:22:28Z",
+    "score": 21.495966,
+    "highlight": {
+      "body": [
+        "=NORUN?   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - <b>ADVPL</b> - Versión 12   Solución     El punto de Entrada  M462SER , que se encuentra en rutina  MATA462AN ,  se definió a"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "20804079105559",
+    "raw_id": "z_20804079105559",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - La función cGetFile() no permite acceder a los discos locales desde el SmatClient WebApp",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - ADVPL - La función cGetFile() no permite acceder a los discos locales desde el SmatClient WebApp",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/20804079105559-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-La-funci%C3%B3n-cGetFile-no-permite-acceder-a-los-discos-locales-desde-el-SmatClient-WebApp",
+    "body": "      Tiempo aproximado para lectura:  00:02:30 min    Ocurrencia       Al seleccionar opción de Discos locales en la función cGetFile() ejecutándola desde SmatClient WebApp la función devuelve la ruta de localización en el servidor    \n   \n   \n    Sin embargo realizando esta misma prueba desde el SmartClient Desktop la función permite acceder a las rutas locales.    \n     Ambiente     [Escreva o nome completo do Macro Segmento Produto/Área/Serviço - Produto/Área - Módulo/Serviço - mencionados acima no título e informe a Versão a qual a solução é aplicável.  Exemplo: Cross Segmento - TOTVS Backoffice (Linha Protheus) - TOTVS Gestão Fiscal - Todas as versões]   Causa  \n Este tema ocurre debido al medio por el cual se trata acceder a la ruta de archivos locales (Smartclient WebApp)   Solución     Con la función del cGetFile() no se permite acceder a los directorios locales, esta limitación existe desde la version de Smartclient HTML y hoy en día es el mismo tema con la versión del WebApp       Lo anterior debido a que con el acceso se realiza a través de la Web, no hay forma de ver los archivos locales  \n   \n   ",
+    "updated_at": "2024-01-23T23:42:57Z",
+    "score": 21.115986,
+    "highlight": {},
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "19405359917207",
+    "raw_id": "z_19405359917207",
+    "type": "zendesk",
+    "title": "TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – GPEM650 – Error log invalid typecast in file E:\\build-dir\\TP11-OF20310-TECXWIN64\\advpl\\instrvar.inl at line 954  on FGRAVTIT(GPEM650.PRX)",
+    "title_name": "TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – GPEM650 – Error log invalid typecast in file E:\\build-dir\\TP11-OF20310-TECXWIN64\\advpl\\instrvar.inl at line 954  on FGRAVTIT(GPEM650.PRX)",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/19405359917207-TOTVS-RH-TOTVS-RH-LINEA-PROTHEUS-MI-Gesti%C3%B3n-de-Personal-SIGAGPE-GPEM650-Error-log-invalid-typecast-in-file-E-build-dir-TP11-OF20310-TECXWIN64-advpl-instrvar-inl-at-line-954-on-FGRAVTIT-GPEM650-PRX",
+    "body": "   Tiempo aproximado para lectura:  00:05:00 min  \n   Ocurrencia  En módulo Gestión de Personal, Al generar los títulos envía Error log invalid typecast in file E:\\build-dir\\TP11-OF20310-TECXWIN64\\advpl\\instrvar.inl at line 954 on FGRAVTIT(GPEM650.PRX) \n   \n  Ambiente  TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – Release 12 \n   \n  Causa  Este error ocurre debido a una configuración del parámetro MV_CONDUPL \n   \n  Solución  Para solucionar esta ocurrencia, verifique tener creado el parámetro MV_CONDUPL con los siguientes datos: \n   N ota: El valor del Cont. Por puede contener .F. o .T. , según las necesidades de su entorno, como se describe en la documentación debajo de la funcionalidad de este parámetro:  TSXBDD_DT_Consistir_Duplicidade_de_Títulos  \n   ",
+    "updated_at": "2023-11-28T23:15:33Z",
+    "score": 21.081997,
+    "highlight": {
+      "body": [
+        "\\<b>advpl</b>\\instrvar.inl at line 954 on FGRAVTIT(GPEM650.PRX) \n   \n  Ambiente  TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – Release 12 \n   \n  Causa  Este error ocurre debido a"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360053284654",
+    "raw_id": "z_360053284654",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Contabilidad de Gestión (SIGACTB) - File is in EOF - _SC00 in file D:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-TECX17V3-TECXWIN64\\advpl\\advplfile.cpp at line 66  on CTB270CAD(CTBA270.PRW)",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Contabilidad de Gestión (SIGACTB) - File is in EOF - _SC00 in file D:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-TECX17V3-TECXWIN64\\advpl\\advplfile.cpp at line 66  on CTB270CAD(CTBA270.PRW)",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360053284654-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-Contabilidad-de-Gesti%C3%B3n-SIGACTB-File-is-in-EOF-SC00-in-file-D-bamboo-agent-5-7-2-xml-data-build-dir-TP11-TECX17V3-TECXWIN64-advpl-advplfile-cpp-at-line-66-on-CTB270CAD-CTBA270-PRW",
+    "body": "  Ocurrencia    En el módulo de Contabilidad de gestión, al intentar realizar la importación de un  CSV desde la rutina     Offline        Assessment     -  CTBA270 con dos elementos, se produce   error  :  \n  Error de actualización: el archivo está en EOF - _SC00 en el archivo D: \\ bamboo-agent-5.7.2 \\ xml-data \\ build-dir \\ TP11-TECX17V3-TECXWIN64 \\ advpl \\ advplfile.cpp en la línea 66 en CTB270CAD (CTBA270.PRW ) 07/01/2019 16:18:17 línea: 864  \n   Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Contabilidad de Gestión (SIGACTB) - 12   Causa   El incidente se presenta por un desajuste en la rutina automática de la evaluación sin conexión - CTBA270, para recibir más de un artículo \n   Solución    Para solucionar esa ocurrencia, realice los siguientes pasos: 1. Solicite al área de soporte el patch de corrección del issue  DSERCTR1-22783; 2. Aplique el patch en su ambiente, con las siguientes rutinas: CFGX019.PRW 19/06/2019  CTBA270.PRW 05/08/2019  ENGXFUN.PRW 06/07/2018 FISLOAD.PRW 26/02/2019   3. Verifique que el error log ya no sea presentado.  ",
+    "updated_at": "2021-06-02T03:00:38Z",
+    "score": 18.651081,
+    "highlight": {
+      "body": [
+        "   error  :  \n  Error de actualización: el archivo está en EOF - _SC00 en el archivo D: \\ bamboo-agent-5.7.2 \\ xml-data \\ build-dir \\ TP11-TECX17V3-TECXWIN64 \\ <b>advpl</b> \\ advplfile.cpp en la línea 66 en"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360036942133",
+    "raw_id": "z_360036942133",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - El execauto para Remito de venta (MATA462N) no toma el punto de venta enviado e inserta el último PV ingresado por la rutina manual",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - El execauto para Remito de venta (MATA462N) no toma el punto de venta enviado e inserta el último PV ingresado por la rutina manual",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360036942133-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-ADVPL-El-execauto-para-Remito-de-venta-MATA462N-no-toma-el-punto-de-venta-enviado-e-inserta-el-%C3%BAltimo-PV-ingresado-por-la-rutina-manual",
+    "body": "  Ocurrencia  Al ejecutar execauto para (MATA462N) el sistema no toma el punto de venta enviado. Esto provoca que  no se inserte el remito o lo inserte con el PV erróneo.  En el siguiente caso se ejemplifica lo mencionado. En el execauto se envió el PV(0012) pero el sistema insertó PV(0001) que corresponde al último PV ingresado por la rutina manual.             Ambiente    Cross Segmentos - TOTVS BackOffice (Línea Protheus) MI - ADVPL - P12   Solución  Para este caso debe seguirse la misma lógica del remito manual, es decir, la pregunta (PV) debe ser alterada antes o dentro de la ejecución del execauto.   Una forma es usar adicionalmente el punto de entrada (  LOCXPDV  ), pudiendo optar por alguna otra opción en su especifico que altere la pregunta(PVXARG) antes de ser lanzado el execauto.   Aquí se ejemplifica el uso de punto de entrada   1.- En el fuente que detona el execauto.   Declarar una variable xPV que es donde debe colocar el valor del punto de venta a utilizar en el execauto.  Esta variable debe estar declarada antes de la linea del execauto.  xPV será utilizada en el fuente del punto de entrada (LOCXPDV)        2.- El fuente del PE (LOCXPDV)   https://tdn.totvs.com/pages/releaseview.action?pageId=505753055   Este PE es especifico para poder alterar la variable interna del punto de venta.   Es el que resolverá de manera interna si usted está ingresando de manera manual o si es por execauto.   Pudiendo ingresar usted mas validaciones si fuera necesario.    Un ejemplo mas completo puede solicitar al equipo de soporte MI.      ",
+    "updated_at": "2023-11-04T11:55:51Z",
+    "score": 18.475845,
+    "highlight": {
+      "body": [
+        " - TOTVS BackOffice (Línea Protheus) MI - <b>ADVPL</b> - P12   Solución  Para este caso debe seguirse la misma lógica del remito manual, es decir, la pregunta (PV) debe ser alterada antes o dentro de la ejecución"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360027932631",
+    "raw_id": "z_360027932631",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Configurador (SIGACFG) - PROFMGR - Update error - lock required - File: ruta\\profile\\profile.usr in file ruta\\advpl\\advplfile.cpp at line 74  on WRITEPROFDEF(PROFILE.PRW) 23/10/2018 18:06:50 line",
+    "title_name": "Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Configurador (SIGACFG) - PROFMGR - Update error - lock required - File: ruta\\profile\\profile.usr in file ruta\\advpl\\advplfile.cpp at line 74  on WRITEPROFDEF(PROFILE.PRW) 23/10/2018 18:06:50 line",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360027932631-Cross-Segmentos-TOTVS-BackOffice-L%C3%ADnea-Protheus-MI-Configurador-SIGACFG-PROFMGR-Update-error-lock-required-File-ruta-profile-profile-usr-in-file-ruta-advpl-advplfile-cpp-at-line-74-on-WRITEPROFDEF-PROFILE-PRW-23-10-2018-18-06-50-line",
+    "body": "        Ocurrencia    Al ingresar al sistema Protheus, se presenta el siguiente error:  Update error - lock required - File: d:\\totvs12\\mp12117\\protheus_data_17col\\profile\\profile.usr in file D:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-BUILDV2APPSRV-TEC11WIN32RPO32\\advtec9_tt11\\advpl\\advplfile.cpp at line 74 on WRITEPROFDEF(PROFILE.PRW) 23/10/2018 18:06:50 line : 327     Ambiente     Cross Segmentos - TOTVS BackOffice (Línea Protheus) - MI - Configurador (SIGACFG) -  Versión 12117    Causa   Este incidente ocurre porque se corrompió el profile del usuario de Protheus.    Solución    Para solucionar esta ocurrencia, realice los siguientes pasos:   \n 1. Realice un respaldo de la carpeta Profile ubicada dentro de la carpeta Protheus_Data de su ambiente, recuerde haber parado los servicios de Protheus para podre hacer este respaldo;   2. Acceda al modulo del configurador (SIGACFG) en menú Ambiente / Archivos / Mantenimiento de Profile (Programa - PROFMGR);       3. Elimine puntualmente los registros del usuario donde esta el problema, haga clic en el código de usuario, seleccione el registro y después presione el icono de \"Eliminar\", elija la opción que desee.  - Borrar el registro corriente (Registro seleccionado) - Borrar todos los registros del usuario.      \n   \n  Nota:  En caso de requerir apoyo para la revisión del un escenario especifico en su ambiente, deberá registrar un ticket de atención a Soporte Mercado Internacional, donde deberá anexar su vídeo de evidencia con el patrón de emulación y configuraciones a considerar.  \n -En caso de ser un erro.log, deberá anexar el log completo en un bloc de notas. \n  Vídeo: ¿Como abrir un ticket de atención en el Portal del Cliente?      \n  Conozca más : Para consultar la información contenida en nuestro banco de conocimientos, acceda al siguiente enlace: \n  Help On-Line Mantenimiento Profile (PROFMGR)  \n    \n  How To - Como responder la encuesta de satisfacción de tickets de atención TOTVS.  ",
+    "updated_at": "2021-06-10T22:06:43Z",
+    "score": 18.033745,
+    "highlight": {
+      "body": [
+        ":\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-BUILDV2APPSRV-TEC11WIN32RPO32\\advtec9_tt11\\<b>advpl</b>\\advplfile.cpp at line 74 on WRITEPROFDEF(PROFILE.PRW) 23/10/2018 18:06:50 line : 327     Ambiente     Cross"
+      ]
+    },
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360028800292",
+    "raw_id": "z_360028800292",
+    "type": "zendesk",
+    "title": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Compras(SIGACOM) - MATA161 – expected string expression in FieldPut CE_ITEMGRD in file D:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-BUILDV2APPSRV TEC11WIN32RPO32\\advtec9_tt11\\advpl\\dbenv.cpp at lin",
+    "title_name": "Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Compras(SIGACOM) - MATA161 – expected string expression in FieldPut CE_ITEMGRD in file D:\\bamboo-agent-5.7.2\\xml-data\\build-dir\\TP11-BUILDV2APPSRV TEC11WIN32RPO32\\advtec9_tt11\\advpl\\dbenv.cpp at lin",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360028800292-Cross-Segmentos-TOTVS-Backoffice-L%C3%ADnea-Protheus-MI-Compras-SIGACOM-MATA161-expected-string-expression-in-FieldPut-CE-ITEMGRD-in-file-D-bamboo-agent-5-7-2-xml-data-build-dir-TP11-BUILDV2APPSRV-TEC11WIN32RPO32-advtec9-tt11-advpl-dbenv-cpp-at-lin",
+    "body": "  Incidencia    Al realizar la confirmación de un análisis de cotización por medio de la rutina MATA161 se muestra el siguiente error log:   \n  Ambiente    Cross Segmentos - TOTVS Backoffice (Línea Protheus) MI - Compras(SIGACOM) - Protheus 12.1.14  y Superior. \n  Causa  Este incidente es ocasionado al no contar con la actualización de la rutina: COMXFUN. \n  Solución  Para solucionar el incidente es necesario realizar los siguientes pasos: 1. Verificar que se cuenta con la rutina a la siguiente fecha o superior: COMXFUN - 18/01/2018; 2. En caso de no contar la fecha actualizada, solicitar el patch al equipo de soporte; 3. Respaldar el RPO y aplicar el patch de actualización de la rutina; 4. Validar que el incidente sea corregido. ",
+    "updated_at": "2021-06-11T13:56:36Z",
+    "score": 16.593672,
+    "highlight": {},
+    "thumbnails": null,
+    "hide_description": false
+  },
+  {
+    "id": "360057112674",
+    "raw_id": "z_360057112674",
+    "type": "zendesk",
+    "title": "TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – GPEM020 – Invalid typecast in file d:\\bamboo-agent-5.7.2\\xml-data\\buildir\\tpll-tecxl7v3rl-tecxiwin64\\advpl\\instrvar.ini at line 932 on GPEXMED(GPEXMED.PRX) 26/10/2020",
+    "title_name": "TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – GPEM020 – Invalid typecast in file d:\\bamboo-agent-5.7.2\\xml-data\\buildir\\tpll-tecxl7v3rl-tecxiwin64\\advpl\\instrvar.ini at line 932 on GPEXMED(GPEXMED.PRX) 26/10/2020",
+    "url": "https://centraldeatendimento.totvs.com/hc/es/articles/360057112674-TOTVS-RH-TOTVS-RH-LINEA-PROTHEUS-MI-Gesti%C3%B3n-de-Personal-SIGAGPE-GPEM020-Invalid-typecast-in-file-d-bamboo-agent-5-7-2-xml-data-buildir-tpll-tecxl7v3rl-tecxiwin64-advpl-instrvar-ini-at-line-932-on-GPEXMED-GPEXMED-PRX-26-10-2020",
+    "body": "  Ocurrencia  En modulo Gestión de Personal, Al ejecutar el cálculo del Aguinaldo genera THREAD ERROR ([6612]) Invalid typecast in file d: on GPEXMED(GPEXMED.PRX) 26/10/2020 19:38:37 line : 929 \n   \n  Ambiente  TOTVS RH - TOTVS RH (LINEA PROTHEUS) - MI – Gestión de Personal (SIGAGPE) – Release 12 \n    Causa  Este incidente ocurre cuando inconsistencias identificadas en la rutina GPEM020 \n    \n  Solución  Para solucionar esta ocurrencia, realice los siguientes pasos:   \n \n Verifique tener la rutina  GPEM020 igual o superior al 09/10/2020 ; Caso contrario, solicite el patch de actualización de estas rutinas a Soporte Mercado Internacional través de un ticket de atención;  \n \n \n  Importante:  Para ambientes de países de mercado internacional como lo es Bolivia,  no deben ser aplicados los patch de acumulado semanal o mensual de RH , estos solo aplican para el país de Brasil;   \n \n La alternativa de la aplicación del patch, se deberá utilizar mientras su ambiente continúe desactualizado, deberá aplicar inicialmente en su ambiente de PRUEBAS,  con previo respaldo del RPO , eligiendo la opción aplicar solo fuentes actualizados;   \n \n Una vez aplicado el patch  ingrese nuevamente a la rutina de Calculo – GPEM020  para ejecutar el cálculo del procedimiento aguinaldo y confirme el resultado. \n ",
+    "updated_at": "2021-06-10T22:29:39Z",
+    "score": 16.021816,
+    "highlight": {},
+    "thumbnails": null,
+    "hide_description": false
+  }
+]
